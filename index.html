@@ -253,7 +253,7 @@
 const REPORTS = { employees:"All_Employees", kra:"KRA_Report", goal:"Goal_Report", competency:"Competency_Report", review:"Review_Report" };
 const FORMS = { kra:"KRA", goal:"Goal", competency:"Competency", review:"Review", training:"Training_Need" };
 
-console.log("MEGA PERFORMANCE VERSION: 2026-08-11-FLEX-NUM-01");
+console.log("MEGA PERFORMANCE VERSION: 2026-08-11-UPDATE-FIX-02");
 
 /* ============================================================
    STATE
@@ -491,19 +491,56 @@ function closeApproval(){ state.activeApproval = null; document.getElementById('
 
 function approveAsHead(){
   const a = state.activeApproval;
+
+  if(!a || !a.review || !a.review.ID){
+    setStatus('No approval record is open.', false);
+    return;
+  }
+
   const inputs = document.querySelectorAll('.appr-rating-input');
-  const updates = Array.from(inputs).map(inp => {
-    const goalId = inp.getAttribute('data-goal-id');
-    const val = inp.value;
-    return creatorUpdateRecord(REPORTS.goal, goalId, { Appraiser_Rating: val });
-  });
-  Promise.all(updates).then(() => {
-    return creatorUpdateRecord(REPORTS.review, a.review.ID, { Status: "Head Approved" });
-  }).then(() => {
-    setStatus('✅ Approved and sent to HR.', true);
-    closeApproval();
-    refreshApprovals();
-  }).catch(err => { console.error('APPROVE ERROR', err); setStatus('Approval failed — check console.', false); });
+  const updates = [];
+
+  for(let i = 0; i < inputs.length; i++){
+    const goalId = inputs[i].getAttribute('data-goal-id');
+    const raw = String(inputs[i].value || '').trim();
+    const rating = Number(raw);
+
+    if(raw === '' || !Number.isFinite(rating) || rating < 1 || rating > 5){
+      setStatus('Enter an Appraiser Rating from 1 to 5 for every goal before approval.', false);
+      return;
+    }
+
+    updates.push(
+      creatorUpdateRecord(
+        REPORTS.goal,
+        goalId,
+        { Appraiser_Rating: creatorNumericString(rating, 0) }
+      )
+    );
+  }
+
+  setStatus('Approving and sending to HR…', null);
+
+  Promise.all(updates)
+    .then(function(){
+      return creatorUpdateRecord(
+        REPORTS.review,
+        a.review.ID,
+        { Status: 'Head Approved' }
+      );
+    })
+    .then(function(){
+      setStatus('✅ Approved and sent to HR.', true);
+      closeApproval();
+      return refreshApprovals();
+    })
+    .catch(function(err){
+      console.error('APPROVE ERROR', err);
+      if(err && err.responseText){
+        console.error('APPROVE RESPONSE:', err.responseText);
+      }
+      setStatus('Approval failed — check console.', false);
+    });
 }
 function approveAsHR(){
   const a = state.activeApproval;
@@ -870,87 +907,105 @@ function creatorAddRecord(formName, data){
    Do NOT use data:{data:data}
 ===================================================== */
 
-function creatorUpdateRecord(reportName, recordId, formData)
+function isExtraKeyJsonError(error){
+  const text = getErrorText(error);
+  return (
+    text.indexOf('2945') !== -1 ||
+    text.indexOf('EXTRA_KEY_FOUND_IN_JSON') !== -1
+  );
+}
+
+/* ============================================================
+   UPDATE CREATOR RECORD - FIXED
+
+   Creator JS API v1 accepts config.data = formData.
+   The underlying Creator update body is { data: { ...fields } }.
+   ============================================================ */
+function creatorUpdateRecord(reportName, recordId, fields)
 {
-    if(!recordId)
-    {
-        return Promise.reject(
-            new Error(
-                "Missing record ID for report: " +
-                reportName
-            )
-        );
-    }
-
-    var config = {
-        reportName: reportName,
-        id: String(recordId),
-
-        // CORRECT
-        data: formData
-    };
-
-    console.log(
-        "UPDATE REQUEST:",
-        reportName,
-        recordId,
-        formData
+  if(!recordId){
+    return Promise.reject(
+      new Error('Missing record ID for report: ' + reportName)
     );
+  }
 
-    return ZOHO.CREATOR.API
-    .updateRecord(config)
+  const requestBody = {
+    data: fields
+  };
 
+  const config = {
+    reportName: reportName,
+    id: String(recordId),
+    data: requestBody
+  };
+
+  console.log('UPDATE REQUEST:', {
+    reportName: reportName,
+    id: String(recordId),
+    data: requestBody
+  });
+
+  return ZOHO.CREATOR.API.updateRecord(config)
     .then(function(response)
     {
-        console.log(
-            "UPDATE SUCCESS:",
-            reportName,
-            response
-        );
+      console.log('UPDATE RESPONSE:', reportName, recordId, response);
 
-        if(
-            response &&
-            (
-                response.code == 3000 ||
-                response.code == "3000"
-            )
-        )
-        {
-            return response.data;
-        }
+      if(response && (response.code == 3000 || response.code == '3000')){
+        return response.data;
+      }
 
-        console.error(
-            "UPDATE FAILED RESPONSE:",
-            response
-        );
-
-        throw response;
+      throw response;
     })
-
     .catch(function(error)
     {
-        console.error(
-            "UPDATE API ERROR:",
-            reportName,
-            recordId,
-            error
+      console.error('UPDATE API ERROR:', reportName, recordId, error);
+
+      if(error && error.responseText){
+        console.error('ZOHO RESPONSE TEXT:', error.responseText);
+      }
+
+      /*
+       * Compatibility fallback only for error 2945.
+       * If Creator rejects the wrapped request body in a particular
+       * widget build, retry the field map directly.
+       */
+      if(isExtraKeyJsonError(error)){
+        const fallbackConfig = {
+          reportName: reportName,
+          id: String(recordId),
+          data: fields
+        };
+
+        console.warn(
+          'Retrying update with alternate V1 payload shape:',
+          fallbackConfig
         );
 
-        if(
-            error &&
-            error.responseText
-        )
-        {
-            console.error(
-                "ZOHO RESPONSE TEXT:",
-                error.responseText
+        return ZOHO.CREATOR.API.updateRecord(fallbackConfig)
+          .then(function(response2)
+          {
+            console.log(
+              'UPDATE FALLBACK RESPONSE:',
+              reportName,
+              recordId,
+              response2
             );
-        }
 
-        throw error;
+            if(
+              response2 &&
+              (response2.code == 3000 || response2.code == '3000')
+            ){
+              return response2.data;
+            }
+
+            throw response2;
+          });
+      }
+
+      throw error;
     });
 }
-  
+
 async function saveAll(){
   const kSum = kraWeightSum(), kAllowed = state.settings.kraSectionWeight;
   const aSum = attrWeightSum(), aAllowed = state.settings.roleSectionWeight;
