@@ -253,7 +253,7 @@
 const REPORTS = { employees:"All_Employees", kra:"KRA_Report", goal:"Goal_Report", competency:"Competency_Report", review:"Review_Report" };
 const FORMS = { kra:"KRA", goal:"Goal", competency:"Competency", review:"Review", training:"Training_Need" };
 
-console.log("MEGA PERFORMANCE VERSION: 2026-08-11-FRESH-01");
+console.log("MEGA PERFORMANCE VERSION: 2026-08-11-FLEX-NUM-01");
 
 /* ============================================================
    STATE
@@ -756,6 +756,86 @@ function renderAll(){
 /* ============================================================
    SAVE / EXPORT (Creator Widget SDK)
    ============================================================ */
+/* ============================================================
+   FLEXIBLE NUMBER NORMALIZER
+
+   Accepts:
+   - integer: 75
+   - decimal: 75.25
+   - numeric string: "75.25"
+   - comma number: "1,250.50"
+   - percent text: "75%"
+   - blank / null / undefined / NaN -> "0"
+
+   Creator numeric fields are safest when values are sent as strings.
+   ============================================================ */
+function creatorNumericString(value, decimalPlaces){
+  let raw = value;
+
+  if(raw === null || raw === undefined || raw === ''){
+    return "0";
+  }
+
+  if(typeof raw === 'string'){
+    raw = raw.trim();
+    if(raw === '') return "0";
+
+    // Support common numeric display formats.
+    raw = raw.replace(/,/g, '').replace(/%/g, '').trim();
+
+    // Support accounting style negatives like (12.50).
+    if(/^\(.*\)$/.test(raw)){
+      raw = '-' + raw.slice(1, -1);
+    }
+  }
+
+  const n = Number(raw);
+  if(!Number.isFinite(n)){
+    return "0";
+  }
+
+  const places = Number.isInteger(decimalPlaces) ? Math.max(0, decimalPlaces) : 2;
+  const factor = Math.pow(10, places);
+  const rounded = Math.round((n + Number.EPSILON) * factor) / factor;
+
+  // Keep integers as integers and decimals as decimals.
+  return String(rounded);
+}
+
+function creatorIntegerString(value){
+  const normalized = creatorNumericString(value, 6);
+  const n = Number(normalized);
+  if(!Number.isFinite(n)) return "0";
+  return String(Math.round(n));
+}
+
+function getErrorText(err){
+  let text = '';
+  try{
+    if(err && err.responseText) text += ' ' + err.responseText;
+    if(err && err.message) text += ' ' + err.message;
+    if(err && err.error) text += ' ' + JSON.stringify(err.error);
+    if(err && err.code !== undefined) text += ' ' + err.code;
+  }catch(e){}
+  return text;
+}
+
+function isScoreNumberValidationError(err){
+  const text = getErrorText(err);
+  return (
+    text.indexOf('Final_Score') !== -1 ||
+    text.indexOf('Final Score') !== -1 ||
+    text.indexOf('KRA_Score') !== -1 ||
+    text.indexOf('KRA Score') !== -1 ||
+    text.indexOf('Competency_Score') !== -1 ||
+    text.indexOf('Competency Score') !== -1
+  ) && (
+    text.indexOf('3002') !== -1 ||
+    text.toLowerCase().indexOf('valid number') !== -1 ||
+    text.toLowerCase().indexOf('invalid') !== -1
+  );
+}
+
 function markUnsaved(){ setStatus('Unsaved changes — click Save Appraisal to persist.', null); }
 function setStatus(msg, ok){
   const s = document.getElementById('statusText');
@@ -837,14 +917,14 @@ async function saveAll(){
       if(!kra.name) continue;
       const kraRecord = await creatorAddRecord("KRA", {
         KRA_Name: kra.name, Description: kra.description||'', Employee_Name: employee,
-        Quarter: quarter, Year_field1: year, Weightage: kra.weightage
+        Quarter: quarter, Year_field1: year, Weightage: creatorNumericString(kra.weightage)
       });
       const kraId = kraRecord.ID;
       for(const goal of kra.goals){
         if(!goal.name) continue;
         await creatorAddRecord("Goal", {
-          Goal_Name: goal.name, Description: goal.name, KRA: kraId, Weightage: goal.weightage||'',
-          Achievement: goal.achievement||'', Self_Rating: goal.selfRating||'', Appraiser_Rating: '',
+          Goal_Name: goal.name, Description: goal.name, KRA: kraId, Weightage: goal.weightage === '' ? '' : creatorNumericString(goal.weightage),
+          Achievement: goal.achievement||'', Self_Rating: goal.selfRating === '' ? '' : creatorNumericString(goal.selfRating), Appraiser_Rating: '',
           Data_Source: "Manual"
         });
       }
@@ -852,7 +932,7 @@ async function saveAll(){
     for(const attr of state.attributes){
       if(!attr.name) continue;
       await creatorAddRecord("Competency", {
-        Attribute_Name: attr.name, Weightage: attr.weightage, Rating: attr.rating||'',
+        Attribute_Name: attr.name, Weightage: creatorNumericString(attr.weightage), Rating: attr.rating === '' ? '' : creatorNumericString(attr.rating),
         Employee_Name1: employee, Quarter: quarter, Year_field1: year
       });
     }
@@ -864,22 +944,77 @@ console.log("Competency :", scores.attrContribution);
 console.log("Final :", scores.overall);
 console.log("Type :", typeof scores.overall);
 
-await creatorAddRecord("Review", {
+const reviewBaseData = {
       Employee_Lookup: empId,
       Department_Head: deptHeadId || '',
       HR_Approver: hrApproverId || '',
       Status: statusVal,
-      Appraiser_Name: appraiser, Department: department, Quarter: quarter, Year_field: year,
+      Appraiser_Name: appraiser,
+      Department: department,
+      Quarter: quarter,
+      Year_field: year,
       Facilitating_Factors1: document.getElementById('facFactors').value,
       Constraining_Factors: document.getElementById('conFactors').value,
       Outstanding_Achievement: document.getElementById('outAchieve').value,
       Appraiser_Comments: document.getElementById('apprComments').value,
       My_Learnings: document.getElementById('myLearnings').value,
-      Overall_Rating: state.overallRating || '',
-      KRA_Score: parseFloat(scores.kraContribution.toFixed(2)) || 0,
-      Competency_Score: parseFloat(scores.attrContribution.toFixed(2)) || 0,
-      Final_Score: Number(scores.overall.toFixed(2)) || 0
+      Overall_Rating: state.overallRating || ''
+    };
+
+    // First choice: preserve decimal scores. Integer scores are also accepted by Decimal fields.
+    const reviewDecimalData = Object.assign({}, reviewBaseData, {
+      KRA_Score: creatorNumericString(scores.kraContribution, 2),
+      Competency_Score: creatorNumericString(scores.attrContribution, 2),
+      Final_Score: creatorNumericString(scores.overall, 2)
     });
+
+    console.log('REVIEW SCORES - DECIMAL MODE:', {
+      KRA_Score: reviewDecimalData.KRA_Score,
+      Competency_Score: reviewDecimalData.Competency_Score,
+      Final_Score: reviewDecimalData.Final_Score
+    });
+
+    try{
+      await creatorAddRecord("Review", reviewDecimalData);
+    }catch(reviewErr){
+      // If the Creator fields are configured as integer Number fields,
+      // retry automatically with rounded integers so the record is still saved.
+      if(isScoreNumberValidationError(reviewErr)){
+        console.warn('Decimal score rejected by Creator. Retrying Review with integer scores.', reviewErr);
+
+        const reviewIntegerData = Object.assign({}, reviewBaseData, {
+          KRA_Score: creatorIntegerString(scores.kraContribution),
+          Competency_Score: creatorIntegerString(scores.attrContribution),
+          Final_Score: creatorIntegerString(scores.overall)
+        });
+
+        console.log('REVIEW SCORES - INTEGER FALLBACK:', {
+          KRA_Score: reviewIntegerData.KRA_Score,
+          Competency_Score: reviewIntegerData.Competency_Score,
+          Final_Score: reviewIntegerData.Final_Score
+        });
+
+        try{
+          await creatorAddRecord("Review", reviewIntegerData);
+        }catch(integerErr){
+          // Last score-only fallback: use zero. This handles null / NaN / unusable numeric values
+          // and ensures the score fields always have a reportable numeric value.
+          if(isScoreNumberValidationError(integerErr)){
+            console.warn('Integer score also rejected. Retrying Review with zero scores.', integerErr);
+            const reviewZeroData = Object.assign({}, reviewBaseData, {
+              KRA_Score: "0",
+              Competency_Score: "0",
+              Final_Score: "0"
+            });
+            await creatorAddRecord("Review", reviewZeroData);
+          }else{
+            throw integerErr;
+          }
+        }
+      }else{
+        throw reviewErr;
+      }
+    }
     for(const t of state.training){
       if(!t.need) continue;
       await creatorAddRecord("Training_Need", {
