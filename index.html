@@ -861,25 +861,96 @@ function creatorAddRecord(formName, data){
     });
   });
 }
-function creatorUpdateRecord(reportName, id, data){
-  return new Promise((resolve, reject) => {
-    const config = {
-      reportName: reportName,
-      id: String(id),
-      data: { "data": data }
+
+
+  /* =====================================================
+   UPDATE CREATOR RECORD
+   IMPORTANT:
+   updateRecord uses data DIRECTLY.
+   Do NOT use data:{data:data}
+===================================================== */
+
+function creatorUpdateRecord(reportName, recordId, formData)
+{
+    if(!recordId)
+    {
+        return Promise.reject(
+            new Error(
+                "Missing record ID for report: " +
+                reportName
+            )
+        );
+    }
+
+    var config = {
+        reportName: reportName,
+        id: String(recordId),
+
+        // CORRECT
+        data: formData
     };
-    console.log('UPDATE RECORD:', reportName, id, data);
-    ZOHO.CREATOR.API.updateRecord(config).then(resp => {
-      console.log('UPDATE RESPONSE:', reportName, resp);
-      if(resp && (resp.code === 3000 || resp.code === '3000')){ resolve(resp.data); }
-      else { reject(resp); }
-    }).catch(err => {
-      console.error('UPDATE API ERROR:', reportName, err);
-      if(err && err.responseText){ console.error('UPDATE responseText:', err.responseText); }
-      reject(err);
+
+    console.log(
+        "UPDATE REQUEST:",
+        reportName,
+        recordId,
+        formData
+    );
+
+    return ZOHO.CREATOR.API
+    .updateRecord(config)
+
+    .then(function(response)
+    {
+        console.log(
+            "UPDATE SUCCESS:",
+            reportName,
+            response
+        );
+
+        if(
+            response &&
+            (
+                response.code == 3000 ||
+                response.code == "3000"
+            )
+        )
+        {
+            return response.data;
+        }
+
+        console.error(
+            "UPDATE FAILED RESPONSE:",
+            response
+        );
+
+        throw response;
+    })
+
+    .catch(function(error)
+    {
+        console.error(
+            "UPDATE API ERROR:",
+            reportName,
+            recordId,
+            error
+        );
+
+        if(
+            error &&
+            error.responseText
+        )
+        {
+            console.error(
+                "ZOHO RESPONSE TEXT:",
+                error.responseText
+            );
+        }
+
+        throw error;
     });
-  });
 }
+  
 async function saveAll(){
   const kSum = kraWeightSum(), kAllowed = state.settings.kraSectionWeight;
   const aSum = attrWeightSum(), aAllowed = state.settings.roleSectionWeight;
