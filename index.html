@@ -188,8 +188,53 @@ function renderSetup(){document.getElementById('kraBadge').textContent=state.kra
 
 function validatePlan(){if(!state.kras.length)return'Add at least one KRA.';if(!state.attributes.length)return'Add at least one Role Attribute.';for(const k of state.kras){if(!String(k.name).trim())return'Every KRA needs a name.';if(!k.goals.length)return'Every KRA needs at least one task.';for(const g of k.goals){if(!String(g.name).trim())return'Every task needs a description.';if(numberValue(g.weight,-1)<0)return'Task weightage cannot be negative.'}if(Math.abs(goalWeight(k)-numberValue(k.weight,0))>.01)return'Task weightage under "'+k.name+'" must equal '+numberValue(k.weight,0).toFixed(2)+'%.'}for(const a of state.attributes){if(!String(a.name).trim())return'Every Role Attribute needs a name.'}return''}
 function findReview(rows,empId,quarter,year){return rows.find(r=>lookupId(r.Employee_Lookup)===String(empId)&&textValue(r.Quarter)===String(quarter)&&textValue(r.Year_field)===String(year))||null}
-function getStage(review){const s=textValue(review&&review.Process_Stage).trim();if(s)return s;const status=textValue(review&&review.Status);if(status==='Head Approved')return STAGE.HEAD_APPROVED;if(status==='Approved')return STAGE.APPROVED;if(status==='Rejected')return STAGE.REJECTED;if(status==='Submitted for Approval')return STAGE.SELF_SUBMITTED;return STAGE.KRA_SUBMITTED}
+function getStage(review)
+{
+    if(!review)
+    {
+        return "";
+    }
 
+    var stage =
+        textValue(
+            review.Process_Stage
+        ).trim();
+
+    /*
+       Process_Stage is the ONLY workflow source.
+       Never assume Self Rating from Status.
+    */
+    if(stage === STAGE.KRA_SUBMITTED)
+    {
+        return STAGE.KRA_SUBMITTED;
+    }
+
+    if(stage === STAGE.SELF_SUBMITTED)
+    {
+        return STAGE.SELF_SUBMITTED;
+    }
+
+    if(stage === STAGE.HEAD_APPROVED)
+    {
+        return STAGE.HEAD_APPROVED;
+    }
+
+    if(stage === STAGE.APPROVED)
+    {
+        return STAGE.APPROVED;
+    }
+
+    if(stage === STAGE.REJECTED)
+    {
+        return STAGE.REJECTED;
+    }
+
+    /*
+       Old records / missing Process_Stage:
+       DO NOT send them to Department Head.
+    */
+    return "";
+}
 async function submitKraPlan(){const empId=document.getElementById('setupEmp').value,headId=document.getElementById('setupHead').value,hrId=document.getElementById('setupHr').value,year=String(document.getElementById('setupYear').value).trim(),emp=findEmployee(empId);if(!emp){showModal('KRA Setup','Select an employee.','error');return}if(!headId){showModal('KRA Setup','Select Department Head.','error');return}if(!hrId){showModal('KRA Setup','Select HR Approver.','error');return}if(!year){showModal('KRA Setup','Enter year.','error');return}const problem=validatePlan();if(problem){showModal('KRA Setup',problem,'error');return}setBusy('setupSubmitBtn',true,'Submitting...');setStatus('Submitting KRA plan...',null);try{const reviews=await getAll(REPORTS.review);if(findReview(reviews,empId,state.quarter,year)){showModal('KRA already exists','A KRA plan already exists for this Employee / Quarter / Year. Use Self Rating instead of creating duplicate records.','error');return}for(const k of state.kras){const kr=await addRecord(FORMS.kra,{KRA_Name:k.name,Description:k.description||'',Employee_Name:emp.name,Quarter:state.quarter,Year_field1:year,Weightage:num(k.weight)});for(let gi=0;gi<k.goals.length;gi++)await addGoalRecord(kr.ID,k.goals[gi],gi+1)}for(const a of state.attributes){await addRecord(FORMS.competency,{Attribute_Name:a.name,Weightage:num(a.weight),Employee_Name1:emp.name,Quarter:state.quarter,Year_field1:year})}await addRecord(FORMS.review,{Employee_Lookup:String(empId),Department_Head:String(headId),HR_Approver:String(hrId),Status:'Submitted for Approval',Process_Stage:STAGE.KRA_SUBMITTED,Appraiser_Name:document.getElementById('setupAppraiser').value||'',Department:emp.department||'',Quarter:state.quarter,Year_field:year,KRA_Section_Weight:num(state.settings.kraWeight),Role_Attribute_Weight:num(state.settings.attrWeight),KRA_Score:'0',Competency_Score:'0',Final_Score:'0'});setStatus('KRA plan submitted.',true);showModal('KRA submitted','KRA plan was submitted successfully. Task and KRA data are now stored for the Self Rating stage.','success')}catch(err){friendlyError(err,'KRA plan could not be submitted.')}finally{setBusy('setupSubmitBtn',false)}}
 
 function selfLocked(){if(!state.self)return true;return getStage(state.self.review)!==STAGE.KRA_SUBMITTED}
