@@ -214,10 +214,56 @@ function renderSelf(){const s=state.self;if(!s)return;document.getElementById('s
   document.getElementById('selfFac').value=textValue(s.review.Facilitating_Factors1);document.getElementById('selfCon').value=textValue(s.review.Constraining_Factors);document.getElementById('selfOutstanding').value=textValue(s.review.Outstanding_Achievement);document.getElementById('selfLearnings').value=textValue(s.review.My_Learnings);['selfFac','selfCon','selfOutstanding','selfLearnings'].forEach(id=>document.getElementById(id).disabled=locked);document.getElementById('addTrainingBtn').disabled=locked;renderTraining();renderSelfSummary();syncSelfButtons()}
 
 function validateSelfSubmit(){for(const p of state.self.kras){for(const g of p.goals){if(!String(textValue(g.Achievement)).trim())return'Enter Achievement for every task.';if(!ratingValid(g.Self_Rating))return'Enter a Self Rating from 0 to 5 for every task.'}}for(const a of state.self.attributes){if(!ratingValid(a.Rating))return'Enter a Self Rating from 0 to 5 for every Role Attribute.'}return''}
-async function saveSelfRating(finalSubmit){if(!state.self){showModal('Self Rating','Load Self Rating first.','error');return}if(selfLocked()){showModal('Self Rating locked','This Self Rating has already been submitted and cannot be changed.','error');return}if(finalSubmit){const p=validateSelfSubmit();if(p){showModal('Self Rating',p,'error');return}}const buttonId=finalSubmit?'selfSubmitBtn':'selfDraftBtn';setBusy(buttonId,true,finalSubmit?'Submitting...':'Saving...');setStatus(finalSubmit?'Submitting Self Rating...':'Saving Self Rating draft...',null);try{const updates=[];for(const pair of state.self.kras){for(const g of pair.goals){const f={Achievement:textValue(g.Achievement)};if(String(textValue(g.Self_Rating)).trim()!=='')f.Self_Rating=num(g.Self_Rating,2);updates.push(updateRecord(REPORTS.goal,g.ID,f))}}for(const a of state.self.attributes){if(String(textValue(a.Rating)).trim()!=='')updates.push(updateRecord(REPORTS.competency,a.ID,{Rating:num(a.Rating,2)}))}await Promise.all(updates);const scores=calculateSelfScores();const reviewFields={Facilitating_Factors1:document.getElementById('selfFac').value,Constraining_Factors:document.getElementById('selfCon').value,Outstanding_Achievement:document.getElementById('selfOutstanding').value,My_Learnings:document.getElementById('selfLearnings').value,KRA_Section_Weight:num(state.self.settings.kraWeight),Role_Attribute_Weight:num(state.self.settings.attrWeight),Self_KRA_Rating:num(scores.kra),Self_Role_Rating:num(scores.role),Self_Overall_Rating:num(scores.overall),KRA_Score:num(scores.kra),Competency_Score:num(scores.role)};if(finalSubmit){reviewFields.Status='Submitted for Approval';reviewFields.Process_Stage=STAGE.SELF_SUBMITTED}else{reviewFields.Status='Submitted for Approval';reviewFields.Process_Stage=STAGE.KRA_SUBMITTED}await updateRecord(REPORTS.review,state.self.review.ID,reviewFields);if(finalSubmit){for(const t of state.training){if(!String(t.need).trim())continue;await addRecord(FORMS.training,{Training_Need:t.need,Expected_Benefit:t.benefit||'',How_Fulfilled:t.fulfilled||'',Employee_Name:state.self.employee.name,Quarter1:state.self.quarter,Year_field:state.self.year})}state.self.review.Process_Stage=STAGE.SELF_SUBMITTED;state.self.review.Status='Submitted for Approval';renderSelf();showModal('Self Rating submitted','Your Self Rating has been submitted successfully and is now permanently locked.','success');setStatus('Self Rating submitted and locked.',true)}else{showModal('Draft saved','Self Rating draft was saved. You can continue editing until final submission.','success');setStatus('Self Rating draft saved.',true)}}catch(err){friendlyError(err,finalSubmit?'Self Rating could not be submitted.':'Self Rating draft could not be saved.');setStatus('Self Rating save failed.',false)}finally{setBusy(buttonId,false)}}
+if(finalSubmit)
+{
+    state.self.review.Status =
+        "Submitted for Approval";
 
+    state.self.review.Process_Stage =
+        STAGE.SELF_SUBMITTED;
+
+
+    renderSelf();
+
+
+    showModal(
+        "Self Rating submitted",
+        "Your Self Rating has been submitted successfully. It is now locked and available for Department Head Review.",
+        "success"
+    );
+
+
+    setStatus(
+        "Self Rating submitted and locked.",
+        true
+    );
+}
+else
+{
+    state.self.review.Status =
+        "Submitted for Approval";
+
+    state.self.review.Process_Stage =
+        STAGE.KRA_SUBMITTED;
+
+
+    showModal(
+        "Draft saved",
+        "Self Rating draft saved successfully. It has NOT been sent to Department Head.",
+        "success"
+    );
+
+
+    setStatus(
+        "Self Rating draft saved.",
+        true
+    );
+}
+  
+async function saveSelfRating(finalSubmit){if(!state.self){showModal('Self Rating','Load Self Rating first.','error');return}if(selfLocked()){showModal('Self Rating locked','This Self Rating has already been submitted and cannot be changed.','error');return}if(finalSubmit){const p=validateSelfSubmit();if(p){showModal('Self Rating',p,'error');return}}const buttonId=finalSubmit?'selfSubmitBtn':'selfDraftBtn';setBusy(buttonId,true,finalSubmit?'Submitting...':'Saving...');setStatus(finalSubmit?'Submitting Self Rating...':'Saving Self Rating draft...',null);try{const updates=[];for(const pair of state.self.kras){for(const g of pair.goals){const f={Achievement:textValue(g.Achievement)};if(String(textValue(g.Self_Rating)).trim()!=='')f.Self_Rating=num(g.Self_Rating,2);updates.push(updateRecord(REPORTS.goal,g.ID,f))}}for(const a of state.self.attributes){if(String(textValue(a.Rating)).trim()!=='')updates.push(updateRecord(REPORTS.competency,a.ID,{Rating:num(a.Rating,2)}))}await Promise.all(updates);const scores=calculateSelfScores();const reviewFields={Facilitating_Factors1:document.getElementById('selfFac').value,Constraining_Factors:document.getElementById('selfCon').value,Outstanding_Achievement:document.getElementById('selfOutstanding').value,My_Learnings:document.getElementById('selfLearnings').value,KRA_Section_Weight:num(state.self.settings.kraWeight),Role_Attribute_Weight:num(state.self.settings.attrWeight),Self_KRA_Rating:num(scores.kra),Self_Role_Rating:num(scores.role),Self_Overall_Rating:num(scores.overall),KRA_Score:num(scores.kra),Competency_Score:num(scores.role)};
 renderQuarterButtons();redistributeSetup();renderSetup();renderTraining();
 if(window.ZOHO&&ZOHO.CREATOR){ZOHO.CREATOR.init().then(()=>loadEmployees()).then(()=>setStatus('Ready.',true)).catch(err=>{friendlyError(err,'Creator widget could not be initialized.');setStatus('Initialization failed.',false)})}else{showModal('Creator SDK not detected','Open this page inside Zoho Creator.','error');setStatus('Zoho Creator SDK not detected.',false)}
+  
 </script>
 </body>
 </html>
