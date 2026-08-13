@@ -131,7 +131,7 @@ const DEFAULT_ROLE_SECTION_WEIGHT=20;
 const state={mode:'setup',quarter:'Q1',employees:[],currentUserEmail:'',currentEmployee:null,kras:[],attributes:[],training:[],self:null,settings:{kraWeight:DEFAULT_KRA_SECTION_WEIGHT,attrWeight:DEFAULT_ROLE_SECTION_WEIGHT}};
 let kraSeq=1,goalSeq=1,attrSeq=1,trainingSeq=1;
 const quarters=[{id:'Q1',label:'Q1: Apr-Jun'},{id:'Q2',label:'Q2: Jul-Sep'},{id:'Q3',label:'Q3: Oct-Dec'},{id:'Q4',label:'Q4: Jan-Mar'}];
-console.log('MEGA PERFORMANCE VERSION: 2026-08-13-STRICT-STAGE-01');
+console.log('MEGA PERFORMANCE VERSION: 2026-08-13-WORKING-FINAL-02');
 
 function showModal(title,message,type){document.getElementById('modalTitle').textContent=title||'Message';document.getElementById('modalMessage').textContent=message||'';const box=document.getElementById('modalBox');box.className='modal'+(type?' '+type:'');document.getElementById('modalBackdrop').classList.remove('hidden')}
 function closeModal(){document.getElementById('modalBackdrop').classList.add('hidden')}
@@ -149,7 +149,7 @@ function errorText(err){let s='';try{s=((err&&err.responseText)||'')+' '+((err&&
 function friendlyError(err,context){const raw=errorText(err);let msg='Unable to complete this action. Please try again.';if(raw.indexOf('Goal_Name')>=0&&raw.indexOf('3001')>=0)msg='One task title is longer than the Goal Name field allows. The full task is stored in Description; please try again.';else if(raw.indexOf('3002')>=0)msg='One of the values is not valid for its Creator field. Please check numeric fields and try again.';else if(raw.indexOf('2945')>=0||raw.indexOf('EXTRA_KEY_FOUND_IN_JSON')>=0)msg='Creator rejected the update format. Please refresh once and try again.';else if(raw.indexOf('3100')>=0)msg='No matching record was found.';if(context)msg=context+'\n\n'+msg;showModal('Action could not be completed',msg,'error');console.error(context||'Creator error',err)}
 function setBusy(id,busy,busyText){const b=document.getElementById(id);if(!b)return;if(busy){b.dataset.oldText=b.textContent;b.disabled=true;if(busyText)b.textContent=busyText}else{b.disabled=false;if(b.dataset.oldText)b.textContent=b.dataset.oldText}}
 
-function getAll(reportName){let page=1,out=[];function next(){return ZOHO.CREATOR.API.getAllRecords({reportName,page,pageSize:200}).then(r=>{const rows=r&&r.data?r.data:[];out=out.concat(rows);if(rows.length<200||page>=50)return out;page++;return next()}).catch(err=>{if(noData(err))return out;throw err})}return next()}
+function getAll(reportName,criteria){let page=1,out=[];function next(){const config={reportName:reportName,page:page,pageSize:200};if(criteria)config.criteria=criteria;return ZOHO.CREATOR.API.getAllRecords(config).then(r=>{const rows=r&&r.data?r.data:[];out=out.concat(rows);if(rows.length<200||page>=50)return out;page++;return next()}).catch(err=>{if(noData(err))return out;throw err})}return next()}
 function addRecord(formName,fields){const config={formName,data:{data:fields}};return ZOHO.CREATOR.API.addRecord(config).then(r=>{if(r&&r.code==3000)return r.data;throw r})}
 function updateRecord(reportName,id,fields){const wrapped={reportName,id:String(id),data:{data:fields}};return ZOHO.CREATOR.API.updateRecord(wrapped).then(r=>{if(r&&r.code==3000)return r.data;throw r}).catch(err=>{const t=errorText(err);if(t.indexOf('2945')>=0||t.indexOf('EXTRA_KEY_FOUND_IN_JSON')>=0){return ZOHO.CREATOR.API.updateRecord({reportName,id:String(id),data:fields}).then(r=>{if(r&&r.code==3000)return r.data;throw r})}throw err})}
 
@@ -188,7 +188,8 @@ function renderSetup(){document.getElementById('kraBadge').textContent=state.kra
 
 function validatePlan(){if(!state.kras.length)return'Add at least one KRA.';if(!state.attributes.length)return'Add at least one Role Attribute.';for(const k of state.kras){if(!String(k.name).trim())return'Every KRA needs a name.';if(!k.goals.length)return'Every KRA needs at least one task.';for(const g of k.goals){if(!String(g.name).trim())return'Every task needs a description.';if(numberValue(g.weight,-1)<0)return'Task weightage cannot be negative.'}if(Math.abs(goalWeight(k)-numberValue(k.weight,0))>.01)return'Task weightage under "'+k.name+'" must equal '+numberValue(k.weight,0).toFixed(2)+'%.'}for(const a of state.attributes){if(!String(a.name).trim())return'Every Role Attribute needs a name.'}return''}
 function findReview(rows,empId,quarter,year){return rows.find(r=>lookupId(r.Employee_Lookup)===String(empId)&&textValue(r.Quarter)===String(quarter)&&textValue(r.Year_field)===String(year))||null}
-function getStage(review){if(!review)return'';const stage=textValue(review.Process_Stage).trim();if(stage===STAGE.KRA_SUBMITTED)return STAGE.KRA_SUBMITTED;if(stage===STAGE.SELF_SUBMITTED)return STAGE.SELF_SUBMITTED;if(stage===STAGE.HEAD_APPROVED)return STAGE.HEAD_APPROVED;if(stage===STAGE.APPROVED)return STAGE.APPROVED;if(stage===STAGE.REJECTED)return STAGE.REJECTED;return''}
+function getStage(review){if(!review)return'';const resolved=String(review._resolvedStage||'').trim();if(resolved===STAGE.KRA_SUBMITTED||resolved===STAGE.SELF_SUBMITTED||resolved===STAGE.HEAD_APPROVED||resolved===STAGE.APPROVED||resolved===STAGE.REJECTED)return resolved;const stage=textValue(review.Process_Stage).trim();if(stage===STAGE.KRA_SUBMITTED||stage===STAGE.SELF_SUBMITTED||stage===STAGE.HEAD_APPROVED||stage===STAGE.APPROVED||stage===STAGE.REJECTED)return stage;return''}
+async function resolveReviewStage(review){if(!review||!review.ID)return'';let stage=getStage(review);if(stage){review._resolvedStage=stage;return stage}const candidates=[STAGE.KRA_SUBMITTED,STAGE.SELF_SUBMITTED,STAGE.HEAD_APPROVED,STAGE.APPROVED,STAGE.REJECTED];for(const candidate of candidates){const criteria='(ID == '+String(review.ID)+' && Process_Stage == "'+candidate+'")';const rows=await getAll(REPORTS.review,criteria);if(rows.length){review._resolvedStage=candidate;return candidate}}const status=textValue(review.Status).trim();if(status==='Approved'){review._resolvedStage=STAGE.APPROVED;return STAGE.APPROVED}if(status==='Rejected'){review._resolvedStage=STAGE.REJECTED;return STAGE.REJECTED}review._resolvedStage=STAGE.KRA_SUBMITTED;try{await updateRecord(REPORTS.review,review.ID,{Process_Stage:STAGE.KRA_SUBMITTED,Status:'Submitted for Approval'})}catch(stageErr){console.warn('Could not auto-migrate blank Process_Stage to KRA Submitted.',stageErr)}return STAGE.KRA_SUBMITTED}
 
 async function submitKraPlan(){const empId=document.getElementById('setupEmp').value,headId=document.getElementById('setupHead').value,hrId=document.getElementById('setupHr').value,year=String(document.getElementById('setupYear').value).trim(),emp=findEmployee(empId);if(!emp){showModal('KRA Setup','Select an employee.','error');return}if(!headId){showModal('KRA Setup','Select Department Head.','error');return}if(!hrId){showModal('KRA Setup','Select HR Approver.','error');return}if(!year){showModal('KRA Setup','Enter year.','error');return}const problem=validatePlan();if(problem){showModal('KRA Setup',problem,'error');return}setBusy('setupSubmitBtn',true,'Submitting...');setStatus('Submitting KRA plan...',null);try{const reviews=await getAll(REPORTS.review);if(findReview(reviews,empId,state.quarter,year)){showModal('KRA already exists','A KRA plan already exists for this Employee / Quarter / Year. Use Self Rating instead of creating duplicate records.','error');return}for(const k of state.kras){const kr=await addRecord(FORMS.kra,{KRA_Name:k.name,Description:k.description||'',Employee_Name:emp.name,Quarter:state.quarter,Year_field1:year,Weightage:num(k.weight)});for(let gi=0;gi<k.goals.length;gi++)await addGoalRecord(kr.ID,k.goals[gi],gi+1)}for(const a of state.attributes){await addRecord(FORMS.competency,{Attribute_Name:a.name,Weightage:num(a.weight),Employee_Name1:emp.name,Quarter:state.quarter,Year_field1:year})}await addRecord(FORMS.review,{Employee_Lookup:String(empId),Department_Head:String(headId),HR_Approver:String(hrId),Status:'Submitted for Approval',Process_Stage:STAGE.KRA_SUBMITTED,Appraiser_Name:document.getElementById('setupAppraiser').value||'',Department:emp.department||'',Quarter:state.quarter,Year_field:year,KRA_Section_Weight:num(state.settings.kraWeight),Role_Attribute_Weight:num(state.settings.attrWeight),KRA_Score:'0',Competency_Score:'0',Final_Score:'0'});setStatus('KRA plan submitted.',true);showModal('KRA submitted','KRA plan was submitted successfully. Task and KRA data are now stored for the Self Rating stage.','success')}catch(err){friendlyError(err,'KRA plan could not be submitted.')}finally{setBusy('setupSubmitBtn',false)}}
 
@@ -206,7 +207,31 @@ function calculateSelfScores(){if(!state.self)return{kra:0,role:0,overall:0};con
 function renderSelfSummary(){if(!state.self)return;const s=calculateSelfScores();document.getElementById('selfKraScore').textContent=s.kra.toFixed(2);document.getElementById('selfRoleScore').textContent=s.role.toFixed(2);document.getElementById('selfOverallScore').textContent=s.overall.toFixed(2);document.getElementById('selfFormulaBadge').textContent='KRA '+numberValue(state.self.settings.kraWeight,0)+'% / Role '+numberValue(state.self.settings.attrWeight,0)+'%'}
 function syncSelfButtons(){const selfMode=state.mode==='self',loaded=!!state.self,locked=selfLocked();document.getElementById('selfDraftBtn').classList.toggle('hidden',!selfMode||!loaded||locked);document.getElementById('selfSubmitBtn').classList.toggle('hidden',!selfMode||!loaded||locked)}
 
-async function loadSelfRating(){const empId=document.getElementById('selfEmp').value,quarter=document.getElementById('selfQuarter').value,year=String(document.getElementById('selfYear').value).trim(),emp=findEmployee(empId);if(!emp){showModal('Self Rating','Select employee.','error');return}setStatus('Loading existing KRA...',null);try{const results=await Promise.all([getAll(REPORTS.review),getAll(REPORTS.kra),getAll(REPORTS.goal),getAll(REPORTS.competency)]),review=findReview(results[0],empId,quarter,year);if(!review){state.self=null;document.getElementById('selfContent').classList.add('hidden');syncSelfButtons();showModal('Self Rating','No KRA plan was found for this Employee / Quarter / Year.','error');return}const kras=results[1].filter(k=>textValue(k.Employee_Name)===emp.name&&textValue(k.Quarter)===quarter&&textValue(k.Year_field1)===year),allGoals=results[2],attrs=results[3].filter(a=>textValue(a.Employee_Name1)===emp.name&&textValue(a.Quarter)===quarter&&textValue(a.Year_field1)===year),pairs=kras.map(k=>({kra:k,goals:allGoals.filter(g=>lookupId(g.KRA)===String(k.ID))}));let kw=numberValue(review.KRA_Section_Weight,NaN),rw=numberValue(review.Role_Attribute_Weight,NaN);if(!Number.isFinite(kw))kw=DEFAULT_KRA_SECTION_WEIGHT;if(!Number.isFinite(rw))rw=DEFAULT_ROLE_SECTION_WEIGHT;state.self={employee:emp,quarter,year,review,kras:pairs,attributes:attrs,settings:{kraWeight:kw,attrWeight:rw}};state.training=[];renderSelf();setStatus('Self Rating loaded.',true)}catch(err){friendlyError(err,'Self Rating could not be loaded.');setStatus('Self Rating load failed.',false)}}
+async function loadSelfRating(){
+  const empId=document.getElementById('selfEmp').value;
+  const quarter=document.getElementById('selfQuarter').value;
+  const year=String(document.getElementById('selfYear').value).trim();
+  const emp=findEmployee(empId);
+  if(!emp){showModal('Self Rating','Select employee.','error');return}
+  setStatus('Loading existing KRA...',null);
+  try{
+    const results=await Promise.all([getAll(REPORTS.review),getAll(REPORTS.kra),getAll(REPORTS.goal),getAll(REPORTS.competency)]);
+    const review=findReview(results[0],empId,quarter,year);
+    if(!review){state.self=null;document.getElementById('selfContent').classList.add('hidden');syncSelfButtons();showModal('Self Rating','No KRA plan was found for this Employee / Quarter / Year.','error');return}
+    await resolveReviewStage(review);
+    const kras=results[1].filter(k=>textValue(k.Employee_Name)===emp.name&&textValue(k.Quarter)===quarter&&textValue(k.Year_field1)===year);
+    const allGoals=results[2];
+    const attrs=results[3].filter(a=>textValue(a.Employee_Name1)===emp.name&&textValue(a.Quarter)===quarter&&textValue(a.Year_field1)===year);
+    const pairs=kras.map(k=>({kra:k,goals:allGoals.filter(g=>lookupId(g.KRA)===String(k.ID))}));
+    let kw=numberValue(review.KRA_Section_Weight,NaN),rw=numberValue(review.Role_Attribute_Weight,NaN);
+    if(!Number.isFinite(kw))kw=DEFAULT_KRA_SECTION_WEIGHT;
+    if(!Number.isFinite(rw))rw=DEFAULT_ROLE_SECTION_WEIGHT;
+    state.self={employee:emp,quarter:quarter,year:year,review:review,kras:pairs,attributes:attrs,settings:{kraWeight:kw,attrWeight:rw}};
+    state.training=[];
+    renderSelf();
+    setStatus('Self Rating loaded.',true);
+  }catch(err){friendlyError(err,'Self Rating could not be loaded.');setStatus('Self Rating load failed.',false)}
+}
 
 function renderSelf(){const s=state.self;if(!s)return;document.getElementById('selfContent').classList.remove('hidden');const locked=selfLocked(),stage=getStage(s.review);document.getElementById('selfStageBadge').textContent=statusLabel(s.review);document.getElementById('selfKraStatus').textContent=s.employee.name+' / '+s.quarter+' / '+s.year;document.getElementById('rejectionBox').classList.toggle('hidden',stage!==STAGE.REJECTED);document.getElementById('rejectionBox').textContent=stage===STAGE.REJECTED?'Department Head returned this appraisal: '+(textValue(s.review.Rejection_Comments)||'No rejection comment provided. Self Rating remains locked.') : '';
   document.getElementById('selfKraList').innerHTML=s.kras.length?s.kras.map(pair=>'<div class="kra-card"><strong>'+esc(textValue(pair.kra.KRA_Name))+'</strong><div class="note">'+esc(textValue(pair.kra.Description))+' | Weightage '+esc(textValue(pair.kra.Weightage))+'%</div>'+pair.goals.map(g=>'<div class="goal-card"><div class="readonly" style="margin-bottom:10px">'+esc(fullGoalText(g))+'</div><div class="goal-grid-self"><div><label>Achievement</label><textarea '+(locked?'disabled':'')+' onchange="selfGoalChange(\''+pair.kra.ID+'\',\''+g.ID+'\',\'Achievement\',this.value)">'+esc(textValue(g.Achievement))+'</textarea></div><div><label>Self Rating (0-5)</label><input type="number" min="0" max="5" step="0.1" value="'+esc(textValue(g.Self_Rating))+'" '+(locked?'disabled':'')+' oninput="selfGoalChange(\''+pair.kra.ID+'\',\''+g.ID+'\',\'Self_Rating\',this.value)"></div><div><label>Weightage</label><div class="readonly">'+esc(textValue(g.Weightage))+'%</div></div></div></div>').join('')+'</div>').join(''):'<div class="note">No KRA records found.</div>';
@@ -214,56 +239,74 @@ function renderSelf(){const s=state.self;if(!s)return;document.getElementById('s
   document.getElementById('selfFac').value=textValue(s.review.Facilitating_Factors1);document.getElementById('selfCon').value=textValue(s.review.Constraining_Factors);document.getElementById('selfOutstanding').value=textValue(s.review.Outstanding_Achievement);document.getElementById('selfLearnings').value=textValue(s.review.My_Learnings);['selfFac','selfCon','selfOutstanding','selfLearnings'].forEach(id=>document.getElementById(id).disabled=locked);document.getElementById('addTrainingBtn').disabled=locked;renderTraining();renderSelfSummary();syncSelfButtons()}
 
 function validateSelfSubmit(){for(const p of state.self.kras){for(const g of p.goals){if(!String(textValue(g.Achievement)).trim())return'Enter Achievement for every task.';if(!ratingValid(g.Self_Rating))return'Enter a Self Rating from 0 to 5 for every task.'}}for(const a of state.self.attributes){if(!ratingValid(a.Rating))return'Enter a Self Rating from 0 to 5 for every Role Attribute.'}return''}
-if(finalSubmit)
-{
-    state.self.review.Status =
-        "Submitted for Approval";
+async function saveSelfRating(finalSubmit){
+  if(!state.self){showModal('Self Rating','Load Self Rating first.','error');return}
+  if(selfLocked()){showModal('Self Rating locked','This Self Rating has already been submitted and cannot be changed.','error');return}
+  if(finalSubmit){const p=validateSelfSubmit();if(p){showModal('Self Rating',p,'error');return}}
+  const buttonId=finalSubmit?'selfSubmitBtn':'selfDraftBtn';
+  setBusy(buttonId,true,finalSubmit?'Submitting...':'Saving...');
+  setStatus(finalSubmit?'Submitting Self Rating...':'Saving Self Rating draft...',null);
+  try{
+    const updates=[];
+    for(const pair of state.self.kras){
+      for(const g of pair.goals){
+        const f={Achievement:textValue(g.Achievement)};
+        if(String(textValue(g.Self_Rating)).trim()!=='')f.Self_Rating=num(g.Self_Rating,2);
+        updates.push(updateRecord(REPORTS.goal,g.ID,f));
+      }
+    }
+    for(const a of state.self.attributes){
+      if(String(textValue(a.Rating)).trim()!=='')updates.push(updateRecord(REPORTS.competency,a.ID,{Rating:num(a.Rating,2)}));
+    }
+    await Promise.all(updates);
 
-    state.self.review.Process_Stage =
-        STAGE.SELF_SUBMITTED;
+    const reviewFields={
+      Facilitating_Factors1:document.getElementById('selfFac').value,
+      Constraining_Factors:document.getElementById('selfCon').value,
+      Outstanding_Achievement:document.getElementById('selfOutstanding').value,
+      My_Learnings:document.getElementById('selfLearnings').value,
+      KRA_Section_Weight:num(state.self.settings.kraWeight),
+      Role_Attribute_Weight:num(state.self.settings.attrWeight),
+      Status:'Submitted for Approval',
+      Process_Stage:finalSubmit?STAGE.SELF_SUBMITTED:STAGE.KRA_SUBMITTED
+    };
 
+    if(finalSubmit){
+      const scores=calculateSelfScores();
+      reviewFields.Self_KRA_Rating=num(scores.kra);
+      reviewFields.Self_Role_Rating=num(scores.role);
+      reviewFields.Self_Overall_Rating=num(scores.overall);
+    }
 
-    renderSelf();
+    await updateRecord(REPORTS.review,state.self.review.ID,reviewFields);
+    state.self.review.Status='Submitted for Approval';
+    state.self.review.Process_Stage=reviewFields.Process_Stage;
+    state.self.review._resolvedStage=reviewFields.Process_Stage;
 
-
-    showModal(
-        "Self Rating submitted",
-        "Your Self Rating has been submitted successfully. It is now locked and available for Department Head Review.",
-        "success"
-    );
-
-
-    setStatus(
-        "Self Rating submitted and locked.",
-        true
-    );
+    if(finalSubmit){
+      for(const t of state.training){
+        if(!String(t.need).trim())continue;
+        await addRecord(FORMS.training,{Training_Need:t.need,Expected_Benefit:t.benefit||'',How_Fulfilled:t.fulfilled||'',Employee_Name:state.self.employee.name,Quarter1:state.self.quarter,Year_field:state.self.year});
+      }
+      renderSelf();
+      showModal('Self Rating submitted','Your Self Rating has been submitted successfully. It is now locked and available in Department Head Review.','success');
+      setStatus('Self Rating submitted and locked.',true);
+    }else{
+      renderSelfSummary();
+      syncSelfButtons();
+      showModal('Draft saved','Self Rating draft was saved. It has NOT been sent to Department Head.','success');
+      setStatus('Self Rating draft saved.',true);
+    }
+  }catch(err){
+    friendlyError(err,finalSubmit?'Self Rating could not be submitted.':'Self Rating draft could not be saved.');
+    setStatus('Self Rating save failed.',false);
+  }finally{
+    setBusy(buttonId,false);
+  }
 }
-else
-{
-    state.self.review.Status =
-        "Submitted for Approval";
 
-    state.self.review.Process_Stage =
-        STAGE.KRA_SUBMITTED;
-
-
-    showModal(
-        "Draft saved",
-        "Self Rating draft saved successfully. It has NOT been sent to Department Head.",
-        "success"
-    );
-
-
-    setStatus(
-        "Self Rating draft saved.",
-        true
-    );
-}
-  
-async function saveSelfRating(finalSubmit){if(!state.self){showModal('Self Rating','Load Self Rating first.','error');return}if(selfLocked()){showModal('Self Rating locked','This Self Rating has already been submitted and cannot be changed.','error');return}if(finalSubmit){const p=validateSelfSubmit();if(p){showModal('Self Rating',p,'error');return}}const buttonId=finalSubmit?'selfSubmitBtn':'selfDraftBtn';setBusy(buttonId,true,finalSubmit?'Submitting...':'Saving...');setStatus(finalSubmit?'Submitting Self Rating...':'Saving Self Rating draft...',null);try{const updates=[];for(const pair of state.self.kras){for(const g of pair.goals){const f={Achievement:textValue(g.Achievement)};if(String(textValue(g.Self_Rating)).trim()!=='')f.Self_Rating=num(g.Self_Rating,2);updates.push(updateRecord(REPORTS.goal,g.ID,f))}}for(const a of state.self.attributes){if(String(textValue(a.Rating)).trim()!=='')updates.push(updateRecord(REPORTS.competency,a.ID,{Rating:num(a.Rating,2)}))}await Promise.all(updates);const scores=calculateSelfScores();const reviewFields={Facilitating_Factors1:document.getElementById('selfFac').value,Constraining_Factors:document.getElementById('selfCon').value,Outstanding_Achievement:document.getElementById('selfOutstanding').value,My_Learnings:document.getElementById('selfLearnings').value,KRA_Section_Weight:num(state.self.settings.kraWeight),Role_Attribute_Weight:num(state.self.settings.attrWeight),Self_KRA_Rating:num(scores.kra),Self_Role_Rating:num(scores.role),Self_Overall_Rating:num(scores.overall),KRA_Score:num(scores.kra),Competency_Score:num(scores.role)};
 renderQuarterButtons();redistributeSetup();renderSetup();renderTraining();
 if(window.ZOHO&&ZOHO.CREATOR){ZOHO.CREATOR.init().then(()=>loadEmployees()).then(()=>setStatus('Ready.',true)).catch(err=>{friendlyError(err,'Creator widget could not be initialized.');setStatus('Initialization failed.',false)})}else{showModal('Creator SDK not detected','Open this page inside Zoho Creator.','error');setStatus('Zoho Creator SDK not detected.',false)}
-  
 </script>
 </body>
 </html>
