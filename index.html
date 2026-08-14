@@ -131,7 +131,7 @@ const DEFAULT_ROLE_SECTION_WEIGHT=20;
 const state={mode:'setup',quarter:'Q1',employees:[],currentUserEmail:'',currentEmployee:null,kras:[],attributes:[],training:[],self:null,settings:{kraWeight:DEFAULT_KRA_SECTION_WEIGHT,attrWeight:DEFAULT_ROLE_SECTION_WEIGHT}};
 let kraSeq=1,goalSeq=1,attrSeq=1,trainingSeq=1;
 const quarters=[{id:'Q1',label:'Q1: Apr-Jun'},{id:'Q2',label:'Q2: Jul-Sep'},{id:'Q3',label:'Q3: Oct-Dec'},{id:'Q4',label:'Q4: Jan-Mar'}];
-console.log('MEGA PERFORMANCE VERSION: 2026-08-14-FINAL-STAGE-LOCK-01');
+console.log('MEGA PERFORMANCE VERSION: 2026-08-14-AUTO-OVERALL-FIX-02');
 
 function showModal(title,message,type){document.getElementById('modalTitle').textContent=title||'Message';document.getElementById('modalMessage').textContent=message||'';const box=document.getElementById('modalBox');box.className='modal'+(type?' '+type:'');document.getElementById('modalBackdrop').classList.remove('hidden')}
 function closeModal(){document.getElementById('modalBackdrop').classList.add('hidden')}
@@ -140,7 +140,7 @@ function setStatus(msg,ok){const e=document.getElementById('statusText');e.textC
 function esc(v){return(v===null||v===undefined?'':String(v)).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c))}
 function textValue(v){if(v===null||v===undefined)return'';if(typeof v==='object')return String(v.display_value||v.zc_display_value||v.value||'');return String(v)}
 function lookupId(v){if(!v)return'';if(typeof v==='object')return String(v.ID||v.id||'');return String(v)}
-function numberValue(v,fallback=0){const n=Number(String(v===null||v===undefined?'':v).replace(/,/g,'').replace(/%/g,'').trim());return Number.isFinite(n)?n:fallback}
+function numberValue(v,fallback=0){const raw=String(v===null||v===undefined?'':v).replace(/,/g,'').replace(/%/g,'').trim();if(raw==='')return fallback;const n=Number(raw);return Number.isFinite(n)?n:fallback}function optionalNumber(v){const raw=String(v===null||v===undefined?'':v).replace(/,/g,'').replace(/%/g,'').trim();if(raw==='')return null;const n=Number(raw);return Number.isFinite(n)?n:null}
 function num(v,places=2){const n=numberValue(v,0);const f=Math.pow(10,places);return String(Math.round((n+Number.EPSILON)*f)/f)}
 function round2(v){return Math.round((numberValue(v,0)+Number.EPSILON)*100)/100}
 function ratingValid(v){const n=numberValue(v,NaN);return Number.isFinite(n)&&n>=0&&n<=5}
@@ -264,6 +264,7 @@ function trainingChange(uid,f,v){const t=state.training.find(x=>x.uid===uid);if(
 function renderTraining(){document.getElementById('trainingRows').innerHTML=state.training.map(t=>'<div class="grid" style="margin-bottom:10px"><div><label>Training Need</label><input '+(selfLocked()?'disabled':'')+' value="'+esc(t.need)+'" onchange="trainingChange(\''+t.uid+'\',\'need\',this.value)"></div><div><label>Expected Benefit</label><input '+(selfLocked()?'disabled':'')+' value="'+esc(t.benefit)+'" onchange="trainingChange(\''+t.uid+'\',\'benefit\',this.value)"></div><div><label>How Fulfilled</label><input '+(selfLocked()?'disabled':'')+' value="'+esc(t.fulfilled)+'" onchange="trainingChange(\''+t.uid+'\',\'fulfilled\',this.value)"></div><div style="align-self:end"><button class="danger" '+(selfLocked()?'disabled':'')+' onclick="removeTraining(\''+t.uid+'\')">Remove</button></div></div>').join('')}
 
 function weightedRating(items,ratingGetter,weightGetter){let sum=0,weight=0,count=0,plain=0;items.forEach(item=>{const r=numberValue(ratingGetter(item),NaN);if(!Number.isFinite(r))return;const w=Math.max(0,numberValue(weightGetter(item),0));plain+=r;count++;if(w>0){sum+=r*w;weight+=w}});if(weight>0)return sum/weight;return count?plain/count:0}
+function resolveSelfPerformanceWeights(review,pairs,attrs){const reviewKra=optionalNumber(review&&review.KRA_Section_Weight),reviewRole=optionalNumber(review&&review.Role_Attribute_Weight),reviewTotal=(reviewKra===null?0:reviewKra)+(reviewRole===null?0:reviewRole);let kraWeight=reviewKra,attrWeight=reviewRole,source='Review';if(reviewKra===null||reviewRole===null||reviewTotal<=0){const kraTotal=(pairs||[]).reduce((sum,p)=>sum+Math.max(0,numberValue(p&&p.kra&&p.kra.Weightage,0)),0);const roleTotal=(attrs||[]).reduce((sum,a)=>sum+Math.max(0,numberValue(a&&a.Weightage,0)),0);if(kraTotal+roleTotal>0){kraWeight=kraTotal;attrWeight=roleTotal;source='KRA/Role records';}else{kraWeight=DEFAULT_KRA_SECTION_WEIGHT;attrWeight=DEFAULT_ROLE_SECTION_WEIGHT;source='default 80/20';}}const total=numberValue(kraWeight,0)+numberValue(attrWeight,0);if(total>0&&Math.abs(total-100)>0.01){kraWeight=numberValue(kraWeight,0)*100/total;attrWeight=numberValue(attrWeight,0)*100/total;source=source+' normalized';}const resolved={kraWeight:round2(kraWeight),attrWeight:round2(attrWeight)};console.log('SELF PERFORMANCE WEIGHTS AUTO RESOLVED:',{kraWeight:resolved.kraWeight,roleWeight:resolved.attrWeight,source:source});return resolved}
 function calculateSelfScores(){if(!state.self)return{kra:0,role:0,overall:0};const goals=[];state.self.kras.forEach(p=>p.goals.forEach(g=>goals.push(g)));const kra=weightedRating(goals,g=>g.Self_Rating,g=>g.Weightage);const role=weightedRating(state.self.attributes,a=>a.Rating,a=>a.Weightage);const kw=numberValue(state.self.settings.kraWeight,DEFAULT_KRA_SECTION_WEIGHT),rw=numberValue(state.self.settings.attrWeight,DEFAULT_ROLE_SECTION_WEIGHT),total=kw+rw;const overall=total>0?(kra*kw+role*rw)/total:0;return{kra:round2(kra),role:round2(role),overall:round2(overall)}}
 function renderSelfSummary(){if(!state.self)return;const s=calculateSelfScores();document.getElementById('selfKraScore').textContent=s.kra.toFixed(2);document.getElementById('selfRoleScore').textContent=s.role.toFixed(2);document.getElementById('selfOverallScore').textContent=s.overall.toFixed(2);document.getElementById('selfFormulaBadge').textContent='KRA '+numberValue(state.self.settings.kraWeight,0)+'% / Role '+numberValue(state.self.settings.attrWeight,0)+'%'}
 function syncSelfButtons(){const selfMode=state.mode==='self',loaded=!!state.self,locked=selfLocked();document.getElementById('selfDraftBtn').classList.toggle('hidden',!selfMode||!loaded||locked);document.getElementById('selfSubmitBtn').classList.toggle('hidden',!selfMode||!loaded||locked)}
@@ -284,10 +285,8 @@ async function loadSelfRating(){
     const allGoals=results[2];
     const attrs=results[3].filter(a=>textValue(a.Employee_Name1)===emp.name&&textValue(a.Quarter)===quarter&&textValue(a.Year_field1)===year);
     const pairs=kras.map(k=>({kra:k,goals:allGoals.filter(g=>lookupId(g.KRA)===String(k.ID))}));
-    let kw=numberValue(review.KRA_Section_Weight,NaN),rw=numberValue(review.Role_Attribute_Weight,NaN);
-    if(!Number.isFinite(kw))kw=DEFAULT_KRA_SECTION_WEIGHT;
-    if(!Number.isFinite(rw))rw=DEFAULT_ROLE_SECTION_WEIGHT;
-    state.self={employee:emp,quarter:quarter,year:year,review:review,kras:pairs,attributes:attrs,settings:{kraWeight:kw,attrWeight:rw}};
+    const resolvedWeights=resolveSelfPerformanceWeights(review,pairs,attrs);
+    state.self={employee:emp,quarter:quarter,year:year,review:review,kras:pairs,attributes:attrs,settings:resolvedWeights};
     state.training=[];
     renderSelf();
     setStatus('Self Rating loaded.',true);
