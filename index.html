@@ -131,7 +131,7 @@ const DEFAULT_ROLE_SECTION_WEIGHT=20;
 const state={mode:'setup',quarter:'Q1',employees:[],currentUserEmail:'',currentEmployee:null,kras:[],attributes:[],training:[],self:null,settings:{kraWeight:DEFAULT_KRA_SECTION_WEIGHT,attrWeight:DEFAULT_ROLE_SECTION_WEIGHT}};
 let kraSeq=1,goalSeq=1,attrSeq=1,trainingSeq=1;
 const quarters=[{id:'Q1',label:'Q1: Apr-Jun'},{id:'Q2',label:'Q2: Jul-Sep'},{id:'Q3',label:'Q3: Oct-Dec'},{id:'Q4',label:'Q4: Jan-Mar'}];
-console.log('MEGA PERFORMANCE VERSION: 2026-08-14-AUTO-OVERALL-FIX-02');
+console.log('MEGA PERFORMANCE VERSION: 2026-08-14-CALCULATION-FINAL-FIX-01');
 
 function showModal(title,message,type){document.getElementById('modalTitle').textContent=title||'Message';document.getElementById('modalMessage').textContent=message||'';const box=document.getElementById('modalBox');box.className='modal'+(type?' '+type:'');document.getElementById('modalBackdrop').classList.remove('hidden')}
 function closeModal(){document.getElementById('modalBackdrop').classList.add('hidden')}
@@ -153,9 +153,49 @@ function getAll(reportName,criteria){let page=1,out=[];function next(){const con
 function addRecord(formName,fields){const config={formName,data:{data:fields}};return ZOHO.CREATOR.API.addRecord(config).then(r=>{if(r&&r.code==3000)return r.data;throw r})}
 function updateRecord(reportName,id,fields){const wrapped={reportName,id:String(id),data:{data:fields}};return ZOHO.CREATOR.API.updateRecord(wrapped).then(r=>{if(r&&r.code==3000)return r.data;throw r}).catch(err=>{const t=errorText(err);if(t.indexOf('2945')>=0||t.indexOf('EXTRA_KEY_FOUND_IN_JSON')>=0){return ZOHO.CREATOR.API.updateRecord({reportName,id:String(id),data:fields}).then(r=>{if(r&&r.code==3000)return r.data;throw r})}throw err})}
 
+/* =====================================================
+   EXACT APPRAISAL SCOPE
+
+   Every new appraisal gets one Appraisal_Key.
+   The same key is stored on Review, KRA, Goal,
+   Competency and Training Need records.
+
+   This prevents old records from another appraisal,
+   even for the same employee / quarter / year,
+   from appearing in Self, Head or HR review.
+===================================================== */
+function criteriaEscape(value){return String(value===null||value===undefined?'':value).replace(/\\/g,'\\\\').replace(/"/g,'\\"')}
+function makeAppraisalKey(empId,quarter,year){return 'APPR-'+String(empId)+'-'+String(quarter)+'-'+String(year)+'-'+Date.now()}
+function appraisalKey(review){return textValue(review&&review.Appraisal_Key).trim()}
+function idCompareDesc(a,b){const x=String(a&&a.ID||''),y=String(b&&b.ID||'');if(x.length!==y.length)return y.length-x.length;return y.localeCompare(x)}
+function chooseLatestWeightedSet(rows,targetWeight,weightGetter){
+  const sorted=(rows||[]).slice().sort(idCompareDesc);
+  const target=Math.max(0,Math.round(numberValue(targetWeight,0)*100));
+  if(!sorted.length||target<=0)return sorted;
+  const dp=new Array(target+1).fill(null);dp[0]=[];
+  for(const row of sorted){
+    const w=Math.max(0,Math.round(numberValue(weightGetter(row),0)*100));
+    if(w<=0||w>target)continue;
+    for(let sum=target;sum>=w;sum--){
+      if(dp[sum]===null&&dp[sum-w]!==null)dp[sum]=dp[sum-w].concat([row]);
+    }
+    if(dp[target])return dp[target];
+  }
+  for(let sum=target;sum>=0;sum--){if(dp[sum]&&dp[sum].length)return dp[sum]}
+  return sorted;
+}
+function employeeRecordMatches(field,empId,empName){const id=lookupId(field);if(id&&String(id)===String(empId))return true;return textValue(field).trim()===String(empName||'').trim()}
+async function safeTagRecord(reportName,id,key){if(!id||!key)return;try{await updateRecord(reportName,id,{Appraisal_Key:key})}catch(e){console.warn('Could not tag legacy record with Appraisal_Key:',reportName,id,e)}}
+
+
 function buildGoalName(fullTask,taskNumber){const raw=String(fullTask||'').trim();if(!raw)return'Task '+taskNumber;const first=(raw.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||raw).replace(/^[\s\u2022*\-]+/,'').replace(/\s+/g,' ').trim();return first.length<=80?first:first.slice(0,77).trim()+'...'}
 function goalNameTooLong(err){const t=errorText(err);return t.indexOf('3001')>=0&&t.indexOf('Goal_Name')>=0}
-async function addGoalRecord(kraId,goal,taskNumber){const fullTask=String(goal.name||'').trim();const base={Description:fullTask,KRA:String(kraId),Weightage:num(goal.weight),Data_Source:'Manual'};try{return await addRecord(FORMS.goal,Object.assign({Goal_Name:buildGoalName(fullTask,taskNumber)},base))}catch(err){if(goalNameTooLong(err))return addRecord(FORMS.goal,Object.assign({Goal_Name:'Task '+taskNumber},base));throw err}}
+async function addGoalRecord(kraId,goal,taskNumber,key){
+  const fullTask=String(goal.name||'').trim();
+  const base={Description:fullTask,KRA:String(kraId),Weightage:num(goal.weight),Data_Source:'Manual',Appraisal_Key:key};
+  try{return await addRecord(FORMS.goal,Object.assign({Goal_Name:buildGoalName(fullTask,taskNumber)},base))}
+  catch(err){if(goalNameTooLong(err))return addRecord(FORMS.goal,Object.assign({Goal_Name:'Task '+taskNumber},base));throw err}
+}
 function fullGoalText(goal){return textValue(goal&&goal.Description)||textValue(goal&&goal.Goal_Name)}
 
 function getCurrentUser(){try{const r=ZOHO.CREATOR.UTIL.getInitParams();if(r&&typeof r.then==='function')return r.then(x=>x&&x.loginUser?String(x.loginUser):'').catch(()=> '');return Promise.resolve(r&&r.loginUser?String(r.loginUser):'')}catch(e){return Promise.resolve('')}}
@@ -187,7 +227,10 @@ function renderSetup(){document.getElementById('kraBadge').textContent=state.kra
   document.getElementById('setupAttrList').innerHTML=state.attributes.length?state.attributes.map((a,i)=>'<div class="attr-row"><div><label>Attribute '+(i+1)+'</label><input value="'+esc(a.name)+'" onchange="setAttr(\''+a.uid+'\',\'name\',this.value)"></div><div><label>Weightage</label><input value="'+numberValue(a.weight,0).toFixed(2)+'%" disabled></div><div><button class="danger" onclick="removeAttribute(\''+a.uid+'\')">Remove</button></div></div>').join(''):'<div class="note">No role attributes added yet.</div>'}
 
 function validatePlan(){if(!state.kras.length)return'Add at least one KRA.';if(!state.attributes.length)return'Add at least one Role Attribute.';for(const k of state.kras){if(!String(k.name).trim())return'Every KRA needs a name.';if(!k.goals.length)return'Every KRA needs at least one task.';for(const g of k.goals){if(!String(g.name).trim())return'Every task needs a description.';if(numberValue(g.weight,-1)<0)return'Task weightage cannot be negative.'}if(Math.abs(goalWeight(k)-numberValue(k.weight,0))>.01)return'Task weightage under "'+k.name+'" must equal '+numberValue(k.weight,0).toFixed(2)+'%.'}for(const a of state.attributes){if(!String(a.name).trim())return'Every Role Attribute needs a name.'}return''}
-function findReview(rows,empId,quarter,year){return rows.find(r=>lookupId(r.Employee_Lookup)===String(empId)&&textValue(r.Quarter)===String(quarter)&&textValue(r.Year_field)===String(year))||null}
+function findReview(rows,empId,quarter,year){
+  const matches=(rows||[]).filter(r=>lookupId(r.Employee_Lookup)===String(empId)&&textValue(r.Quarter)===String(quarter)&&textValue(r.Year_field)===String(year)).sort(idCompareDesc);
+  return matches[0]||null;
+}
 function normalizeStage(value){
   const s=String(value===null||value===undefined?'':value).trim();
   if(s===STAGE.READY_SELF||s==='KRA Submitted')return STAGE.READY_SELF;
@@ -252,8 +295,40 @@ async function resolveReviewStage(review){
   return STAGE.READY_SELF;
 }
 
-async function submitKraPlan(){const empId=document.getElementById('setupEmp').value,headId=document.getElementById('setupHead').value,hrId=document.getElementById('setupHr').value,year=String(document.getElementById('setupYear').value).trim(),emp=findEmployee(empId);if(!emp){showModal('KRA Setup','Select an employee.','error');return}if(!headId){showModal('KRA Setup','Select Department Head.','error');return}if(!hrId){showModal('KRA Setup','Select HR Approver.','error');return}if(!year){showModal('KRA Setup','Enter year.','error');return}const problem=validatePlan();if(problem){showModal('KRA Setup',problem,'error');return}setBusy('setupSubmitBtn',true,'Submitting...');setStatus('Submitting KRA plan...',null);try{const reviews=await getAll(REPORTS.review);if(findReview(reviews,empId,state.quarter,year)){showModal('KRA already exists','A KRA plan already exists for this Employee / Quarter / Year. Use Self Rating instead of creating duplicate records.','error');return}for(const k of state.kras){const kr=await addRecord(FORMS.kra,{KRA_Name:k.name,Description:k.description||'',Employee_Name:emp.name,Quarter:state.quarter,Year_field1:year,Weightage:num(k.weight)});for(let gi=0;gi<k.goals.length;gi++)await addGoalRecord(kr.ID,k.goals[gi],gi+1)}for(const a of state.attributes){await addRecord(FORMS.competency,{Attribute_Name:a.name,Weightage:num(a.weight),Employee_Name1:emp.name,Quarter:state.quarter,Year_field1:year})}await addRecord(FORMS.review,{Employee_Lookup:String(empId),Department_Head:String(headId),HR_Approver:String(hrId),Status:'Submitted for Approval',Process_Stage:STAGE.READY_SELF,Appraiser_Name:document.getElementById('setupAppraiser').value||'',Department:emp.department||'',Quarter:state.quarter,Year_field:year,KRA_Section_Weight:num(state.settings.kraWeight),Role_Attribute_Weight:num(state.settings.attrWeight),});setStatus('Ready for Self Rating.',true);showModal('Ready for Self Rating','KRA plan was submitted successfully. Status is now Ready for Self Rating. Open the Self Rating tab to continue.','success')}catch(err){friendlyError(err,'KRA plan could not be submitted.')}finally{setBusy('setupSubmitBtn',false)}}
-
+async function submitKraPlan(){
+  const empId=document.getElementById('setupEmp').value;
+  const headId=document.getElementById('setupHead').value;
+  const hrId=document.getElementById('setupHr').value;
+  const year=String(document.getElementById('setupYear').value).trim();
+  const emp=findEmployee(empId);
+  if(!emp){showModal('KRA Setup','Select an employee.','error');return}
+  if(!headId){showModal('KRA Setup','Select Department Head.','error');return}
+  if(!hrId){showModal('KRA Setup','Select HR Approver.','error');return}
+  if(!year){showModal('KRA Setup','Enter year.','error');return}
+  const problem=validatePlan();if(problem){showModal('KRA Setup',problem,'error');return}
+  setBusy('setupSubmitBtn',true,'Submitting...');setStatus('Submitting KRA plan...',null);
+  try{
+    const reviews=await getAll(REPORTS.review);
+    if(findReview(reviews,empId,state.quarter,year)){
+      showModal('KRA already exists','An appraisal already exists for this Employee / Quarter / Year. Open Self Rating instead of creating another KRA set.','error');return;
+    }
+    const key=makeAppraisalKey(empId,state.quarter,year);
+    for(const k of state.kras){
+      const kr=await addRecord(FORMS.kra,{KRA_Name:k.name,Description:k.description||'',Employee_Name:emp.name,Quarter:state.quarter,Year_field1:year,Weightage:num(k.weight),Appraisal_Key:key});
+      for(let gi=0;gi<k.goals.length;gi++)await addGoalRecord(kr.ID,k.goals[gi],gi+1,key);
+    }
+    for(const a of state.attributes){
+      await addRecord(FORMS.competency,{Attribute_Name:a.name,Weightage:num(a.weight),Employee_Name1:emp.name,Quarter:state.quarter,Year_field1:year,Appraisal_Key:key});
+    }
+    await addRecord(FORMS.review,{Employee_Lookup:String(empId),Department_Head:String(headId),HR_Approver:String(hrId),Status:'Submitted for Approval',Process_Stage:STAGE.READY_SELF,Appraisal_Key:key,Appraiser_Name:document.getElementById('setupAppraiser').value||'',Department:emp.department||'',Quarter:state.quarter,Year_field:year,KRA_Section_Weight:num(state.settings.kraWeight),Role_Attribute_Weight:num(state.settings.attrWeight)});
+    setStatus('Ready for Self Rating.',true);
+    showModal('Ready for Self Rating',"KRA plan was submitted successfully. Only this appraisal's KRA and tasks will be used in Self Rating, Department Head Review and HR Review.",'success');
+  }catch(err){
+    const raw=errorText(err);
+    if(raw.indexOf('Appraisal_Key')>=0){showModal('Creator setup required','Add a Single Line field with link name Appraisal_Key to Review, KRA, Goal, Competency and Training_Need forms/reports, then submit again.','error');console.error(err)}
+    else friendlyError(err,'KRA plan could not be submitted.');
+  }finally{setBusy('setupSubmitBtn',false)}
+}
 function selfLocked(){if(!state.self)return true;return getStage(state.self.review)!==STAGE.READY_SELF}
 function statusLabel(review){const stage=getStage(review);if(stage===STAGE.READY_SELF)return'Ready for Self Rating';if(stage===STAGE.SELF_SUBMITTED)return'Self Rating Submitted / Locked';if(stage===STAGE.HEAD_SUBMITTED)return'Department Head Rating Submitted';if(stage===STAGE.APPROVED)return'Approved';if(stage===STAGE.REJECTED)return'Rejected / Self Rating Locked';return stage}
 function selfGoalChange(kid,gid,f,v){const p=state.self&&state.self.kras.find(x=>String(x.kra.ID)===String(kid));if(!p)return;const g=p.goals.find(x=>String(x.ID)===String(gid));if(g){g[f]=v;renderSelfSummary()}}
@@ -269,27 +344,49 @@ function calculateSelfScores(){if(!state.self)return{kra:0,role:0,overall:0};con
 function renderSelfSummary(){if(!state.self)return;const s=calculateSelfScores();document.getElementById('selfKraScore').textContent=s.kra.toFixed(2);document.getElementById('selfRoleScore').textContent=s.role.toFixed(2);document.getElementById('selfOverallScore').textContent=s.overall.toFixed(2);document.getElementById('selfFormulaBadge').textContent='KRA '+numberValue(state.self.settings.kraWeight,0)+'% / Role '+numberValue(state.self.settings.attrWeight,0)+'%'}
 function syncSelfButtons(){const selfMode=state.mode==='self',loaded=!!state.self,locked=selfLocked();document.getElementById('selfDraftBtn').classList.toggle('hidden',!selfMode||!loaded||locked);document.getElementById('selfSubmitBtn').classList.toggle('hidden',!selfMode||!loaded||locked)}
 
+
+async function loadExactSelfDataset(review,emp,quarter,year){
+  const key=appraisalKey(review);
+  if(key){
+    const c='(Appraisal_Key == "'+criteriaEscape(key)+'")';
+    const results=await Promise.all([getAll(REPORTS.kra,c),getAll(REPORTS.goal,c),getAll(REPORTS.competency,c)]);
+    const kraIds={};results[0].forEach(k=>kraIds[String(k.ID)]=true);
+    const goals=results[1].filter(g=>kraIds[lookupId(g.KRA)]||results[0].some(k=>String(k.ID)===lookupId(g.KRA)));
+    return {key:key,kras:results[0],goals:goals,attrs:results[2]};
+  }
+
+  // Legacy records: isolate the newest weighted KRA/Role set for this exact employee + quarter + year.
+  const results=await Promise.all([getAll(REPORTS.kra),getAll(REPORTS.goal),getAll(REPORTS.competency)]);
+  const candidateKras=results[0].filter(k=>employeeRecordMatches(k.Employee_Name,emp.ID,emp.name)&&textValue(k.Quarter)===quarter&&textValue(k.Year_field1)===year);
+  const candidateAttrs=results[2].filter(a=>employeeRecordMatches(a.Employee_Name1,emp.ID,emp.name)&&textValue(a.Quarter)===quarter&&textValue(a.Year_field1)===year);
+  const targetKra=numberValue(review.KRA_Section_Weight,DEFAULT_KRA_SECTION_WEIGHT);
+  const targetRole=numberValue(review.Role_Attribute_Weight,DEFAULT_ROLE_SECTION_WEIGHT);
+  const kras=chooseLatestWeightedSet(candidateKras,targetKra,k=>k.Weightage);
+  const attrs=chooseLatestWeightedSet(candidateAttrs,targetRole,a=>a.Weightage);
+  const ids={};kras.forEach(k=>ids[String(k.ID)]=true);
+  const goals=results[1].filter(g=>ids[lookupId(g.KRA)]);
+  return {key:'',kras:kras,goals:goals,attrs:attrs};
+}
+
 async function loadSelfRating(){
   const empId=document.getElementById('selfEmp').value;
   const quarter=document.getElementById('selfQuarter').value;
   const year=String(document.getElementById('selfYear').value).trim();
   const emp=findEmployee(empId);
   if(!emp){showModal('Self Rating','Select employee.','error');return}
-  setStatus('Loading existing KRA...',null);
+  setStatus('Loading this appraisal only...',null);
   try{
-    const results=await Promise.all([getAll(REPORTS.review),getAll(REPORTS.kra),getAll(REPORTS.goal),getAll(REPORTS.competency)]);
-    const review=findReview(results[0],empId,quarter,year);
+    const reviews=await getAll(REPORTS.review);
+    const review=findReview(reviews,empId,quarter,year);
     if(!review){state.self=null;document.getElementById('selfContent').classList.add('hidden');syncSelfButtons();showModal('Self Rating','No KRA plan was found for this Employee / Quarter / Year.','error');return}
     await resolveReviewStage(review);
-    const kras=results[1].filter(k=>textValue(k.Employee_Name)===emp.name&&textValue(k.Quarter)===quarter&&textValue(k.Year_field1)===year);
-    const allGoals=results[2];
-    const attrs=results[3].filter(a=>textValue(a.Employee_Name1)===emp.name&&textValue(a.Quarter)===quarter&&textValue(a.Year_field1)===year);
-    const pairs=kras.map(k=>({kra:k,goals:allGoals.filter(g=>lookupId(g.KRA)===String(k.ID))}));
-    const resolvedWeights=resolveSelfPerformanceWeights(review,pairs,attrs);
-    state.self={employee:emp,quarter:quarter,year:year,review:review,kras:pairs,attributes:attrs,settings:resolvedWeights};
+    const dataset=await loadExactSelfDataset(review,emp,quarter,year);
+    const pairs=dataset.kras.map(k=>({kra:k,goals:dataset.goals.filter(g=>lookupId(g.KRA)===String(k.ID))}));
+    const resolvedWeights=resolveSelfPerformanceWeights(review,pairs,dataset.attrs);
+    state.self={employee:emp,quarter:quarter,year:year,review:review,kras:pairs,attributes:dataset.attrs,settings:resolvedWeights,appraisalKey:dataset.key};
     state.training=[];
     renderSelf();
-    setStatus('Self Rating loaded.',true);
+    setStatus('Self Rating loaded for '+quarter+' / '+year+'.',true);
   }catch(err){friendlyError(err,'Self Rating could not be loaded.');setStatus('Self Rating load failed.',false)}
 }
 
@@ -356,7 +453,7 @@ async function saveSelfRating(finalSubmit){
     if(finalSubmit){
       for(const t of state.training){
         if(!String(t.need).trim())continue;
-        await addRecord(FORMS.training,{Training_Need:t.need,Expected_Benefit:t.benefit||'',How_Fulfilled:t.fulfilled||'',Employee_Name:state.self.employee.name,Quarter1:state.self.quarter,Year_field:state.self.year});
+        await addRecord(FORMS.training,{Training_Need:t.need,Expected_Benefit:t.benefit||'',How_Fulfilled:t.fulfilled||'',Employee_Name:state.self.employee.name,Quarter1:state.self.quarter,Year_field:state.self.year,Appraisal_Key:appraisalKey(state.self.review)||state.self.appraisalKey||''});
       }
       renderSelf();
       lockSelfRatingUI();
