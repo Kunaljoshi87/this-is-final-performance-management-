@@ -3,310 +3,76 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Employee Performance - Mega Engineering</title>
+<title>HR Final Appraisal Review - Mega Engineering</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://static.zohocdn.com/creator/widgets/version/1.0/widgetsdk-min.js"></script>
 <style>
-:root{--bg:#F4F6F8;--panel:#fff;--line:#D7DEE5;--navy:#1E4E8C;--red:#C0392B;--green:#1E8E5A;--text:#1F2937;--muted:#6B7A8F;--amber:#B7791F}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif}body{padding:24px 28px 92px;min-height:100vh}
-input,textarea,select{background:#F9FAFB;border:1px solid var(--line);color:var(--text);font-family:Inter,sans-serif;font-size:13px;padding:8px 10px;width:100%;outline:none}input:focus,textarea:focus,select:focus{border-color:var(--navy)}input:disabled,textarea:disabled,select:disabled{background:#EEF1F4;color:var(--muted)}textarea{resize:vertical;min-height:70px}label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:4px}
-button{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:transparent;border:1px solid var(--navy);color:var(--navy);padding:9px 15px;cursor:pointer}button:hover{background:var(--navy);color:#fff}button.solid{background:var(--navy);color:#fff}button.danger{border-color:var(--red);color:var(--red)}button.danger:hover{background:var(--red);color:#fff}button:disabled{opacity:.45;cursor:not-allowed}
-.tabs{display:flex;gap:8px;margin-bottom:18px}.tab{border:1px solid var(--line);background:var(--panel);padding:10px 18px;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer}.tab.active{border-color:var(--navy);color:var(--navy);background:#EAF1FA;font-weight:600}
-.section{border:1px solid var(--line);background:var(--panel);padding:20px 22px;margin-bottom:18px;box-shadow:0 1px 3px rgba(31,41,55,.05)}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px}.section-head h2{font-family:'Space Grotesk',sans-serif;font-size:17px;color:var(--navy);margin:0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.readonly{background:#EEF1F4;border:1px solid var(--line);padding:8px 10px;min-height:36px;font-size:13px}.note{font-size:12px;color:var(--muted);line-height:1.45}.badge{font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid var(--line);padding:4px 8px}.badge.ok{color:var(--green);border-color:var(--green)}.badge.bad{color:var(--red);border-color:var(--red)}.badge.warn{color:var(--amber);border-color:var(--amber)}
-.quarters{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.quarter{padding:8px 14px;border:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;color:var(--muted)}.quarter.active{border-color:var(--navy);color:var(--navy);font-weight:600}
-.kra-card{border:1px dashed var(--line);padding:14px;margin-bottom:14px}.kra-top{display:grid;grid-template-columns:2fr 2fr 1fr auto;gap:10px;align-items:end}.goal-card{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}.goal-grid-setup{display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end}.goal-grid-self{display:grid;grid-template-columns:2fr 2fr 1fr;gap:10px;align-items:start}.attr-row{display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px}.self-attr-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:end;margin-bottom:10px}
-.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.summary-card{border:1px solid var(--line);padding:14px;background:#FAFBFC}.summary-card .value{font-family:'Space Grotesk',sans-serif;font-size:24px;color:var(--navy);font-weight:700}.summary-card .caption{font-size:11px;color:var(--muted);margin-top:3px}
-.footer{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 28px;display:flex;gap:10px;align-items:center;z-index:20}.status{margin-right:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}.status.ok{color:var(--green)}.status.bad{color:var(--red)}.hidden{display:none!important}.reject-box{border:1px solid #f0c3be;background:#fff7f6;padding:12px;margin-bottom:14px;color:var(--red);font-size:12px}
-.modal-backdrop{position:fixed;inset:0;background:rgba(31,41,55,.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}.modal{width:min(520px,100%);background:#fff;border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.2)}.modal-head{padding:16px 18px;border-bottom:1px solid var(--line);font-family:'Space Grotesk',sans-serif;font-size:17px;color:var(--navy);font-weight:600}.modal-body{padding:18px;font-size:13px;line-height:1.55;white-space:pre-wrap}.modal-actions{padding:0 18px 18px;text-align:right}.modal.error .modal-head{color:var(--red)}.modal.success .modal-head{color:var(--green)}
-@media(max-width:800px){body{padding:14px 14px 100px}.two,.kra-top,.goal-grid-setup,.goal-grid-self,.attr-row,.self-attr-row,.summary{grid-template-columns:1fr}.footer{padding:10px 14px;flex-wrap:wrap}}
+:root{--bg:#F4F6F8;--panel:#FFF;--line:#D7DEE5;--navy:#1E4E8C;--red:#C0392B;--green:#1E8E5A;--amber:#B7791F;--text:#1F2937;--muted:#6B7A8F}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif}body{padding:24px 28px 90px;min-height:100vh}input,textarea,select{background:#F9FAFB;border:1px solid var(--line);color:var(--text);font-family:Inter,sans-serif;font-size:13px;padding:8px 10px;width:100%;outline:none}input:disabled,textarea:disabled,select:disabled{background:#EEF1F4;color:var(--muted)}label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:4px}button{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:transparent;border:1px solid var(--navy);color:var(--navy);padding:9px 16px;cursor:pointer}button:hover{background:var(--navy);color:#fff}button.solid{background:var(--navy);color:#fff}button.green{border-color:var(--green);color:var(--green)}button.green:hover{background:var(--green);color:#fff}button:disabled{opacity:.45;cursor:not-allowed}.section{border:1px solid var(--line);background:var(--panel);padding:20px 22px;margin-bottom:18px;box-shadow:0 1px 3px rgba(31,41,55,.05)}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px;font-family:'Space Grotesk',sans-serif;font-size:17px;color:var(--navy);font-weight:600}.top-grid{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:14px;align-items:end}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}.readonly{background:#EEF1F4;padding:8px 10px;font-size:13px;border:1px solid var(--line);min-height:36px;white-space:pre-wrap}.badge{font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid var(--line);padding:4px 8px}.badge.ok{color:var(--green);border-color:var(--green)}.badge.warn{color:var(--amber);border-color:var(--amber)}.kra-card{border:1px dashed var(--line);padding:14px;margin-bottom:14px}.goal-head{font-weight:600;margin-bottom:6px}.goal-grid{display:grid;grid-template-columns:2fr 1.2fr .7fr .7fr .7fr;gap:10px;align-items:start;border-top:1px solid var(--line);padding-top:12px;margin-top:12px}.attr-grid{display:grid;grid-template-columns:2fr .8fr .8fr .8fr;gap:10px;align-items:end;margin-bottom:10px}.summary-table{width:100%;border-collapse:collapse}.summary-table th,.summary-table td{padding:9px;border-bottom:1px solid var(--line);text-align:right}.summary-table th:first-child,.summary-table td:first-child{text-align:left}.summary-table thead th{font-size:10px;text-transform:uppercase;color:var(--muted)}.summary-table .final-row td{font-weight:700;font-size:15px;color:var(--navy)}.footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:12px 28px;display:flex;justify-content:flex-end;gap:10px;z-index:20}.status{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-right:auto;align-self:center}.status.ok{color:var(--green)}.status.bad{color:var(--red)}.hidden{display:none!important}.modal-backdrop{position:fixed;inset:0;background:rgba(31,41,55,.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}.modal{width:min(520px,100%);background:#fff;border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.2)}.modal-head{padding:16px 18px;border-bottom:1px solid var(--line);font-family:'Space Grotesk',sans-serif;font-size:17px;color:var(--navy);font-weight:600}.modal-body{padding:18px;font-size:13px;line-height:1.55;white-space:pre-wrap}.modal-actions{padding:0 18px 18px;text-align:right}.modal.error .modal-head{color:var(--red)}.modal.success .modal-head{color:var(--green)}
+#printArea{display:none}@page{size:A4;margin:10mm}@media print{body{padding:0!important;background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block!important;position:static!important;width:100%!important;background:#fff!important;color:#000!important;font-family:Arial,Helvetica,sans-serif!important}}.print-doc{background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.35;padding:8px}.print-title{text-align:center;font-size:18px;font-weight:700;margin-bottom:8px}.print-quarters{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}.print-quarter{border:1px solid #000;padding:4px 7px;font-size:10px}.print-quarter.active{background:#000;color:#fff}.print-meta{width:100%;border-collapse:collapse;margin-bottom:10px}.print-meta td{border:1px solid #000;padding:5px 7px;vertical-align:top}.print-section-title{font-weight:700;font-size:12px;border:1px solid #000;background:#f2f2f2;padding:5px 7px;margin-top:10px}.print-target{margin-top:10px;page-break-inside:avoid}.print-target-title{font-weight:700;border:1px solid #000;border-bottom:0;padding:6px 7px}.print-table{width:100%;border-collapse:collapse}.print-table th,.print-table td{border:1px solid #000;padding:5px 6px;vertical-align:top;text-align:left}.print-table th{font-weight:700;background:#f7f7f7}.print-text{white-space:pre-wrap}.print-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:28px}.print-signature{border-top:1px solid #000;padding-top:5px;text-align:center}.print-summary{font-size:12px;font-weight:700}
+@media(max-width:900px){body{padding:15px 15px 100px}.top-grid,.two-col,.goal-grid,.attr-grid{grid-template-columns:1fr}.footer{padding:10px 15px;flex-wrap:wrap}}
 </style>
 </head>
 <body>
-
-<div class="tabs">
-  <div class="tab active" id="tabSetup" onclick="switchMode('setup')">KRA Setup</div>
-  <div class="tab" id="tabSelf" onclick="switchMode('self')">Self Rating</div>
-</div>
-
-<div id="setupView">
-  <div class="section">
-    <div class="section-head"><h2>KRA / Goal Setup</h2><span class="badge warn">Quarter Beginning</span></div>
-    <div class="grid">
-      <div><label>Employee</label><select id="setupEmp"><option value="">Loading...</option></select></div>
-      <div><label>Department</label><div class="readonly" id="setupDept">-</div></div>
-      <div><label>Appraiser Name</label><input id="setupAppraiser" placeholder="e.g. Kunal Joshi"></div>
-      <div><label>Year</label><input id="setupYear" value="2026"></div>
-      <div><label>Department Head</label><select id="setupHead"><option value="">Loading...</option></select></div>
-      <div><label>HR Approver</label><select id="setupHr"><option value="">Loading...</option></select></div>
-    </div>
-    <div class="quarters" id="setupQuarters"></div>
-    <div class="note" style="margin-top:12px">Performance Settings are controlled by Department Head / HR and are hidden here. KRA and Role Attribute weights are distributed automatically. Task weightage is also distributed automatically whenever tasks are added or removed, but you can change task weights manually before submission.</div>
-  </div>
-
-  <div class="section">
-    <div class="section-head"><h2>Targets (KRA) and Tasks</h2><span class="badge" id="kraBadge">0 / 80</span></div>
-    <div id="setupKraList"></div>
-    <button class="solid" onclick="addKra()">+ Add KRA</button>
-  </div>
-
-  <div class="section">
-    <div class="section-head"><h2>Role Attributes</h2><span class="badge" id="attrBadge">0 / 20</span></div>
-    <div id="setupAttrList"></div>
-    <button class="solid" onclick="addAttribute()">+ Add Attribute</button>
+<div class="section">
+  <div class="section-head"><span>HR Final Appraisal Review</span><span class="badge warn">Head Approved</span></div>
+  <div class="top-grid">
+    <div><label>Employee</label><select id="empSelect"><option value="">Loading...</option></select></div>
+    <div><label>Quarter</label><select id="quarterSelect"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
+    <div><label>Year</label><select id="yearSelect"><option>2024</option><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option></select></div>
+    <div><button class="solid" onclick="loadAppraisal()">Load Appraisal</button></div>
   </div>
 </div>
 
-<div id="selfView" class="hidden">
-  <div class="section">
-    <div class="section-head"><h2>Self Rating</h2><span class="badge warn" id="selfStageBadge">Load KRA</span></div>
-    <div class="grid">
-      <div><label>Employee</label><select id="selfEmp"><option value="">Loading...</option></select></div>
-      <div><label>Quarter</label><select id="selfQuarter"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
-      <div><label>Year</label><input id="selfYear" value="2026"></div>
-      <div style="align-self:end"><button class="solid" onclick="loadSelfRating()">Load My KRA</button></div>
-    </div>
-    <div class="note" style="margin-top:12px">Self Rating accepts any value from 0 to 5, including decimals such as 3.5 or 4.2. After final submission, Self Rating is permanently locked.</div>
-  </div>
-
-  <div id="selfContent" class="hidden">
-    <div id="rejectionBox" class="reject-box hidden"></div>
-
-    <div class="section">
-      <div class="section-head"><h2>My KRA and Task Rating</h2><span class="badge" id="selfKraStatus">-</span></div>
-      <div id="selfKraList"></div>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><h2>Role Attribute Self Rating</h2></div>
-      <div id="selfAttrList"></div>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><h2>Self Rating Summary</h2><span class="badge" id="selfFormulaBadge">KRA 80% / Role 20%</span></div>
-      <div class="summary">
-        <div class="summary-card"><div class="value" id="selfKraScore">0.00</div><div class="caption">KRA Rating / 5</div></div>
-        <div class="summary-card"><div class="value" id="selfRoleScore">0.00</div><div class="caption">Role Attribute Rating / 5</div></div>
-        <div class="summary-card"><div class="value" id="selfOverallScore">0.00</div><div class="caption">Overall Self Rating / 5</div></div>
-      </div>
-    </div>
-
-    <div class="section two">
-      <div><label>Facilitating Factors</label><textarea id="selfFac"></textarea></div>
-      <div><label>Constraining Factors</label><textarea id="selfCon"></textarea></div>
-      <div><label>Outstanding Achievement / Contribution</label><textarea id="selfOutstanding"></textarea></div>
-      <div><label>My Learnings</label><textarea id="selfLearnings"></textarea></div>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><h2>Training Need Identification</h2></div>
-      <div id="trainingRows"></div>
-      <button id="addTrainingBtn" onclick="addTraining()">+ Add Training Need</button>
-      <div class="note" style="margin-top:10px">Training rows are created on final Self Rating submission.</div>
-    </div>
-  </div>
+<div id="resultArea" class="hidden">
+  <div class="section"><div class="section-head"><span>Employee Details</span><span class="badge" id="statusBadge">-</span></div><div class="grid"><div><label>Employee</label><div class="readonly" id="rvEmployee">-</div></div><div><label>Department</label><div class="readonly" id="rvDepartment">-</div></div><div><label>Appraiser</label><div class="readonly" id="rvAppraiser">-</div></div><div><label>Quarter / Year</label><div class="readonly" id="rvPeriod">-</div></div></div></div>
+  <div class="section"><div class="section-head"><span>Performance Settings</span></div><div class="grid"><div><label>KRA Section Weight (%)</label><div class="readonly" id="rvKraWeight">-</div></div><div><label>Role Attribute Weight (%)</label><div class="readonly" id="rvRoleWeight">-</div></div><div><label>Total</label><div class="readonly" id="rvTotalWeight">100</div></div></div></div>
+  <div class="section"><div class="section-head"><span>KRA, Tasks and Ratings</span></div><div id="kraArea"></div></div>
+  <div class="section"><div class="section-head"><span>Role Attributes</span></div><div id="attrArea"></div></div>
+  <div class="section"><div class="section-head"><span>Final Rating Summary</span><span class="badge">Final = 50% Self + 50% Head</span></div><table class="summary-table"><thead><tr><th>Rating</th><th>Employee Self</th><th>Department Head</th><th>Final Section</th></tr></thead><tbody><tr><td>KRA Rating / 5</td><td id="sumSelfKra">0.00</td><td id="sumHeadKra">0.00</td><td id="sumFinalKra">0.00</td></tr><tr><td>Role Attribute Rating / 5</td><td id="sumSelfRole">0.00</td><td id="sumHeadRole">0.00</td><td id="sumFinalRole">0.00</td></tr><tr><td>Overall Rating / 5</td><td id="sumSelfOverall">0.00</td><td id="sumHeadOverall">0.00</td><td>-</td></tr><tr class="final-row"><td>Final Appraisal Rating / 5</td><td colspan="3" id="sumFinalOverall">0.00</td></tr></tbody></table></div>
+  <div class="section"><div class="section-head"><span>Review Information</span></div><div class="two-col"><div><label>Facilitating Factors</label><div class="readonly" id="rvFac">-</div></div><div><label>Constraining Factors</label><div class="readonly" id="rvCon">-</div></div><div><label>Outstanding Achievement</label><div class="readonly" id="rvOut">-</div></div><div><label>My Learnings</label><div class="readonly" id="rvLearn">-</div></div></div><div style="margin-top:14px"><label>Appraiser Comments</label><div class="readonly" id="rvComments">-</div></div></div>
 </div>
 
-<div class="footer">
-  <span class="status" id="statusText">Loading Creator...</span>
-  <button id="setupSubmitBtn" class="solid" onclick="submitKraPlan()">Submit KRA Plan</button>
-  <button id="selfDraftBtn" class="hidden" onclick="saveSelfRating(false)">Save Self Rating Draft</button>
-  <button id="selfSubmitBtn" class="solid hidden" onclick="saveSelfRating(true)">Submit Self Rating</button>
-</div>
-
-<div id="modalBackdrop" class="modal-backdrop hidden" onclick="modalBackdropClick(event)">
-  <div id="modalBox" class="modal">
-    <div class="modal-head" id="modalTitle">Message</div>
-    <div class="modal-body" id="modalMessage"></div>
-    <div class="modal-actions"><button class="solid" onclick="closeModal()">OK</button></div>
-  </div>
-</div>
+<div class="footer"><span class="status" id="statusText"></span><button id="pdfBtn" onclick="downloadPdf()" disabled>Download PDF</button><button id="approveBtn" class="solid green" onclick="finalApprove()" disabled>Final Approve</button></div>
+<div id="printArea"></div>
+<div id="modalBackdrop" class="modal-backdrop hidden" onclick="modalBackdropClick(event)"><div id="modalBox" class="modal"><div class="modal-head" id="modalTitle">Message</div><div class="modal-body" id="modalMessage"></div><div class="modal-actions"><button class="solid" onclick="closeModal()">OK</button></div></div></div>
 
 <script>
-const REPORTS={employees:'All_Employees',kra:'KRA_Report',goal:'Goal_Report',competency:'Competency_Report',review:'Review_Report'};
-const FORMS={kra:'KRA',goal:'Goal',competency:'Competency',review:'Review',training:'Training_Need'};
-const STAGE={KRA_SUBMITTED:'KRA Submitted',SELF_SUBMITTED:'Self Rating Submitted',HEAD_APPROVED:'Head Approved',APPROVED:'Approved',REJECTED:'Rejected'};
-const DEFAULT_KRA_SECTION_WEIGHT=80;
-const DEFAULT_ROLE_SECTION_WEIGHT=20;
-const state={mode:'setup',quarter:'Q1',employees:[],currentUserEmail:'',currentEmployee:null,kras:[],attributes:[],training:[],self:null,settings:{kraWeight:DEFAULT_KRA_SECTION_WEIGHT,attrWeight:DEFAULT_ROLE_SECTION_WEIGHT}};
-let kraSeq=1,goalSeq=1,attrSeq=1,trainingSeq=1;
-const quarters=[{id:'Q1',label:'Q1: Apr-Jun'},{id:'Q2',label:'Q2: Jul-Sep'},{id:'Q3',label:'Q3: Oct-Dec'},{id:'Q4',label:'Q4: Jan-Mar'}];
-console.log('MEGA PERFORMANCE VERSION: 2026-08-13-EMPLOYEE-NAME-FIX-03');
-
-function showModal(title,message,type){document.getElementById('modalTitle').textContent=title||'Message';document.getElementById('modalMessage').textContent=message||'';const box=document.getElementById('modalBox');box.className='modal'+(type?' '+type:'');document.getElementById('modalBackdrop').classList.remove('hidden')}
-function closeModal(){document.getElementById('modalBackdrop').classList.add('hidden')}
-function modalBackdropClick(e){if(e.target.id==='modalBackdrop')closeModal()}
+const REPORTS={review:'Review_Report',kra:'KRA_Report',goal:'Goal_Report',competency:'Competency_Report',employees:'All_Employees',training:'Training_Need_Report'}; // Change training report link here only if needed.
+const STAGE={HEAD_APPROVED:'Head Approved',APPROVED:'Approved'};
+const FINAL_SELF_WEIGHT=50,FINAL_HEAD_WEIGHT=50;
+const state={reviews:[],employees:[],review:null,kras:[],competencies:[],training:[],settings:{kraWeight:80,roleWeight:20}};
+console.log('HR FINAL REVIEW VERSION: 2026-08-14-HR-FINAL-01');
+function showModal(title,message,type){document.getElementById('modalTitle').textContent=title||'Message';document.getElementById('modalMessage').textContent=message||'';document.getElementById('modalBox').className='modal'+(type?' '+type:'');document.getElementById('modalBackdrop').classList.remove('hidden')}
+function closeModal(){document.getElementById('modalBackdrop').classList.add('hidden')}function modalBackdropClick(e){if(e.target.id==='modalBackdrop')closeModal()}
 function setStatus(msg,ok){const e=document.getElementById('statusText');e.textContent=msg||'';e.classList.remove('ok','bad');if(ok===true)e.classList.add('ok');if(ok===false)e.classList.add('bad')}
 function esc(v){return(v===null||v===undefined?'':String(v)).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c))}
 function textValue(v){if(v===null||v===undefined)return'';if(typeof v==='object')return String(v.display_value||v.zc_display_value||v.value||'');return String(v)}
 function lookupId(v){if(!v)return'';if(typeof v==='object')return String(v.ID||v.id||'');return String(v)}
-function numberValue(v,fallback=0){const n=Number(String(v===null||v===undefined?'':v).replace(/,/g,'').replace(/%/g,'').trim());return Number.isFinite(n)?n:fallback}
-function num(v,places=2){const n=numberValue(v,0);const f=Math.pow(10,places);return String(Math.round((n+Number.EPSILON)*f)/f)}
-function round2(v){return Math.round((numberValue(v,0)+Number.EPSILON)*100)/100}
-function ratingValid(v){const n=numberValue(v,NaN);return Number.isFinite(n)&&n>=0&&n<=5}
-function noData(err){const s=((err&&err.responseText)||'')+' '+((err&&err.message)||'')+' '+((err&&err.code)||'');return s.indexOf('3100')>=0||s.indexOf('No Data Available')>=0}
-function errorText(err){let s='';try{s=((err&&err.responseText)||'')+' '+((err&&err.message)||'')+' '+((err&&err.description)||'')+' '+((err&&err.code)||'')}catch(e){}return s}
-function friendlyError(err,context){const raw=errorText(err);let msg='Unable to complete this action. Please try again.';if(raw.indexOf('Goal_Name')>=0&&raw.indexOf('3001')>=0)msg='One task title is longer than the Goal Name field allows. The full task is stored in Description; please try again.';else if(raw.indexOf('3002')>=0)msg='One of the values is not valid for its Creator field. Please check numeric fields and try again.';else if(raw.indexOf('2945')>=0||raw.indexOf('EXTRA_KEY_FOUND_IN_JSON')>=0)msg='Creator rejected the update format. Please refresh once and try again.';else if(raw.indexOf('3100')>=0)msg='No matching record was found.';if(context)msg=context+'\n\n'+msg;showModal('Action could not be completed',msg,'error');console.error(context||'Creator error',err)}
-function setBusy(id,busy,busyText){const b=document.getElementById(id);if(!b)return;if(busy){b.dataset.oldText=b.textContent;b.disabled=true;if(busyText)b.textContent=busyText}else{b.disabled=false;if(b.dataset.oldText)b.textContent=b.dataset.oldText}}
-
-function getAll(reportName,criteria){let page=1,out=[];function next(){const config={reportName:reportName,page:page,pageSize:200};if(criteria)config.criteria=criteria;return ZOHO.CREATOR.API.getAllRecords(config).then(r=>{const rows=r&&r.data?r.data:[];out=out.concat(rows);if(rows.length<200||page>=50)return out;page++;return next()}).catch(err=>{if(noData(err))return out;throw err})}return next()}
-function addRecord(formName,fields){const config={formName,data:{data:fields}};return ZOHO.CREATOR.API.addRecord(config).then(r=>{if(r&&r.code==3000)return r.data;throw r})}
+function same(a,b){return textValue(a).trim()===String(b).trim()}function numberValue(v,f=0){const n=Number(String(v===null||v===undefined?'':v).replace(/,/g,'').replace(/%/g,'').trim());return Number.isFinite(n)?n:f}function num(v,p=2){const n=numberValue(v,0),f=Math.pow(10,p);return String(Math.round((n+Number.EPSILON)*f)/f)}function round2(v){return Math.round((numberValue(v,0)+Number.EPSILON)*100)/100}
+function errorText(err){let s='';try{s=((err&&err.responseText)||'')+' '+((err&&err.message)||'')+' '+((err&&err.description)||'')+' '+((err&&err.code)||'')}catch(e){}return s}function noData(err){const t=errorText(err);return t.indexOf('3100')>=0||t.indexOf('No Data Available')>=0}
+function friendlyError(err,context){console.error(context,err);showModal('Action could not be completed',(context||'Unable to complete this action.')+'\n\nPlease try again.','error')}
+function getAll(reportName,criteria){let page=1,out=[];function next(){const config={reportName,page,pageSize:200};if(criteria)config.criteria=criteria;return ZOHO.CREATOR.API.getAllRecords(config).then(r=>{const rows=r&&r.data?r.data:[];out=out.concat(rows);if(rows.length<200||page>=50)return out;page++;return next()}).catch(err=>{if(noData(err))return out;throw err})}return next()}
+async function getOptional(reportName){try{return await getAll(reportName)}catch(err){console.warn('Optional report unavailable: '+reportName,err);return[]}}
 function updateRecord(reportName,id,fields){const wrapped={reportName,id:String(id),data:{data:fields}};return ZOHO.CREATOR.API.updateRecord(wrapped).then(r=>{if(r&&r.code==3000)return r.data;throw r}).catch(err=>{const t=errorText(err);if(t.indexOf('2945')>=0||t.indexOf('EXTRA_KEY_FOUND_IN_JSON')>=0){return ZOHO.CREATOR.API.updateRecord({reportName,id:String(id),data:fields}).then(r=>{if(r&&r.code==3000)return r.data;throw r})}throw err})}
-
-function buildGoalName(fullTask,taskNumber){const raw=String(fullTask||'').trim();if(!raw)return'Task '+taskNumber;const first=(raw.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||raw).replace(/^[\s\u2022*\-]+/,'').replace(/\s+/g,' ').trim();return first.length<=80?first:first.slice(0,77).trim()+'...'}
-function goalNameTooLong(err){const t=errorText(err);return t.indexOf('3001')>=0&&t.indexOf('Goal_Name')>=0}
-async function addGoalRecord(kraId,goal,taskNumber){const fullTask=String(goal.name||'').trim();const base={Description:fullTask,KRA:String(kraId),Weightage:num(goal.weight),Data_Source:'Manual'};try{return await addRecord(FORMS.goal,Object.assign({Goal_Name:buildGoalName(fullTask,taskNumber)},base))}catch(err){if(goalNameTooLong(err))return addRecord(FORMS.goal,Object.assign({Goal_Name:'Task '+taskNumber},base));throw err}}
-function fullGoalText(goal){return textValue(goal&&goal.Description)||textValue(goal&&goal.Goal_Name)}
-
-function getCurrentUser(){try{const r=ZOHO.CREATOR.UTIL.getInitParams();if(r&&typeof r.then==='function')return r.then(x=>x&&x.loginUser?String(x.loginUser):'').catch(()=> '');return Promise.resolve(r&&r.loginUser?String(r.loginUser):'')}catch(e){return Promise.resolve('')}}
-function empName(rec){const v=rec.Employee_Name;if(!v)return String(rec.ID);if(typeof v==='string')return v;if(typeof v==='object')return v.display_value||v.zc_display_value||[v.prefix,v.first_name,v.last_name,v.suffix].filter(Boolean).join(' ')||String(rec.ID);return String(v)}
+function employeeName(record){const v=record&&record.Employee_Name;if(!v)return String(record&&record.ID||'');if(typeof v==='string')return v;if(typeof v==='object')return String(v.display_value||v.zc_display_value||[v.prefix,v.first_name,v.last_name,v.suffix].filter(Boolean).join(' ')||record.ID||'');return String(v)}
+function employeeFieldMatches(field,id,name){const fid=lookupId(field);if(fid&&String(fid)===String(id))return true;return textValue(field).trim()===String(name||'').trim()}function fullGoalText(g){return textValue(g&&g.Description)||textValue(g&&g.Goal_Name)}
+async function loadInitial(){setStatus('Loading Head Approved appraisals...',null);try{let pending=await getAll(REPORTS.review,'(Process_Stage == "Head Approved")');const masters=await getAll(REPORTS.employees);const map={};masters.forEach(r=>map[String(r.ID)]={ID:String(r.ID),name:employeeName(r),department:textValue(r.Department)});state.reviews=pending;const seen={},employees=[];pending.forEach(r=>{const id=lookupId(r.Employee_Lookup);if(!id||seen[id])return;seen[id]=true;const m=map[id];employees.push({ID:id,name:(m&&m.name)||textValue(r.Employee_Lookup)||id,department:textValue(r.Department)||(m&&m.department)||''})});state.employees=employees;document.getElementById('empSelect').innerHTML='<option value="">-- Select --</option>'+employees.map(e=>'<option value="'+esc(e.ID)+'">'+esc(e.name)+'</option>').join('');setStatus(employees.length?employees.length+' appraisal(s) waiting for HR final approval.':'No Head Approved appraisals waiting for HR.',true)}catch(err){friendlyError(err,'HR pending appraisals could not be loaded.');setStatus('Load failed.',false)}}
 function findEmployee(id){return state.employees.find(e=>String(e.ID)===String(id))||null}
-function loadEmployees(){return getAll(REPORTS.employees).then(rows=>{state.employees=rows.map(r=>({ID:r.ID,name:empName(r),department:textValue(r.Department),email:textValue(r.Email)}));const options='<option value="">-- Select --</option>'+state.employees.map(e=>'<option value="'+esc(e.ID)+'">'+esc(e.name)+'</option>').join('');['setupEmp','setupHead','setupHr','selfEmp'].forEach(id=>document.getElementById(id).innerHTML=options);document.getElementById('setupEmp').onchange=function(){const e=findEmployee(this.value);document.getElementById('setupDept').textContent=e?(e.department||'-'):'-'};return getCurrentUser()}).then(email=>{state.currentUserEmail=email||'';state.currentEmployee=state.employees.find(e=>e.email&&state.currentUserEmail&&e.email.toLowerCase()===state.currentUserEmail.toLowerCase())||null;if(state.currentEmployee){document.getElementById('selfEmp').value=state.currentEmployee.ID;document.getElementById('selfEmp').disabled=true}console.log('CURRENT EMPLOYEE',state.currentEmployee)})}
-
-function renderQuarterButtons(){document.getElementById('setupQuarters').innerHTML=quarters.map(q=>'<div class="quarter '+(state.quarter===q.id?'active':'')+'" onclick="setSetupQuarter(\''+q.id+'\')">'+q.label+'</div>').join('')}
-function setSetupQuarter(q){state.quarter=q;renderQuarterButtons()}
-function switchMode(mode){state.mode=mode;document.getElementById('setupView').classList.toggle('hidden',mode!=='setup');document.getElementById('selfView').classList.toggle('hidden',mode!=='self');document.getElementById('tabSetup').classList.toggle('active',mode==='setup');document.getElementById('tabSelf').classList.toggle('active',mode==='self');document.getElementById('setupSubmitBtn').classList.toggle('hidden',mode!=='setup');syncSelfButtons();setStatus(mode==='setup'?'Create KRA plan.':'Load your KRA for Self Rating.',true)}
-
-function distribute(total,count){if(count<=0)return[];const each=Math.floor((total/count)*100)/100;const a=new Array(count).fill(each);a[count-1]=Math.round((total-each*(count-1))*100)/100;return a}
-function autoDistributeTasks(kra){const weights=distribute(numberValue(kra.weight,0),kra.goals.length);kra.goals.forEach((g,i)=>g.weight=weights[i]===undefined?'':weights[i])}
-function redistributeSetup(){const kw=distribute(state.settings.kraWeight,state.kras.length);state.kras.forEach((k,i)=>{k.weight=kw[i]||0;autoDistributeTasks(k)});const aw=distribute(state.settings.attrWeight,state.attributes.length);state.attributes.forEach((a,i)=>a.weight=aw[i]||0)}
-function addKra(){state.kras.push({uid:'k'+kraSeq++,name:'',description:'',weight:0,goals:[]});redistributeSetup();renderSetup()}
-function removeKra(uid){state.kras=state.kras.filter(k=>k.uid!==uid);redistributeSetup();renderSetup()}
-function addGoal(kuid){const k=state.kras.find(x=>x.uid===kuid);if(!k)return;k.goals.push({uid:'g'+goalSeq++,name:'',weight:0});autoDistributeTasks(k);renderSetup()}
-function removeGoal(kuid,guid){const k=state.kras.find(x=>x.uid===kuid);if(!k)return;k.goals=k.goals.filter(g=>g.uid!==guid);autoDistributeTasks(k);renderSetup()}
-function rebalanceTasks(kuid){const k=state.kras.find(x=>x.uid===kuid);if(!k)return;autoDistributeTasks(k);renderSetup()}
-function setKra(uid,f,v){const k=state.kras.find(x=>x.uid===uid);if(k)k[f]=v}
-function setGoal(kuid,guid,f,v){const k=state.kras.find(x=>x.uid===kuid);if(!k)return;const g=k.goals.find(x=>x.uid===guid);if(g){g[f]=v;if(f==='weight')renderSetup()}}
-function addAttribute(){state.attributes.push({uid:'a'+attrSeq++,name:'',weight:0});redistributeSetup();renderSetup()}
-function removeAttribute(uid){state.attributes=state.attributes.filter(a=>a.uid!==uid);redistributeSetup();renderSetup()}
-function setAttr(uid,f,v){const a=state.attributes.find(x=>x.uid===uid);if(a)a[f]=v}
-function goalWeight(k){return k.goals.reduce((s,g)=>s+numberValue(g.weight,0),0)}
-
-function renderSetup(){document.getElementById('kraBadge').textContent=state.kras.reduce((s,k)=>s+numberValue(k.weight,0),0).toFixed(2)+' / '+state.settings.kraWeight;document.getElementById('attrBadge').textContent=state.attributes.reduce((s,a)=>s+numberValue(a.weight,0),0).toFixed(2)+' / '+state.settings.attrWeight;
-  document.getElementById('setupKraList').innerHTML=state.kras.length?state.kras.map((k,i)=>'<div class="kra-card"><div class="kra-top"><div><label>KRA '+(i+1)+'</label><input value="'+esc(k.name)+'" onchange="setKra(\''+k.uid+'\',\'name\',this.value)"></div><div><label>Description</label><input value="'+esc(k.description)+'" onchange="setKra(\''+k.uid+'\',\'description\',this.value)"></div><div><label>KRA Weightage</label><input value="'+numberValue(k.weight,0).toFixed(2)+'%" disabled></div><div><button class="danger" onclick="removeKra(\''+k.uid+'\')">Remove</button></div></div>'+k.goals.map((g,gi)=>'<div class="goal-card"><div class="goal-grid-setup"><div><label>Task '+(gi+1)+'</label><textarea onchange="setGoal(\''+k.uid+'\',\''+g.uid+'\',\'name\',this.value)">'+esc(g.name)+'</textarea></div><div><label>Task Weightage (auto / manual)</label><input type="number" step="0.01" min="0" value="'+esc(g.weight)+'" onchange="setGoal(\''+k.uid+'\',\''+g.uid+'\',\'weight\',this.value)"></div><div><button class="danger" onclick="removeGoal(\''+k.uid+'\',\''+g.uid+'\')">Remove</button></div></div></div>').join('')+'<div class="note" style="margin:8px 0">Task weight assigned: '+goalWeight(k).toFixed(2)+' / '+numberValue(k.weight,0).toFixed(2)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="addGoal(\''+k.uid+'\')">+ Add Task</button><button onclick="rebalanceTasks(\''+k.uid+'\')">Rebalance Tasks</button></div></div>').join(''):'<div class="note">No KRA added yet.</div>';
-  document.getElementById('setupAttrList').innerHTML=state.attributes.length?state.attributes.map((a,i)=>'<div class="attr-row"><div><label>Attribute '+(i+1)+'</label><input value="'+esc(a.name)+'" onchange="setAttr(\''+a.uid+'\',\'name\',this.value)"></div><div><label>Weightage</label><input value="'+numberValue(a.weight,0).toFixed(2)+'%" disabled></div><div><button class="danger" onclick="removeAttribute(\''+a.uid+'\')">Remove</button></div></div>').join(''):'<div class="note">No role attributes added yet.</div>'}
-
-function validatePlan(){if(!state.kras.length)return'Add at least one KRA.';if(!state.attributes.length)return'Add at least one Role Attribute.';for(const k of state.kras){if(!String(k.name).trim())return'Every KRA needs a name.';if(!k.goals.length)return'Every KRA needs at least one task.';for(const g of k.goals){if(!String(g.name).trim())return'Every task needs a description.';if(numberValue(g.weight,-1)<0)return'Task weightage cannot be negative.'}if(Math.abs(goalWeight(k)-numberValue(k.weight,0))>.01)return'Task weightage under "'+k.name+'" must equal '+numberValue(k.weight,0).toFixed(2)+'%.'}for(const a of state.attributes){if(!String(a.name).trim())return'Every Role Attribute needs a name.'}return''}
-function findReview(rows,empId,quarter,year){return rows.find(r=>lookupId(r.Employee_Lookup)===String(empId)&&textValue(r.Quarter)===String(quarter)&&textValue(r.Year_field)===String(year))||null}
-function getStage(review){if(!review)return'';const resolved=String(review._resolvedStage||'').trim();if(resolved===STAGE.KRA_SUBMITTED||resolved===STAGE.SELF_SUBMITTED||resolved===STAGE.HEAD_APPROVED||resolved===STAGE.APPROVED||resolved===STAGE.REJECTED)return resolved;const stage=textValue(review.Process_Stage).trim();if(stage===STAGE.KRA_SUBMITTED||stage===STAGE.SELF_SUBMITTED||stage===STAGE.HEAD_APPROVED||stage===STAGE.APPROVED||stage===STAGE.REJECTED)return stage;return''}
-async function resolveReviewStage(review){if(!review||!review.ID)return'';let stage=getStage(review);if(stage){review._resolvedStage=stage;return stage}const candidates=[STAGE.KRA_SUBMITTED,STAGE.SELF_SUBMITTED,STAGE.HEAD_APPROVED,STAGE.APPROVED,STAGE.REJECTED];for(const candidate of candidates){const criteria='(ID == '+String(review.ID)+' && Process_Stage == "'+candidate+'")';const rows=await getAll(REPORTS.review,criteria);if(rows.length){review._resolvedStage=candidate;return candidate}}const status=textValue(review.Status).trim();if(status==='Approved'){review._resolvedStage=STAGE.APPROVED;return STAGE.APPROVED}if(status==='Rejected'){review._resolvedStage=STAGE.REJECTED;return STAGE.REJECTED}review._resolvedStage=STAGE.KRA_SUBMITTED;try{await updateRecord(REPORTS.review,review.ID,{Process_Stage:STAGE.KRA_SUBMITTED,Status:'Submitted for Approval'})}catch(stageErr){console.warn('Could not auto-migrate blank Process_Stage to KRA Submitted.',stageErr)}return STAGE.KRA_SUBMITTED}
-
-async function submitKraPlan(){const empId=document.getElementById('setupEmp').value,headId=document.getElementById('setupHead').value,hrId=document.getElementById('setupHr').value,year=String(document.getElementById('setupYear').value).trim(),emp=findEmployee(empId);if(!emp){showModal('KRA Setup','Select an employee.','error');return}if(!headId){showModal('KRA Setup','Select Department Head.','error');return}if(!hrId){showModal('KRA Setup','Select HR Approver.','error');return}if(!year){showModal('KRA Setup','Enter year.','error');return}const problem=validatePlan();if(problem){showModal('KRA Setup',problem,'error');return}setBusy('setupSubmitBtn',true,'Submitting...');setStatus('Submitting KRA plan...',null);try{const reviews=await getAll(REPORTS.review);if(findReview(reviews,empId,state.quarter,year)){showModal('KRA already exists','A KRA plan already exists for this Employee / Quarter / Year. Use Self Rating instead of creating duplicate records.','error');return}for(const k of state.kras){const kr=await addRecord(FORMS.kra,{KRA_Name:k.name,Description:k.description||'',Employee_Name:emp.name,Quarter:state.quarter,Year_field1:year,Weightage:num(k.weight)});for(let gi=0;gi<k.goals.length;gi++)await addGoalRecord(kr.ID,k.goals[gi],gi+1)}for(const a of state.attributes){await addRecord(FORMS.competency,{Attribute_Name:a.name,Weightage:num(a.weight),Employee_Name1:emp.name,Quarter:state.quarter,Year_field1:year})}await addRecord(FORMS.review,{Employee_Lookup:String(empId),Department_Head:String(headId),HR_Approver:String(hrId),Status:'Submitted for Approval',Process_Stage:STAGE.KRA_SUBMITTED,Appraiser_Name:document.getElementById('setupAppraiser').value||'',Department:emp.department||'',Quarter:state.quarter,Year_field:year,KRA_Section_Weight:num(state.settings.kraWeight),Role_Attribute_Weight:num(state.settings.attrWeight),KRA_Score:'0',Competency_Score:'0',Final_Score:'0'});setStatus('KRA plan submitted.',true);showModal('KRA submitted','KRA plan was submitted successfully. Task and KRA data are now stored for the Self Rating stage.','success')}catch(err){friendlyError(err,'KRA plan could not be submitted.')}finally{setBusy('setupSubmitBtn',false)}}
-
-function selfLocked(){if(!state.self)return true;return getStage(state.self.review)!==STAGE.KRA_SUBMITTED}
-function statusLabel(review){const stage=getStage(review);if(stage===STAGE.KRA_SUBMITTED)return'KRA Submitted / Self Rating Open';if(stage===STAGE.SELF_SUBMITTED)return'Self Rating Submitted / Locked';if(stage===STAGE.HEAD_APPROVED)return'Head Approved';if(stage===STAGE.APPROVED)return'Approved';if(stage===STAGE.REJECTED)return'Rejected / Self Rating Locked';return stage}
-function selfGoalChange(kid,gid,f,v){const p=state.self&&state.self.kras.find(x=>String(x.kra.ID)===String(kid));if(!p)return;const g=p.goals.find(x=>String(x.ID)===String(gid));if(g){g[f]=v;renderSelfSummary()}}
-function selfAttrChange(id,v){const a=state.self&&state.self.attributes.find(x=>String(x.ID)===String(id));if(a){a.Rating=v;renderSelfSummary()}}
-function addTraining(){if(selfLocked())return;state.training.push({uid:'t'+trainingSeq++,need:'',benefit:'',fulfilled:''});renderTraining()}
-function removeTraining(uid){if(selfLocked())return;state.training=state.training.filter(t=>t.uid!==uid);renderTraining()}
-function trainingChange(uid,f,v){const t=state.training.find(x=>x.uid===uid);if(t)t[f]=v}
-function renderTraining(){document.getElementById('trainingRows').innerHTML=state.training.map(t=>'<div class="grid" style="margin-bottom:10px"><div><label>Training Need</label><input '+(selfLocked()?'disabled':'')+' value="'+esc(t.need)+'" onchange="trainingChange(\''+t.uid+'\',\'need\',this.value)"></div><div><label>Expected Benefit</label><input '+(selfLocked()?'disabled':'')+' value="'+esc(t.benefit)+'" onchange="trainingChange(\''+t.uid+'\',\'benefit\',this.value)"></div><div><label>How Fulfilled</label><input '+(selfLocked()?'disabled':'')+' value="'+esc(t.fulfilled)+'" onchange="trainingChange(\''+t.uid+'\',\'fulfilled\',this.value)"></div><div style="align-self:end"><button class="danger" '+(selfLocked()?'disabled':'')+' onclick="removeTraining(\''+t.uid+'\')">Remove</button></div></div>').join('')}
-
-function weightedRating(items,ratingGetter,weightGetter){let sum=0,weight=0,count=0,plain=0;items.forEach(item=>{const r=numberValue(ratingGetter(item),NaN);if(!Number.isFinite(r))return;const w=Math.max(0,numberValue(weightGetter(item),0));plain+=r;count++;if(w>0){sum+=r*w;weight+=w}});if(weight>0)return sum/weight;return count?plain/count:0}
-function calculateSelfScores(){if(!state.self)return{kra:0,role:0,overall:0};const goals=[];state.self.kras.forEach(p=>p.goals.forEach(g=>goals.push(g)));const kra=weightedRating(goals,g=>g.Self_Rating,g=>g.Weightage);const role=weightedRating(state.self.attributes,a=>a.Rating,a=>a.Weightage);const kw=numberValue(state.self.settings.kraWeight,DEFAULT_KRA_SECTION_WEIGHT),rw=numberValue(state.self.settings.attrWeight,DEFAULT_ROLE_SECTION_WEIGHT),total=kw+rw;const overall=total>0?(kra*kw+role*rw)/total:0;return{kra:round2(kra),role:round2(role),overall:round2(overall)}}
-function renderSelfSummary(){if(!state.self)return;const s=calculateSelfScores();document.getElementById('selfKraScore').textContent=s.kra.toFixed(2);document.getElementById('selfRoleScore').textContent=s.role.toFixed(2);document.getElementById('selfOverallScore').textContent=s.overall.toFixed(2);document.getElementById('selfFormulaBadge').textContent='KRA '+numberValue(state.self.settings.kraWeight,0)+'% / Role '+numberValue(state.self.settings.attrWeight,0)+'%'}
-function syncSelfButtons(){const selfMode=state.mode==='self',loaded=!!state.self,locked=selfLocked();document.getElementById('selfDraftBtn').classList.toggle('hidden',!selfMode||!loaded||locked);document.getElementById('selfSubmitBtn').classList.toggle('hidden',!selfMode||!loaded||locked)}
-
-async function loadSelfRating(){
-  const empId=document.getElementById('selfEmp').value;
-  const quarter=document.getElementById('selfQuarter').value;
-  const year=String(document.getElementById('selfYear').value).trim();
-  const emp=findEmployee(empId);
-  if(!emp){showModal('Self Rating','Select employee.','error');return}
-  setStatus('Loading existing KRA...',null);
-  try{
-    const results=await Promise.all([getAll(REPORTS.review),getAll(REPORTS.kra),getAll(REPORTS.goal),getAll(REPORTS.competency)]);
-    const review=findReview(results[0],empId,quarter,year);
-    if(!review){state.self=null;document.getElementById('selfContent').classList.add('hidden');syncSelfButtons();showModal('Self Rating','No KRA plan was found for this Employee / Quarter / Year.','error');return}
-    await resolveReviewStage(review);
-    const kras=results[1].filter(k=>textValue(k.Employee_Name)===emp.name&&textValue(k.Quarter)===quarter&&textValue(k.Year_field1)===year);
-    const allGoals=results[2];
-    const attrs=results[3].filter(a=>textValue(a.Employee_Name1)===emp.name&&textValue(a.Quarter)===quarter&&textValue(a.Year_field1)===year);
-    const pairs=kras.map(k=>({kra:k,goals:allGoals.filter(g=>lookupId(g.KRA)===String(k.ID))}));
-    let kw=numberValue(review.KRA_Section_Weight,NaN),rw=numberValue(review.Role_Attribute_Weight,NaN);
-    if(!Number.isFinite(kw))kw=DEFAULT_KRA_SECTION_WEIGHT;
-    if(!Number.isFinite(rw))rw=DEFAULT_ROLE_SECTION_WEIGHT;
-    state.self={employee:emp,quarter:quarter,year:year,review:review,kras:pairs,attributes:attrs,settings:{kraWeight:kw,attrWeight:rw}};
-    state.training=[];
-    renderSelf();
-    setStatus('Self Rating loaded.',true);
-  }catch(err){friendlyError(err,'Self Rating could not be loaded.');setStatus('Self Rating load failed.',false)}
-}
-
-function renderSelf(){const s=state.self;if(!s)return;document.getElementById('selfContent').classList.remove('hidden');const locked=selfLocked(),stage=getStage(s.review);document.getElementById('selfStageBadge').textContent=statusLabel(s.review);document.getElementById('selfKraStatus').textContent=s.employee.name+' / '+s.quarter+' / '+s.year;document.getElementById('rejectionBox').classList.toggle('hidden',stage!==STAGE.REJECTED);document.getElementById('rejectionBox').textContent=stage===STAGE.REJECTED?'Department Head returned this appraisal: '+(textValue(s.review.Rejection_Comments)||'No rejection comment provided. Self Rating remains locked.') : '';
-  document.getElementById('selfKraList').innerHTML=s.kras.length?s.kras.map(pair=>'<div class="kra-card"><strong>'+esc(textValue(pair.kra.KRA_Name))+'</strong><div class="note">'+esc(textValue(pair.kra.Description))+' | Weightage '+esc(textValue(pair.kra.Weightage))+'%</div>'+pair.goals.map(g=>'<div class="goal-card"><div class="readonly" style="margin-bottom:10px">'+esc(fullGoalText(g))+'</div><div class="goal-grid-self"><div><label>Achievement</label><textarea '+(locked?'disabled':'')+' onchange="selfGoalChange(\''+pair.kra.ID+'\',\''+g.ID+'\',\'Achievement\',this.value)">'+esc(textValue(g.Achievement))+'</textarea></div><div><label>Self Rating (0-5)</label><input type="number" min="0" max="5" step="0.1" value="'+esc(textValue(g.Self_Rating))+'" '+(locked?'disabled':'')+' oninput="selfGoalChange(\''+pair.kra.ID+'\',\''+g.ID+'\',\'Self_Rating\',this.value)"></div><div><label>Weightage</label><div class="readonly">'+esc(textValue(g.Weightage))+'%</div></div></div></div>').join('')+'</div>').join(''):'<div class="note">No KRA records found.</div>';
-  document.getElementById('selfAttrList').innerHTML=s.attributes.length?s.attributes.map(a=>'<div class="self-attr-row"><div><label>Attribute</label><div class="readonly">'+esc(textValue(a.Attribute_Name))+'</div></div><div><label>Weightage</label><div class="readonly">'+esc(textValue(a.Weightage))+'%</div></div><div><label>Self Rating (0-5)</label><input type="number" min="0" max="5" step="0.1" value="'+esc(textValue(a.Rating))+'" '+(locked?'disabled':'')+' oninput="selfAttrChange(\''+a.ID+'\',this.value)"></div></div>').join(''):'<div class="note">No Role Attribute records found.</div>';
-  document.getElementById('selfFac').value=textValue(s.review.Facilitating_Factors1);document.getElementById('selfCon').value=textValue(s.review.Constraining_Factors);document.getElementById('selfOutstanding').value=textValue(s.review.Outstanding_Achievement);document.getElementById('selfLearnings').value=textValue(s.review.My_Learnings);['selfFac','selfCon','selfOutstanding','selfLearnings'].forEach(id=>document.getElementById(id).disabled=locked);document.getElementById('addTrainingBtn').disabled=locked;renderTraining();renderSelfSummary();syncSelfButtons()}
-
-function validateSelfSubmit(){for(const p of state.self.kras){for(const g of p.goals){if(!String(textValue(g.Achievement)).trim())return'Enter Achievement for every task.';if(!ratingValid(g.Self_Rating))return'Enter a Self Rating from 0 to 5 for every task.'}}for(const a of state.self.attributes){if(!ratingValid(a.Rating))return'Enter a Self Rating from 0 to 5 for every Role Attribute.'}return''}
-async function saveSelfRating(finalSubmit){
-  if(!state.self){showModal('Self Rating','Load Self Rating first.','error');return}
-  if(selfLocked()){showModal('Self Rating locked','This Self Rating has already been submitted and cannot be changed.','error');return}
-  if(finalSubmit){const p=validateSelfSubmit();if(p){showModal('Self Rating',p,'error');return}}
-  const buttonId=finalSubmit?'selfSubmitBtn':'selfDraftBtn';
-  setBusy(buttonId,true,finalSubmit?'Submitting...':'Saving...');
-  setStatus(finalSubmit?'Submitting Self Rating...':'Saving Self Rating draft...',null);
-  try{
-    const updates=[];
-    for(const pair of state.self.kras){
-      for(const g of pair.goals){
-        const f={Achievement:textValue(g.Achievement)};
-        if(String(textValue(g.Self_Rating)).trim()!=='')f.Self_Rating=num(g.Self_Rating,2);
-        updates.push(updateRecord(REPORTS.goal,g.ID,f));
-      }
-    }
-    for(const a of state.self.attributes){
-      if(String(textValue(a.Rating)).trim()!=='')updates.push(updateRecord(REPORTS.competency,a.ID,{Rating:num(a.Rating,2)}));
-    }
-    await Promise.all(updates);
-
-    const reviewFields={
-      Facilitating_Factors1:document.getElementById('selfFac').value,
-      Constraining_Factors:document.getElementById('selfCon').value,
-      Outstanding_Achievement:document.getElementById('selfOutstanding').value,
-      My_Learnings:document.getElementById('selfLearnings').value,
-      KRA_Section_Weight:num(state.self.settings.kraWeight),
-      Role_Attribute_Weight:num(state.self.settings.attrWeight),
-      Status:'Submitted for Approval',
-      Process_Stage:finalSubmit?STAGE.SELF_SUBMITTED:STAGE.KRA_SUBMITTED
-    };
-
-    if(finalSubmit){
-      const scores=calculateSelfScores();
-      reviewFields.Self_KRA_Rating=num(scores.kra);
-      reviewFields.Self_Role_Rating=num(scores.role);
-      reviewFields.Self_Overall_Rating=num(scores.overall);
-    }
-
-    await updateRecord(REPORTS.review,state.self.review.ID,reviewFields);
-    state.self.review.Status='Submitted for Approval';
-    state.self.review.Process_Stage=reviewFields.Process_Stage;
-    state.self.review._resolvedStage=reviewFields.Process_Stage;
-
-    if(finalSubmit){
-      for(const t of state.training){
-        if(!String(t.need).trim())continue;
-        await addRecord(FORMS.training,{Training_Need:t.need,Expected_Benefit:t.benefit||'',How_Fulfilled:t.fulfilled||'',Employee_Name:state.self.employee.name,Quarter1:state.self.quarter,Year_field:state.self.year});
-      }
-      renderSelf();
-      showModal('Self Rating submitted','Your Self Rating has been submitted successfully. It is now locked and available in Department Head Review.','success');
-      setStatus('Self Rating submitted and locked.',true);
-    }else{
-      renderSelfSummary();
-      syncSelfButtons();
-      showModal('Draft saved','Self Rating draft was saved. It has NOT been sent to Department Head.','success');
-      setStatus('Self Rating draft saved.',true);
-    }
-  }catch(err){
-    friendlyError(err,finalSubmit?'Self Rating could not be submitted.':'Self Rating draft could not be saved.');
-    setStatus('Self Rating save failed.',false);
-  }finally{
-    setBusy(buttonId,false);
-  }
-}
-
-renderQuarterButtons();redistributeSetup();renderSetup();renderTraining();
-if(window.ZOHO&&ZOHO.CREATOR){ZOHO.CREATOR.init().then(()=>loadEmployees()).then(()=>setStatus('Ready.',true)).catch(err=>{friendlyError(err,'Creator widget could not be initialized.');setStatus('Initialization failed.',false)})}else{showModal('Creator SDK not detected','Open this page inside Zoho Creator.','error');setStatus('Zoho Creator SDK not detected.',false)}
+async function findReview(empId,q,y){const local=state.reviews.find(r=>lookupId(r.Employee_Lookup)===String(empId)&&same(r.Quarter,q)&&same(r.Year_field,y));if(local)return local;const criteria='(Employee_Lookup == '+String(empId)+' && Quarter == "'+String(q).replace(/"/g,'\\"')+'" && Year_field == '+String(y)+' && Process_Stage == "Head Approved")';const rows=await getAll(REPORTS.review,criteria);return rows[0]||null}
+async function loadAppraisal(){const empId=document.getElementById('empSelect').value,q=document.getElementById('quarterSelect').value,y=document.getElementById('yearSelect').value,emp=findEmployee(empId);if(!emp){showModal('HR Final Review','Select an employee.','error');return}setStatus('Loading appraisal...',null);try{const review=await findReview(empId,q,y);if(!review){showModal('HR Final Review','No Head Approved appraisal was found for this Employee / Quarter / Year.','error');return}const results=await Promise.all([getAll(REPORTS.kra),getAll(REPORTS.goal),getAll(REPORTS.competency),getOptional(REPORTS.training)]);const kras=results[0].filter(k=>employeeFieldMatches(k.Employee_Name,empId,emp.name)&&same(k.Quarter,q)&&same(k.Year_field1,y));const goals=results[1];const attrs=results[2].filter(a=>employeeFieldMatches(a.Employee_Name1,empId,emp.name)&&same(a.Quarter,q)&&same(a.Year_field1,y));state.review=review;state.kras=kras.map(k=>({kra:k,goals:goals.filter(g=>lookupId(g.KRA)===String(k.ID))}));state.competencies=attrs;state.training=(results[3]||[]).filter(t=>textValue(t.Employee_Name).trim()===emp.name.trim()&&same(t.Quarter1,q)&&same(t.Year_field,y));state.settings.kraWeight=numberValue(review.KRA_Section_Weight,80);state.settings.roleWeight=numberValue(review.Role_Attribute_Weight,20);render();setStatus('Loaded for HR final approval.',true)}catch(err){friendlyError(err,'Appraisal could not be loaded.')}}
+function render(){const emp=findEmployee(document.getElementById('empSelect').value);document.getElementById('resultArea').classList.remove('hidden');document.getElementById('rvEmployee').textContent=emp?emp.name:'-';document.getElementById('rvDepartment').textContent=textValue(state.review.Department)||'-';document.getElementById('rvAppraiser').textContent=textValue(state.review.Appraiser_Name)||'-';document.getElementById('rvPeriod').textContent=textValue(state.review.Quarter)+' / '+textValue(state.review.Year_field);document.getElementById('statusBadge').textContent=textValue(state.review.Process_Stage)||'Head Approved';document.getElementById('rvKraWeight').textContent=state.settings.kraWeight+'%';document.getElementById('rvRoleWeight').textContent=state.settings.roleWeight+'%';document.getElementById('rvTotalWeight').textContent=round2(state.settings.kraWeight+state.settings.roleWeight)+'%';document.getElementById('rvFac').textContent=textValue(state.review.Facilitating_Factors1)||'-';document.getElementById('rvCon').textContent=textValue(state.review.Constraining_Factors)||'-';document.getElementById('rvOut').textContent=textValue(state.review.Outstanding_Achievement)||'-';document.getElementById('rvLearn').textContent=textValue(state.review.My_Learnings)||'-';document.getElementById('rvComments').textContent=textValue(state.review.Appraiser_Comments)||'-';renderKras();renderAttrs();renderSummary();document.getElementById('pdfBtn').disabled=false;document.getElementById('approveBtn').disabled=false}
+function renderKras(){document.getElementById('kraArea').innerHTML=state.kras.length?state.kras.map(p=>'<div class="kra-card"><div class="goal-head">'+esc(textValue(p.kra.KRA_Name))+' <span style="font-weight:400;color:var(--muted)">- KRA Weight '+esc(textValue(p.kra.Weightage))+'%</span></div><div style="font-size:12px;color:var(--muted)">'+esc(textValue(p.kra.Description))+'</div>'+p.goals.map(g=>'<div class="goal-grid"><div><label>Task</label><div class="readonly">'+esc(fullGoalText(g))+'</div></div><div><label>Achievement</label><div class="readonly">'+esc(textValue(g.Achievement)||'-')+'</div></div><div><label>Weight</label><div class="readonly">'+esc(textValue(g.Weightage))+'%</div></div><div><label>Self</label><div class="readonly">'+esc(textValue(g.Self_Rating)||'0')+'</div></div><div><label>Head</label><div class="readonly">'+esc(textValue(g.Appraiser_Rating)||'0')+'</div></div></div>').join('')+'</div>').join(''):'<div class="readonly">No KRA records found.</div>'}
+function renderAttrs(){document.getElementById('attrArea').innerHTML=state.competencies.length?state.competencies.map(a=>'<div class="attr-grid"><div><label>Attribute</label><div class="readonly">'+esc(textValue(a.Attribute_Name))+'</div></div><div><label>Weight</label><div class="readonly">'+esc(textValue(a.Weightage))+'%</div></div><div><label>Self</label><div class="readonly">'+esc(textValue(a.Rating)||'0')+'</div></div><div><label>Head</label><div class="readonly">'+esc(textValue(a.Appraiser_Rating)||'0')+'</div></div></div>').join(''):'<div class="readonly">No Role Attributes found.</div>'}
+function weightedRating(items,ratingGetter,weightGetter){let sum=0,w=0,count=0,plain=0;items.forEach(i=>{const r=numberValue(ratingGetter(i),NaN);if(!Number.isFinite(r))return;const wt=Math.max(0,numberValue(weightGetter(i),0));plain+=r;count++;if(wt>0){sum+=r*wt;w+=wt}});return w>0?sum/w:(count?plain/count:0)}
+function calculateScores(){const goals=[];state.kras.forEach(p=>p.goals.forEach(g=>goals.push(g)));const selfKra=weightedRating(goals,g=>g.Self_Rating,g=>g.Weightage),headKra=weightedRating(goals,g=>g.Appraiser_Rating,g=>g.Weightage),selfRole=weightedRating(state.competencies,a=>a.Rating,a=>a.Weightage),headRole=weightedRating(state.competencies,a=>a.Appraiser_Rating,a=>a.Weightage),kw=state.settings.kraWeight,rw=state.settings.roleWeight,total=kw+rw,selfOverall=total?(selfKra*kw+selfRole*rw)/total:0,headOverall=total?(headKra*kw+headRole*rw)/total:0,finalKra=(selfKra*FINAL_SELF_WEIGHT+headKra*FINAL_HEAD_WEIGHT)/(FINAL_SELF_WEIGHT+FINAL_HEAD_WEIGHT),finalRole=(selfRole*FINAL_SELF_WEIGHT+headRole*FINAL_HEAD_WEIGHT)/(FINAL_SELF_WEIGHT+FINAL_HEAD_WEIGHT),finalOverall=(selfOverall*FINAL_SELF_WEIGHT+headOverall*FINAL_HEAD_WEIGHT)/(FINAL_SELF_WEIGHT+FINAL_HEAD_WEIGHT);return{selfKra:round2(selfKra),headKra:round2(headKra),selfRole:round2(selfRole),headRole:round2(headRole),selfOverall:round2(selfOverall),headOverall:round2(headOverall),finalKra:round2(finalKra),finalRole:round2(finalRole),finalOverall:round2(finalOverall)}}
+function ratingLabel(v){const n=numberValue(v,0);if(n>=4.5)return'Outstanding';if(n>=4)return'Exceeds Expectations';if(n>=3)return'Meets Expectations';if(n>=2)return'Needs Improvement';return'Unacceptable'}
+function renderSummary(){const s=calculateScores();document.getElementById('sumSelfKra').textContent=s.selfKra.toFixed(2);document.getElementById('sumHeadKra').textContent=s.headKra.toFixed(2);document.getElementById('sumFinalKra').textContent=s.finalKra.toFixed(2);document.getElementById('sumSelfRole').textContent=s.selfRole.toFixed(2);document.getElementById('sumHeadRole').textContent=s.headRole.toFixed(2);document.getElementById('sumFinalRole').textContent=s.finalRole.toFixed(2);document.getElementById('sumSelfOverall').textContent=s.selfOverall.toFixed(2);document.getElementById('sumHeadOverall').textContent=s.headOverall.toFixed(2);document.getElementById('sumFinalOverall').textContent=s.finalOverall.toFixed(2)+' - '+ratingLabel(s.finalOverall)}
+async function finalApprove(){if(!state.review)return;document.getElementById('approveBtn').disabled=true;setStatus('Final approving...',null);try{const s=calculateScores();await updateRecord(REPORTS.review,state.review.ID,{Status:'Approved',Process_Stage:'Approved',Final_Appraisal_Rating:num(s.finalOverall),Overall_Rating:ratingLabel(s.finalOverall)});state.review.Status='Approved';state.review.Process_Stage='Approved';document.getElementById('statusBadge').textContent='Approved';showModal('Final Approved','HR final approval completed successfully. The appraisal is now locked as Approved.','success');setStatus('Final Approved.',true)}catch(err){friendlyError(err,'Final approval could not be completed.');document.getElementById('approveBtn').disabled=false}}
+function printCell(v){const s=String(v===null||v===undefined?'':v).trim();return esc(s||'-')}function printMultiline(v){return '<div class="print-text">'+printCell(v)+'</div>'}
+function downloadPdf(){if(!state.review){showModal('Download PDF','Load an appraisal first.','error');return}const emp=findEmployee(document.getElementById('empSelect').value),q=document.getElementById('quarterSelect').value,y=document.getElementById('yearSelect').value,s=calculateScores(),labels={Q1:'Q1: April to June',Q2:'Q2: July to September',Q3:'Q3: October - December',Q4:'Q4: January to March'};let h='<div class="print-doc"><div class="print-title">Performance Appraisal Form</div><div class="print-quarters">'+Object.keys(labels).map(k=>'<span class="print-quarter '+(k===q?'active':'')+'">'+esc(labels[k])+(k==='Q4'?' '+esc(y):'')+'</span>').join('')+'</div>';h+='<table class="print-meta"><tr><td><strong>Name:</strong> '+printCell(emp&&emp.name)+'</td><td><strong>Department:</strong> '+printCell(state.review.Department)+'</td></tr><tr><td><strong>Name of Appraiser:</strong> '+printCell(state.review.Appraiser_Name)+'</td><td><strong>Period:</strong> '+printCell(q)+' / '+printCell(y)+'</td></tr></table>';h+='<div class="print-section-title">Performance Parameter, Targets and Achievements - KRA Section Weight '+printCell(state.settings.kraWeight)+'%</div>';state.kras.forEach((p,i)=>{h+='<div class="print-target"><div class="print-target-title">Target-'+(i+1)+': '+printCell(p.kra.KRA_Name)+' | KRA Weight '+printCell(p.kra.Weightage)+'%</div>';if(textValue(p.kra.Description).trim())h+='<div style="border:1px solid #000;border-bottom:0;padding:6px 7px"><strong>Description:</strong> '+printMultiline(p.kra.Description)+'</div>';h+='<table class="print-table"><thead><tr><th>Task</th><th>Achievement</th><th>Weight</th><th>Self</th><th>Appraiser</th></tr></thead><tbody>'+p.goals.map(g=>'<tr><td>'+printMultiline(fullGoalText(g))+'</td><td>'+printMultiline(g.Achievement)+'</td><td>'+printCell(g.Weightage)+'%</td><td>'+printCell(g.Self_Rating)+'</td><td>'+printCell(g.Appraiser_Rating)+'</td></tr>').join('')+'</tbody></table></div>'});h+='<div class="print-section-title">Appraiser\'s / HOD\'s Remark</div><table class="print-table"><tr><td>'+printMultiline(state.review.Appraiser_Comments)+'</td></tr></table>';h+='<div class="print-section-title">Facilitating / Constraining Factors and Significant Contribution</div><table class="print-table"><tr><th>Facilitating Factors</th><td>'+printMultiline(state.review.Facilitating_Factors1)+'</td></tr><tr><th>Constraining Factors</th><td>'+printMultiline(state.review.Constraining_Factors)+'</td></tr><tr><th>Outstanding Achievement / Significant Contribution</th><td>'+printMultiline(state.review.Outstanding_Achievement)+'</td></tr><tr><th>Comments of Appraiser</th><td>'+printMultiline(state.review.Appraiser_Comments)+'</td></tr></table>';h+='<div class="print-section-title">Appraisal on Role Attributes - '+printCell(state.settings.roleWeight)+'% Weightage</div><table class="print-table"><thead><tr><th>S.No</th><th>Role Attribute</th><th>Weight</th><th>Self Rating</th><th>Appraiser Rating</th></tr></thead><tbody>'+state.competencies.map((a,i)=>'<tr><td>'+(i+1)+'</td><td>'+printCell(a.Attribute_Name)+'</td><td>'+printCell(a.Weightage)+'%</td><td>'+printCell(a.Rating)+'</td><td>'+printCell(a.Appraiser_Rating)+'</td></tr>').join('')+'</tbody></table>';h+='<div class="print-section-title">My Learnings</div><table class="print-table"><tr><td>'+printMultiline(state.review.My_Learnings)+'</td></tr></table>';h+='<div class="print-section-title">Training Need Identification</div><table class="print-table"><thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled</th></tr></thead><tbody>'+(state.training.length?state.training.map(t=>'<tr><td>'+printMultiline(t.Training_Need)+'</td><td>'+printMultiline(t.Expected_Benefit)+'</td><td>'+printMultiline(t.How_Fulfilled)+'</td></tr>').join(''):'<tr><td colspan="3">No training needs recorded.</td></tr>')+'</tbody></table>';h+='<div class="print-section-title">Overall Performance Rating</div><table class="print-table print-summary"><tr><td>Employee Overall</td><td>'+s.selfOverall.toFixed(2)+' / 5</td><td>Department Head Overall</td><td>'+s.headOverall.toFixed(2)+' / 5</td></tr><tr><td colspan="3">Final Appraisal Rating</td><td>'+s.finalOverall.toFixed(2)+' / 5 - '+printCell(ratingLabel(s.finalOverall))+'</td></tr></table><div style="margin-top:14px;font-size:10px">Signature of appraisee confirms that feedback has been given and the rating has been discussed with the appraiser.</div><div class="print-signatures"><div class="print-signature">Signature Appraisee</div><div class="print-signature">Signature Appraiser</div><div class="print-signature">Signature HOD</div></div></div>';document.getElementById('printArea').innerHTML=h;setTimeout(()=>window.print(),100)}
+if(window.ZOHO&&ZOHO.CREATOR){ZOHO.CREATOR.init().then(loadInitial).catch(err=>friendlyError(err,'Creator widget could not be initialized.'))}else{showModal('Creator SDK not detected','Open this page inside Zoho Creator.','error')}
 </script>
 </body>
 </html>
