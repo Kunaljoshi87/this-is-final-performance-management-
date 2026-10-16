@@ -6,7 +6,6 @@
 <title>Performance Appraisal — Mega Engineering</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
-<script src="https://static.zohocdn.com/creator/widgets/version/1.0/widgetsdk-min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
   :root{
@@ -136,20 +135,37 @@
   .rate-grid{display:grid; grid-template-columns:3fr 3fr 1fr 1.3fr; gap:10px; align-items:start;}
   .loading-box{padding:40px; text-align:center; color:var(--muted); font-size:13px;}
   @media(max-width:760px){ .rate-grid{grid-template-columns:1fr;} .steps{margin-left:0;} }
+  .code-input{font-family:'IBM Plex Mono',monospace !important; font-size:22px !important; letter-spacing:8px; text-align:center;}
+  .linkish{background:none; border:none; color:var(--navy); text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif; font-size:12px; padding:0; margin-top:12px; width:auto !important; text-decoration:underline;}
+  .linkish:hover{background:none; color:var(--navy);}
 </style>
 </head>
 <body>
 
-<!-- =================== EMAIL SIGN-IN =================== -->
+<!-- =================== SIGN IN (email → 6-digit code) =================== -->
 <div class="login-wrap" id="loginView">
   <div class="login-card">
     <div class="logo-row"><img class="mega-logo" alt="MEGA"><div><b>Performance Appraisal</b><div style="font-size:11px;color:var(--muted)">Mega Engineering</div></div></div>
-    <h2>Sign in</h2>
-    <p>Enter your official email address — the one registered in the Mega employee list.</p>
-    <label>Email address</label>
-    <input id="loginEmail" type="email" autocomplete="email" placeholder="name@mega.tc" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="solid" id="loginBtn" onclick="doLogin()" disabled>Continue</button>
-    <div class="login-msg" id="loginMsg">Connecting…</div>
+
+    <div id="stepEmail">
+      <h2>Sign in</h2>
+      <p>Enter your official email address. We will send a 6-digit code to it.</p>
+      <label>Email address</label>
+      <input id="loginEmail" type="email" autocomplete="email" placeholder="name@megaepc.com" onkeydown="if(event.key==='Enter')sendCode()">
+      <button class="solid" id="sendBtn" onclick="sendCode()">Send code</button>
+    </div>
+
+    <div id="stepCode" class="hidden">
+      <h2>Enter the code</h2>
+      <p>We sent a 6-digit code to <b id="codeMail"></b>. It is valid for 10 minutes.</p>
+      <label>6-digit code</label>
+      <input id="loginCode" class="code-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••" onkeydown="if(event.key==='Enter')verifyCode()">
+      <button class="solid" id="verifyBtn" onclick="verifyCode()">Sign in</button>
+      <button class="linkish" onclick="backToEmail()">Use a different email</button> &nbsp;
+      <button class="linkish" onclick="sendCode(true)">Send a new code</button>
+    </div>
+
+    <div class="login-msg" id="loginMsg"></div>
   </div>
 </div>
 
@@ -163,10 +179,14 @@
   <div class="titleblock">
     <div class="logo-row" style="margin-bottom:14px;"><img class="mega-logo" alt="MEGA"><h2 style="font-size:18px;">Performance Appraisal Form</h2></div>
     <div class="tb-grid">
-      <div><label>Employee</label><div class="readonly-box" id="empNameDisplay">—</div></div>
-      <div><label>Department</label><div class="readonly-box" id="deptDisplay">—</div></div>
-      <div><label>Name of Appraiser</label><input id="appraiserName" placeholder="e.g. Kunal Joshi" onchange="markUnsaved()"></div>
-      <div><label>Year</label><select id="yearSelect" onchange="changePeriod()"></select></div>
+      <div><label>Employee</label><div class="readonly-box" id="pName">—</div></div>
+      <div><label>Employee ID</label><div class="readonly-box" id="pId">—</div></div>
+      <div><label>Department</label><div class="readonly-box" id="pDept">—</div></div>
+    </div>
+    <div class="tb-grid" style="margin-top:16px;">
+      <div><label>Reporting Manager (Appraiser)</label><div class="readonly-box" id="pMgr">—</div></div>
+      <div><label>HR</label><div class="readonly-box" id="pHr">—</div></div>
+      <div><label>Year</label><select id="yearSelect" onchange="changeYear()"></select></div>
     </div>
     <div class="quarter-row" id="quarterRow"></div>
   </div>
@@ -178,7 +198,7 @@
 <div class="footer-bar hidden" id="footerBar">
   <span class="status" id="statusText">—</span>
   <div style="display:flex; gap:10px; flex-wrap:wrap;">
-    <button onclick="downloadPdf()">Download PDF</button>
+    <button id="pdfBtn" onclick="downloadPdf()">Download PDF</button>
     <button class="solid" id="mainBtn" onclick="mainAction()">Submit</button>
   </div>
 </div>
@@ -186,33 +206,34 @@
 <script>
 "use strict";
 /* ======================================================================
-   MEGA ENGINEERING — PERFORMANCE APPRAISAL  (one Creator widget, one page)
+   MEGA ENGINEERING — PERFORMANCE APPRAISAL  (public page, one file)
    ----------------------------------------------------------------------
-   Sign in with email (must exist in the employee report), then per quarter:
-     STEP 1  first visit   → Set Targets: KRA + tasks (weightage automatic)
-                             saved to KRA, Goal, Competency + Review(Status "Draft")
-     STEP 2  second visit  → Self Rating only: achievement + self rating per
-                             task, role-attribute rating, factors, learnings,
-                             training, overall → Review Status "Submitted for Approval"
-     DONE    later visits  → read-only + Download PDF
-   Uses only your EXISTING forms/fields. No Deluge functions, no Custom API.
+   Anyone in Asset Management → All Employees can use this link — no
+   Creator login needed:
+     1. Sign in: email → 6-digit code mailed to that address → session
+     2. Name, Employee ID, Department, Reporting Manager, HR fill in automatically
+     3. Pick year + quarter
+          first time   → STEP 1  Targets (KRA) + tasks + role attributes
+          next time    → STEP 2  Self Rating only (targets locked)
+          after that   → DONE    read-only
+     4. Download PDF at any step (Word-form layout)
+   All reading / saving goes through ONE Creator Custom API (appraisal_api),
+   which checks the signed session on every call → a person can only ever
+   see and change HIS OWN appraisal.
    ====================================================================== */
 
 /* ============================ CONFIG ============================ */
-const CONFIG = {
-  EMPLOYEE_REPORTS: ["All_Employees", "Employ_to_Create_ticket_Report"],   // first one with data is used
-  EMP_FIELDS: { name:"Employee_Name", email:"Email", department:"Department" },
-  REPORTS: { kra:"KRA_Report", goal:"Goal_Report", competency:"Competency_Report", review:"Review_Report", training:"Training_Need_Report" },
-  FORMS:   { kra:"KRA", goal:"Goal", competency:"Competency", review:"Review", training:"Training_Need" },
-  STATUS:  { targetsSet:"Draft", selfRated:"Submitted for Approval" },     // existing Review.Status values
-  KRA_SHARE: 80, ROLE_SHARE: 20,               // total 100; no role attributes → targets get 100
-  RATING_PCT: { 5:100, 4:90, 3:75, 2:50, 1:25 },
-  MATCH_CREATOR_LOGIN: true,                   // typed email must equal the signed-in Creator user
-  PAGE_SIZE: 200, MAX_PAGES: 20
+const API = {
+  URL: "https://www.zohoapis.in/creator/custom/megaengg/appraisal_api",
+  PUBLIC_KEY: "juPuQV0bEKh1HAWyWv5Q5427z",
+  TIMEOUT_MS: 90000
 };
+const KRA_SHARE = 80, ROLE_SHARE = 20;                       // total 100; no role attributes → targets 100
+const RATING_PCT = { 5:100, 4:90, 3:75, 2:50, 1:25 };        // must match the Creator function
 const RATING_LABELS = { 5:'5 - Outstanding', 4:'4 - Very Good', 3:'3 - Good', 2:'2 - Fair', 1:'1 - Poor' };
 const QUARTERS = [{id:'Q1',label:'Q1: Apr–Jun'},{id:'Q2',label:'Q2: Jul–Sep'},{id:'Q3',label:'Q3: Oct–Dec'},{id:'Q4',label:'Q4: Jan–Mar'}];
 const OVERALL_LABELS = ['Outstanding','Exceeds Expectations','Meets Expectations','Needs Improvement','Unacceptable'];
+const SESSION_KEY = 'mega_pa_session_v3';
 
 /* ============================================================
    PDF TEMPLATE ENGINE — exact replica of
@@ -594,105 +615,118 @@ document.querySelectorAll('.mega-logo').forEach(i => i.src = PDF_LOGO);
 
 /* ============================ STATE ============================ */
 const state = {
-  sdkReady:false, creatorUser:'', employees:[], me:null,
+  auth:null,                 // {email, session, sexp}
+  me:null,                   // profile from Creator
+  pending:null,              // {email, challenge, exp} while waiting for the code
   quarter:currentQuarter(), year:String(new Date().getFullYear()),
-  phase:'loading',            // loading | targets | rating | done
-  review:null,                // existing Review record (or null)
+  phase:'loading',           // loading | targets | rating | done
+  reviewStatus:'',
   kras:[], attributes:[], training:[], overallRating:'',
-  texts:{ facFactors:'', conFactors:'', outAchieve:'', apprComments:'', myLearnings:'' },
+  texts:{ facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'' },
   busy:false, loadToken:0
 };
 let seq = 1;
 function nid(p){ return p + (seq++); }
 function currentQuarter(){ const m = new Date().getMonth(); return m <= 2 ? 'Q4' : m <= 5 ? 'Q1' : m <= 8 ? 'Q2' : 'Q3'; }
 
-/* ======================= CREATOR API HELPERS ======================= */
-async function getAll(reportName, criteria){
-  const out = [];
-  for(let page = 1; page <= CONFIG.MAX_PAGES; page++){
-    const cfg = { reportName, page, pageSize:CONFIG.PAGE_SIZE };
-    if(criteria) cfg.criteria = criteria;
-    let resp;
-    try{ resp = await ZOHO.CREATOR.API.getAllRecords(cfg); }
-    catch(err){ if(page === 1 && !isEmptyErr(err)) throw err; break; }
-    const rows = (resp && resp.data) ? resp.data : [];
-    out.push(...rows);
-    if(rows.length < CONFIG.PAGE_SIZE) break;
+/* ======================= API ======================= */
+function withTimeout(p, ms){ return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('The server took too long — please try again.')), ms))]); }
+async function call(action, payload){
+  const body = Object.assign({ action }, payload || {});
+  if(state.auth && action !== 'send_code' && action !== 'verify_code'){
+    body.email = state.auth.email; body.session = state.auth.session; body.sexp = state.auth.sexp;
   }
-  return out;
+  const url = API.URL + '?publickey=' + encodeURIComponent(API.PUBLIC_KEY);
+  let res;
+  try{
+    res = await withTimeout(fetch(url, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                                          body:'req=' + encodeURIComponent(JSON.stringify(body)) }), API.TIMEOUT_MS);
+  }catch(e){
+    throw new Error(e && e.message && /too long/.test(e.message) ? e.message : 'Cannot reach the server. Check your internet connection.');
+  }
+  let json;
+  try{ json = await res.json(); }catch(e){ throw new Error('Unexpected server response (HTTP ' + res.status + ').'); }
+  if(json && json.code && json.code !== 3000) throw new Error(json.message || ('Server code ' + json.code));
+  let r = (json && json.result !== undefined) ? json.result : json;
+  if(typeof r === 'string'){ try{ r = JSON.parse(r); }catch(e){} }
+  if(!r || r.status !== 'success'){
+    if(r && r.code === 'AUTH'){ expireSession(r.message); }
+    throw new Error((r && r.message) ? r.message : 'Request failed.');
+  }
+  return r;
 }
-function isEmptyErr(err){ return /9220|No records|no data/i.test(JSON.stringify(err || '')); }
-async function getAllSafe(r, c){ try{ return await getAll(r, c); }catch(e){ console.warn('read failed', r, e); return []; } }
-function addRecord(formName, data){
-  return ZOHO.CREATOR.API.addRecord({ formName, data:{ data } }).then(resp => { if(resp && resp.code === 3000) return resp.data; throw resp; });
-}
-function updateRecord(reportName, id, data){
-  return ZOHO.CREATOR.API.updateRecord({ reportName, id, data:{ data } }).then(resp => { if(resp && resp.code === 3000) return resp.data; throw resp; });
-}
-function errText(err){
-  if(!err) return 'unknown error';
-  if(typeof err === 'string') return err;
-  if(err.message) return err.message;
-  if(err.error) return typeof err.error === 'string' ? err.error : JSON.stringify(err.error);
-  try{ return JSON.stringify(err).slice(0, 220); }catch(e){ return String(err); }
-}
-function plain(v){ if(v === null || v === undefined) return ''; if(typeof v === 'object') return v.display_value || v.zc_display_value || ''; return String(v); }
-function critStr(v){ return String(v || '').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
-function byId(a, b){ const x = String(a.ID), y = String(b.ID); return x.length - y.length || (x < y ? -1 : x > y ? 1 : 0); }
 
-/* ======================= EMPLOYEES + LOGIN ======================= */
-function empName(rec){
-  const v = rec[CONFIG.EMP_FIELDS.name];
-  if(!v) return '';
-  if(typeof v === 'string') return v.trim();
-  if(typeof v === 'object') return (v.display_value || v.zc_display_value || [v.prefix,v.first_name,v.last_name,v.suffix].filter(Boolean).join(' ')).trim();
-  return String(v).trim();
-}
-async function loadEmployees(){
-  let lastErr = null;
-  for(const rep of CONFIG.EMPLOYEE_REPORTS){
-    try{
-      const list = (await getAll(rep)).map(r => ({
-        ID:String(r.ID), name:empName(r),
-        department:plain(r[CONFIG.EMP_FIELDS.department]).trim(),
-        email:plain(r[CONFIG.EMP_FIELDS.email]).trim().toLowerCase()
-      })).filter(e => e.name);
-      if(list.length && list.some(e => e.email)){ state.employees = list; return; }
-    }catch(err){ lastErr = err; console.warn('Employee report failed:', rep, err); }
-  }
-  throw lastErr || new Error('No employee report returned data');
-}
+/* ======================= SIGN IN ======================= */
 function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 function loginMsg(msg, ok){ const el = document.getElementById('loginMsg'); el.textContent = msg || ''; el.className = 'login-msg' + (ok===true?' ok':ok===false?' bad':''); }
-async function getCreatorUser(){
-  try{ let r = ZOHO.CREATOR.UTIL.getInitParams(); if(r && typeof r.then === 'function') r = await r;
-       const u = (r && r.loginUser) ? String(r.loginUser).trim().toLowerCase() : ''; return isEmail(u) ? u : ''; }
-  catch(e){ return ''; }
+async function sendCode(resend){
+  const email = resend && state.pending ? state.pending.email : (document.getElementById('loginEmail').value || '').trim().toLowerCase();
+  if(!isEmail(email)){ loginMsg('Please enter a valid email address.', false); return; }
+  const btn = document.getElementById('sendBtn'); btn.disabled = true;
+  loginMsg('Checking your email and sending the code…', null);
+  try{
+    const r = await call('send_code', { email });
+    state.pending = { email, challenge:r.challenge, exp:String(r.exp) };
+    document.getElementById('codeMail').textContent = email;
+    document.getElementById('stepEmail').classList.add('hidden');
+    document.getElementById('stepCode').classList.remove('hidden');
+    document.getElementById('loginCode').value = '';
+    document.getElementById('loginCode').focus();
+    loginMsg(resend ? 'A new code was sent. Check your inbox (and spam folder).' : 'Code sent. Check your inbox (and spam folder).', true);
+  }catch(err){ loginMsg(err.message, false); }
+  finally{ btn.disabled = false; }
 }
-function doLogin(){
-  if(!state.sdkReady){ loginMsg('Still connecting to Creator — please wait.', null); return; }
-  const mail = (document.getElementById('loginEmail').value || '').trim().toLowerCase();
-  if(!isEmail(mail)){ loginMsg('Please enter a valid email address.', false); return; }
-  const emp = state.employees.find(e => e.email === mail);
-  if(!emp){ loginMsg('This email is not in the Mega employee list. Use your official email or contact HR.', false); return; }
-  if(CONFIG.MATCH_CREATOR_LOGIN && state.creatorUser && state.creatorUser !== mail){
-    loginMsg('This email does not match the Creator account you are signed in with (' + state.creatorUser + ').', false); return;
-  }
-  state.me = emp;
-  try{ sessionStorage.setItem('mega_pa_session', mail); }catch(e){}
-  openApp();
+async function verifyCode(){
+  const code = (document.getElementById('loginCode').value || '').replace(/\D/g, '');
+  if(code.length !== 6){ loginMsg('Enter the 6-digit code from the email.', false); return; }
+  if(!state.pending){ backToEmail(); return; }
+  const btn = document.getElementById('verifyBtn'); btn.disabled = true;
+  loginMsg('Signing in…', null);
+  try{
+    const r = await call('verify_code', { email:state.pending.email, code, challenge:state.pending.challenge, exp:state.pending.exp });
+    state.auth = { email:state.pending.email, session:r.session, sexp:String(r.sexp) };
+    state.me = r.employee;
+    try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify({ auth:state.auth, me:state.me })); }catch(e){}
+    state.pending = null;
+    openApp();
+  }catch(err){ loginMsg(err.message, false); }
+  finally{ btn.disabled = false; }
 }
-function logout(){ saveDraft(); try{ sessionStorage.removeItem('mega_pa_session'); }catch(e){} location.reload(); }
+function backToEmail(){
+  state.pending = null;
+  document.getElementById('stepCode').classList.add('hidden');
+  document.getElementById('stepEmail').classList.remove('hidden');
+  loginMsg('', null);
+}
+function logout(){
+  saveDraft();
+  try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){}
+  location.reload();
+}
+function expireSession(msg){
+  saveDraft();
+  try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){}
+  state.auth = null; state.me = null;
+  document.getElementById('appView').classList.add('hidden');
+  document.getElementById('footerBar').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+  backToEmail();
+  loginMsg(msg || 'Please sign in again. Your typing is kept.', false);
+}
 
 /* ======================= PAGE + PERIOD ======================= */
 function openApp(){
+  const me = state.me;
   document.getElementById('loginView').classList.add('hidden');
   document.getElementById('appView').classList.remove('hidden');
   document.getElementById('footerBar').classList.remove('hidden');
-  document.getElementById('whoName').textContent = state.me.name;
-  document.getElementById('whoEmail').textContent = state.me.email;
-  document.getElementById('empNameDisplay').textContent = state.me.name;
-  document.getElementById('deptDisplay').textContent = state.me.department || '—';
+  document.getElementById('whoName').textContent = me.name;
+  document.getElementById('whoEmail').textContent = me.email;
+  document.getElementById('pName').textContent = me.name || '—';
+  document.getElementById('pId').textContent = me.employee_id || '—';
+  document.getElementById('pDept').textContent = me.department || '—';
+  document.getElementById('pMgr').textContent = me.manager || '—';
+  document.getElementById('pHr').textContent = me.hr || '—';
   const y = new Date().getFullYear();
   document.getElementById('yearSelect').innerHTML = [y-1, y, y+1].map(v => `<option ${String(v)===state.year?'selected':''}>${v}</option>`).join('');
   renderQuarters();
@@ -703,59 +737,43 @@ function renderQuarters(){
     `<div class="quarter-btn ${state.quarter===q.id?'active':''}" onclick="setQuarter('${q.id}')">${q.label}</div>`).join('');
 }
 function setQuarter(q){ if(state.busy || q === state.quarter) return; saveDraft(); state.quarter = q; renderQuarters(); loadPeriod(); }
-function changePeriod(){ if(state.busy) return; saveDraft(); state.year = document.getElementById('yearSelect').value; loadPeriod(); }
+function changeYear(){ if(state.busy){ document.getElementById('yearSelect').value = state.year; return; } saveDraft(); state.year = document.getElementById('yearSelect').value; loadPeriod(); }
 
-/* Decides which step to show for the selected quarter / year */
 async function loadPeriod(){
   const token = ++state.loadToken;
-  state.phase = 'loading'; resetData();
-  document.getElementById('appraiserName').value = '';
-  renderPage();
+  state.phase = 'loading'; resetData(); renderPage();
   setStatus('Loading your ' + state.quarter + ' ' + state.year + ' appraisal…', null);
-  const me = state.me, q = state.quarter, y = state.year;
-  const [reviews, kraRecs] = await Promise.all([
-    getAllSafe(CONFIG.REPORTS.review, `(Employee_Lookup == ${me.ID} && Quarter == "${q}" && Year_field == "${y}")`),
-    getAllSafe(CONFIG.REPORTS.kra, `(Employee_Name == "${critStr(me.name)}" && Quarter == "${q}" && Year_field1 == "${y}")`)
-  ]);
-  if(token !== state.loadToken) return;                 // user switched period meanwhile
-
-  if(!reviews.length && !kraRecs.length){
-    state.phase = 'targets';
-    if(!restoreDraft()) addKRA(true);
-  } else {
-    state.review = reviews.length ? reviews.sort(byId)[0] : null;
-    const [goalLists, comps, trains] = await Promise.all([
-      Promise.all(kraRecs.sort(byId).map(k => getAllSafe(CONFIG.REPORTS.goal, `(KRA == ${k.ID})`))),
-      getAllSafe(CONFIG.REPORTS.competency, `(Employee_Name1 == "${critStr(me.name)}" && Quarter == "${q}" && Year_field1 == "${y}")`),
-      getAllSafe(CONFIG.REPORTS.training, `(Employee_Name == "${critStr(me.name)}" && Quarter1 == "${q}" && Year_field == "${y}")`)
-    ]);
+  try{
+    const r = await call('load', { quarter:state.quarter, year:state.year });
     if(token !== state.loadToken) return;
-    state.kras = kraRecs.map((k, i) => ({
-      id:nid('k'), recId:String(k.ID), name:plain(k.KRA_Name), description:plain(k.Description), weightage:parseFloat(plain(k.Weightage)) || 0,
-      goals:goalLists[i].sort(byId).map(g => ({ id:nid('g'), recId:String(g.ID), name:plain(g.Goal_Name), achievement:plain(g.Achievement),
-        weightage:parseFloat(plain(g.Weightage)) || 0, selfRating:plain(g.Self_Rating), apprRating:plain(g.Appraiser_Rating) }))
-    }));
-    state.attributes = comps.sort(byId).map(c => ({ id:nid('a'), recId:String(c.ID), name:plain(c.Attribute_Name), weightage:parseFloat(plain(c.Weightage)) || 0, rating:plain(c.Rating) }));
-    const r = state.review || {};
-    const status = plain(r.Status);
-    state.phase = (state.review && status && status !== CONFIG.STATUS.targetsSet) ? 'done' : 'rating';
-    document.getElementById('appraiserName').value = plain(r.Appraiser_Name);
-    state.texts = { facFactors:plain(r.Facilitating_Factors1), conFactors:plain(r.Constraining_Factors), outAchieve:plain(r.Outstanding_Achievement),
-                    apprComments:plain(r.Appraiser_Comments), myLearnings:plain(r.My_Learnings) };
-    state.overallRating = plain(r.Overall_Rating);
-    state.training = trains.sort(byId).map(t => ({ id:nid('t'), recId:String(t.ID), need:plain(t.Training_Need), benefit:plain(t.Expected_Benefit), fulfilled:plain(t.How_Fulfilled) }));
-    if(state.phase === 'rating') restoreDraft();
-  }
-  renderPage();
-  const msg = { targets:'Step 1 — add your Targets (KRA) and tasks, then click Submit Targets.',
+    if(r.employee){ state.me = Object.assign(state.me || {}, r.employee); }
+    state.phase = r.phase;
+    state.kras = (r.kras || []).map(k => ({ id:nid('k'), recId:String(k.id), name:k.name, description:k.description, weightage:num(k.weightage),
+      goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, weightage:num(g.weightage), achievement:g.achievement || '',
+        selfRating:g.self_rating || '', apprRating:g.appraiser_rating || '' })) }));
+    state.attributes = (r.attributes || []).map(a => ({ id:nid('a'), recId:String(a.id), name:a.name, weightage:num(a.weightage), rating:a.rating || '' }));
+    state.training = (r.training || []).map(t => ({ id:nid('t'), saved:true, need:t.need, benefit:t.benefit, fulfilled:t.fulfilled }));
+    const rv = r.review || {};
+    state.texts = { facilitating:rv.facilitating || '', constraining:rv.constraining || '', outstanding:rv.outstanding || '', comments:rv.comments || '', learnings:rv.learnings || '' };
+    state.overallRating = rv.overall || '';
+    state.reviewStatus = rv.status || '';
+    if(state.phase === 'targets'){ if(!restoreDraft()) addKRA(true); }
+    else if(state.phase === 'rating'){ restoreDraft(); }
+    renderPage();
+    setStatus({ targets:'Step 1 — add your Targets (KRA) and tasks, then click Submit Targets.',
                 rating:'Step 2 — fill achievement and self rating for each task, then click Submit Self Rating.',
-                done:'This appraisal is complete. You can download the PDF.' }[state.phase];
-  setStatus(msg, true);
+                done:'This appraisal is complete. You can download the PDF.' }[state.phase] || 'Ready.', true);
+  }catch(err){
+    if(token !== state.loadToken) return;
+    state.phase = 'error'; renderPage();
+    setStatus('❌ ' + err.message, false);
+  }
 }
 function resetData(){
-  state.review = null; state.kras = []; state.attributes = []; state.training = []; state.overallRating = '';
-  state.texts = { facFactors:'', conFactors:'', outAchieve:'', apprComments:'', myLearnings:'' };
+  state.kras = []; state.attributes = []; state.training = []; state.overallRating = ''; state.reviewStatus = '';
+  state.texts = { facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'' };
 }
+function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
 /* ======================= AUTO WEIGHTAGE ======================= */
 function splitEven(total, count){
@@ -765,16 +783,15 @@ function splitEven(total, count){
   arr[count-1] = Math.round((total - each * (count-1)) * 100) / 100;
   return arr;
 }
-function sectionShares(){ const r = state.attributes.length > 0; return { kra: r ? CONFIG.KRA_SHARE : 100, role: r ? CONFIG.ROLE_SHARE : 0 }; }
-/* Only in Step 1 — later the saved weights are used as they are */
-function applyWeights(){
+function sectionShares(){ const r = state.attributes.length > 0; return { kra: r ? KRA_SHARE : 100, role: r ? ROLE_SHARE : 0 }; }
+function applyWeights(){                     // Step 1 only; later the saved weights are used
   if(state.phase !== 'targets') return;
   const sh = sectionShares(), kw = splitEven(sh.kra, state.kras.length);
   state.kras.forEach((k, i) => { k.weightage = kw[i]; const gw = splitEven(k.weightage, k.goals.length); k.goals.forEach((g, j) => g.weightage = gw[j]); });
   const aw = splitEven(sh.role, state.attributes.length);
   state.attributes.forEach((a, i) => a.weightage = aw[i]);
 }
-function pct(r){ const n = parseInt(r, 10); return CONFIG.RATING_PCT[n] !== undefined ? CONFIG.RATING_PCT[n] : 0; }
+function pct(r){ const n = parseInt(r, 10); return RATING_PCT[n] !== undefined ? RATING_PCT[n] : 0; }
 function computeScores(){
   let kra = 0, role = 0;
   state.kras.forEach(k => k.goals.forEach(g => { kra += (g.weightage || 0) * pct(g.selfRating) / 100; }));
@@ -786,7 +803,7 @@ function suggestedOverall(s){ return s >= 96 ? 'Outstanding' : s >= 86 ? 'Exceed
 function kraTotal(){ return state.kras.reduce((s,k) => s + (k.weightage||0), 0); }
 function roleTotal(){ return state.attributes.reduce((s,a) => s + (a.weightage||0), 0); }
 
-/* ======================= STEP 1 EDITING ======================= */
+/* ======================= EDITING ======================= */
 function newGoal(){ return { id:nid('g'), recId:'', name:'', achievement:'', weightage:0, selfRating:'', apprRating:'' }; }
 function addKRA(silent){ state.kras.push({ id:nid('k'), recId:'', name:'', description:'', weightage:0, goals:[newGoal()] }); if(!silent){ renderPage(); markUnsaved(); } }
 function removeKRA(id){ state.kras = state.kras.filter(k => k.id !== id); renderPage(); markUnsaved(); }
@@ -796,17 +813,15 @@ function addGoal(kid){ findKra(kid).goals.push(newGoal()); renderPage(); markUns
 function removeGoal(kid, gid){ const k = findKra(kid); k.goals = k.goals.filter(g => g.id !== gid); renderPage(); markUnsaved(); }
 function addAttribute(){ state.attributes.push({ id:nid('a'), recId:'', name:'', weightage:0, rating:'' }); renderPage(); markUnsaved(); }
 function removeAttribute(id){ state.attributes = state.attributes.filter(a => a.id !== id); renderPage(); markUnsaved(); }
-/* text edits never re-render (keeps the cursor where the user clicked) */
+/* text edits never re-render (keeps the click where the user put it) */
 function setKra(id, f, v){ findKra(id)[f] = v; markUnsaved(); }
 function setGoal(kid, gid, f, v){ findGoal(kid, gid)[f] = v; if(f === 'selfRating') renderScores(); markUnsaved(); }
 function setAttr(id, f, v){ state.attributes.find(a => a.id === id)[f] = v; if(f === 'rating') renderScores(); markUnsaved(); }
 function setText(id, v){ state.texts[id] = v; markUnsaved(); }
-
-/* ======================= STEP 2 EXTRAS ======================= */
-function addTrainingRow(){ state.training.push({ id:nid('t'), recId:'', need:'', benefit:'', fulfilled:'' }); renderPage(); markUnsaved(); }
+function addTrainingRow(){ state.training.push({ id:nid('t'), saved:false, need:'', benefit:'', fulfilled:'' }); renderPage(); markUnsaved(); }
 function removeTrainingRow(id){ state.training = state.training.filter(t => t.id !== id); renderPage(); markUnsaved(); }
 function setTrain(id, f, v){ state.training.find(t => t.id === id)[f] = v; markUnsaved(); }
-function setOverall(l){ state.overallRating = l; renderOverall(); markUnsaved(); }
+function setOverall(l){ if(state.phase !== 'rating') return; state.overallRating = l; renderOverall(); markUnsaved(); }
 
 /* ======================= RENDER ======================= */
 function ratingSelect(value, onchange){
@@ -814,32 +829,29 @@ function ratingSelect(value, onchange){
     `<option value="${r}" ${String(value)===String(r)?'selected':''}>${RATING_LABELS[r]}</option>`).join('')}</select>`;
 }
 function renderBanner(){
-  const p = state.phase, el = document.getElementById('stepBanner');
-  if(p === 'loading'){ el.innerHTML = ''; return; }
+  const p = state.phase, el = document.getElementById('stepBanner'), btn = document.getElementById('mainBtn');
+  btn.classList.toggle('hidden', !(p === 'targets' || p === 'rating'));
+  btn.textContent = p === 'targets' ? 'Submit Targets' : 'Submit Self Rating';
+  btn.disabled = state.busy;
+  document.getElementById('pdfBtn').disabled = !(p === 'targets' || p === 'rating' || p === 'done');
+  if(!(p === 'targets' || p === 'rating' || p === 'done')){ el.innerHTML = ''; return; }
   const info = {
-    targets:['STEP 1','Set your Targets','Add each Target (KRA) and the tasks under it. Weightage is calculated automatically. Ratings are given later in Step 2.',''],
-    rating:['STEP 2','Self Rating','Your targets are saved. Fill the achievement and your self rating for every task, then submit.','rating'],
-    done:['DONE','Appraisal submitted','Status: ' + (plain(state.review && state.review.Status) || 'Submitted') + '. Your entries are locked — download the PDF anytime.','done']
+    targets:['STEP 1','Set your Targets','Add each Target (KRA) and the tasks under it. Weightage is calculated automatically. You rate them later in Step 2.',''],
+    rating:['STEP 2','Self Rating','Your targets are saved and locked. Fill the achievement and your self rating for every task, then submit.','rating'],
+    done:['DONE','Appraisal submitted','Status: ' + (state.reviewStatus || 'Submitted') + '. Your entries are locked — download the PDF anytime.','done']
   }[p];
   el.innerHTML = `<div class="step-banner ${info[3]}"><span class="num">${info[0]}</span><div><div class="t">${info[1]}</div><div class="d">${info[2]}</div></div>
     <div class="steps"><span class="${p==='targets'?'on':''}">1 · Targets</span><span class="${p==='rating'?'on':''}">2 · Self Rating</span><span class="${p==='done'?'on':''}">✓ Done</span></div></div>`;
-  const btn = document.getElementById('mainBtn');
-  btn.classList.toggle('hidden', p === 'done');
-  btn.textContent = p === 'targets' ? 'Submit Targets' : 'Submit Self Rating';
-  btn.disabled = state.busy;
-  document.getElementById('appraiserName').disabled = p === 'done';
 }
 function renderPage(){
   applyWeights();
   renderBanner();
   const body = document.getElementById('pageBody');
   if(state.phase === 'loading'){ body.innerHTML = '<div class="section"><div class="loading-box">Loading…</div></div>'; return; }
-  if(state.phase === 'targets') body.innerHTML = targetsHtml();
-  else body.innerHTML = ratingHtml(state.phase === 'done');
+  if(state.phase === 'error'){ body.innerHTML = '<div class="section"><div class="loading-box">Could not load this quarter. <button class="small" onclick="loadPeriod()">Try again</button></div></div>'; return; }
+  body.innerHTML = state.phase === 'targets' ? targetsHtml() : ratingHtml(state.phase === 'done');
   renderScores(); renderOverall();
 }
-
-/* ---------- STEP 1 page ---------- */
 function targetsHtml(){
   const sh = sectionShares();
   return `
@@ -850,8 +862,8 @@ function targetsHtml(){
       <div class="kra-block">
         <div class="kra-top">
           <div class="fields">
-            <div><label>Target ${i+1} <span class="req">*</span></label><input value="${esc(k.name)}" placeholder="e.g. Zoho Creator Development" onchange="setKra('${k.id}','name',this.value)"></div>
-            <div><label>Description</label><input value="${esc(k.description)}" placeholder="What this target covers" onchange="setKra('${k.id}','description',this.value)"></div>
+            <div><label>Target ${i+1} <span class="req">*</span></label><input value="${esc(k.name)}" maxlength="200" placeholder="e.g. Zoho Creator Development" onchange="setKra('${k.id}','name',this.value)"></div>
+            <div><label>Description</label><input value="${esc(k.description)}" maxlength="500" placeholder="What this target covers" onchange="setKra('${k.id}','description',this.value)"></div>
             <div><label>Weightage (auto)</label><input value="${fmt(k.weightage)}%" disabled></div>
           </div>
           <div class="kra-actions"><button class="small danger" onclick="removeKRA('${k.id}')">Remove</button></div>
@@ -859,7 +871,7 @@ function targetsHtml(){
         ${k.goals.map((g, j) => `
           <div class="goal-row">
             <div class="goal-row-header"><span class="goal-tag">TASK ${i+1}.${j+1} · ${fmt(g.weightage)}%</span><button class="small danger" onclick="removeGoal('${k.id}','${g.id}')">Remove</button></div>
-            <div><label>Task <span class="req">*</span></label><textarea placeholder="Describe the task" onchange="setGoal('${k.id}','${g.id}','name',this.value)">${esc(g.name)}</textarea></div>
+            <div><label>Task <span class="req">*</span></label><textarea maxlength="1000" placeholder="Describe the task" onchange="setGoal('${k.id}','${g.id}','name',this.value)">${esc(g.name)}</textarea></div>
           </div>`).join('')}
         <div style="margin-top:12px;"><button class="small" onclick="addGoal('${k.id}')">+ Add Task under Target ${i+1}</button></div>
       </div>`).join('') : '<div class="empty">No targets yet.</div>'}
@@ -867,26 +879,23 @@ function targetsHtml(){
   </div>
   <div class="section">
     <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(sh.role)}% · ${state.attributes.length} attribute(s)</span></div>
-    <div class="note">Optional. If you add role attributes they share 20% and Targets get 80%. You will rate them in Step 2.</div>
+    <div class="note">Optional. If you add role attributes they share 20% and Targets get 80%. You rate them in Step 2.</div>
     ${state.attributes.length ? state.attributes.map((a, i) => `
       <div class="attr-row" style="grid-template-columns:3fr 1fr auto;">
-        <div><label>Attribute ${i+1} <span class="req">*</span></label><input value="${esc(a.name)}" placeholder="e.g. Leadership" onchange="setAttr('${a.id}','name',this.value)"></div>
+        <div><label>Attribute ${i+1} <span class="req">*</span></label><input value="${esc(a.name)}" maxlength="200" placeholder="e.g. Leadership" onchange="setAttr('${a.id}','name',this.value)"></div>
         <div><label>Weightage (auto)</label><input value="${fmt(a.weightage)}%" disabled></div>
         <div><button class="small danger" onclick="removeAttribute('${a.id}')">✕</button></div>
       </div>`).join('') : '<div class="empty">No role attributes — Targets carry the full 100%.</div>'}
     <div style="margin-top:10px;"><button class="small" onclick="addAttribute()">+ Add Role Attribute</button></div>
   </div>`;
 }
-
-/* ---------- STEP 2 page (and read-only DONE page) ---------- */
 function ratingHtml(ro){
   const ta = (id, ph) => ro ? `<div class="ro">${esc(state.texts[id]) || '—'}</div>`
-                            : `<textarea placeholder="${ph}" onchange="setText('${id}',this.value)">${esc(state.texts[id])}</textarea>`;
+                            : `<textarea maxlength="3000" placeholder="${ph}" onchange="setText('${id}',this.value)">${esc(state.texts[id])}</textarea>`;
   return `
   <div class="score-bar" id="scoreBar"></div>
   <div class="section">
     <div class="section-head"><h2>Targets (KRA) &amp; Tasks</h2><span class="weight-badge">${fmt(kraTotal())}% · ${state.kras.length} target(s)</span></div>
-    ${state.kras.length ? '' : '<div class="empty">No targets were found for this quarter.</div>'}
     ${state.kras.map((k, i) => `
       <div class="kra-block">
         <div><b>Target ${i+1}: ${esc(k.name)}</b> <span class="goal-tag">· ${fmt(k.weightage)}%</span></div>
@@ -896,7 +905,7 @@ function ratingHtml(ro){
             <div class="rate-grid">
               <div><label>Task ${i+1}.${j+1} · ${fmt(g.weightage)}%</label><div class="ro">${esc(g.name)}</div></div>
               <div><label>Achievement</label>${ro ? `<div class="ro">${esc(g.achievement) || '—'}</div>`
-                 : `<textarea placeholder="What was achieved" onchange="setGoal('${k.id}','${g.id}','achievement',this.value)">${esc(g.achievement)}</textarea>`}</div>
+                 : `<textarea maxlength="2000" placeholder="What was achieved" onchange="setGoal('${k.id}','${g.id}','achievement',this.value)">${esc(g.achievement)}</textarea>`}</div>
               <div><label>Self Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(g.selfRating) || '—'}</div>` : ratingSelect(g.selfRating, `setGoal('${k.id}','${g.id}','selfRating',this.value)`)}</div>
               <div><label>Appraiser Rating</label><div class="ro">${esc(g.apprRating) || '—'}</div></div>
             </div>
@@ -915,24 +924,24 @@ function ratingHtml(ro){
       </div>`).join('')}
   </div>` : ''}
   <div class="section two-col">
-    <div><label>Facilitating Factors</label>${ta('facFactors','Factors that helped achieve the targets (mention target number)')}</div>
-    <div><label>Constraining Factors</label>${ta('conFactors','Factors that were constraints (mention target number)')}</div>
-    <div><label>Outstanding Achievement / Significant Contribution</label>${ta('outAchieve','Quantified benefit to company')}</div>
-    <div><label>Comments of Appraiser</label>${ta('apprComments','Comments')}</div>
+    <div><label>Facilitating Factors</label>${ta('facilitating','Factors that helped achieve the targets (mention target number)')}</div>
+    <div><label>Constraining Factors</label>${ta('constraining','Factors that were constraints (mention target number)')}</div>
+    <div><label>Outstanding Achievement / Significant Contribution</label>${ta('outstanding','Quantified benefit to company')}</div>
+    <div><label>Comments of Appraiser</label>${ta('comments','Comments')}</div>
   </div>
   <div class="section">
     <div class="section-head"><h2>My Learnings</h2></div>
-    ${ta('myLearnings','Visit outside organization / Customer Visit / Training / Reading / External Course')}
+    ${ta('learnings','Visit outside organization / Customer Visit / Training / Reading / External Course')}
   </div>
   <div class="section">
     <div class="section-head"><h2>Training Need Identification</h2>${ro ? '' : '<button class="small" onclick="addTrainingRow()">+ Add Row</button>'}</div>
     <table class="train-table">
       <thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled</th>${ro?'':'<th style="width:50px"></th>'}</tr></thead>
-      <tbody>${state.training.length ? state.training.map(t => ro || t.recId ? `
+      <tbody>${state.training.length ? state.training.map(t => ro || t.saved ? `
         <tr><td>${esc(t.need)}</td><td>${esc(t.benefit)}</td><td>${esc(t.fulfilled)}</td>${ro?'':'<td></td>'}</tr>` : `
-        <tr><td><input value="${esc(t.need)}" onchange="setTrain('${t.id}','need',this.value)"></td>
-            <td><input value="${esc(t.benefit)}" onchange="setTrain('${t.id}','benefit',this.value)"></td>
-            <td><input value="${esc(t.fulfilled)}" placeholder="Internal / Self-study / Outside" onchange="setTrain('${t.id}','fulfilled',this.value)"></td>
+        <tr><td><input value="${esc(t.need)}" maxlength="300" onchange="setTrain('${t.id}','need',this.value)"></td>
+            <td><input value="${esc(t.benefit)}" maxlength="300" onchange="setTrain('${t.id}','benefit',this.value)"></td>
+            <td><input value="${esc(t.fulfilled)}" maxlength="300" placeholder="Internal / Self-study / Outside" onchange="setTrain('${t.id}','fulfilled',this.value)"></td>
             <td><button class="small danger" onclick="removeTrainingRow('${t.id}')">✕</button></td></tr>`).join('')
         : `<tr><td colspan="4" class="empty">${ro ? 'None.' : 'No training needs added yet.'}</td></tr>`}</tbody>
     </table>
@@ -953,23 +962,21 @@ function renderScores(){
 }
 function renderOverall(){
   const el = document.getElementById('overallOptions'); if(!el) return;
-  const ro = state.phase === 'done';
+  const ro = state.phase !== 'rating';
   el.innerHTML = OVERALL_LABELS.map(l => `<div class="overall-opt ${state.overallRating===l?'selected':''}" ${ro?'':`onclick="setOverall('${l}')"`}>${l}</div>`).join('');
 }
 
 /* ======================= STATUS / DRAFT ======================= */
 function setStatus(msg, ok){ const s = document.getElementById('statusText'); s.textContent = msg; s.classList.remove('ok','bad'); if(ok===true) s.classList.add('ok'); if(ok===false) s.classList.add('bad'); }
-function draftKey(){ return `mega_pa::${state.me ? state.me.email : ''}::${state.quarter}::${state.year}::${state.phase}`; }
+function draftKey(){ return `mega_pa3::${state.me ? state.me.email : ''}::${state.quarter}::${state.year}::${state.phase}`; }
 function markUnsaved(){ if(state.phase !== 'targets' && state.phase !== 'rating') return; saveDraft(); setStatus('Draft kept in this browser — remember to submit.', null); }
 function saveDraft(){
   if(!state.me || (state.phase !== 'targets' && state.phase !== 'rating')) return;
-  let d;
-  if(state.phase === 'targets') d = { kras:state.kras, attributes:state.attributes, appraiser:val('appraiserName') };
-  else d = {
-    goals:Object.fromEntries(state.kras.flatMap(k => k.goals).map(g => [g.recId, { a:g.achievement, r:g.selfRating }])),
-    attrs:Object.fromEntries(state.attributes.map(a => [a.recId, a.rating])),
-    training:state.training, texts:state.texts, overall:state.overallRating, appraiser:val('appraiserName')
-  };
+  const d = state.phase === 'targets'
+    ? { kras:state.kras, attributes:state.attributes }
+    : { goals:Object.fromEntries(state.kras.flatMap(k => k.goals).map(g => [g.recId, { a:g.achievement, r:g.selfRating }])),
+        attrs:Object.fromEntries(state.attributes.map(a => [a.recId, a.rating])),
+        training:state.training.filter(t => !t.saved), texts:state.texts, overall:state.overallRating };
   try{ localStorage.setItem(draftKey(), JSON.stringify(d)); }catch(e){}
 }
 function restoreDraft(){
@@ -981,22 +988,19 @@ function restoreDraft(){
   } else {
     state.kras.forEach(k => k.goals.forEach(g => { const x = d.goals && d.goals[g.recId]; if(x){ if(x.a && !g.achievement) g.achievement = x.a; if(x.r && !g.selfRating) g.selfRating = x.r; } }));
     state.attributes.forEach(a => { const r = d.attrs && d.attrs[a.recId]; if(r && !a.rating) a.rating = r; });
-    if(Array.isArray(d.training)){ const saved = state.training.filter(t => t.recId); state.training = saved.concat(d.training.filter(t => !t.recId)); }
+    if(Array.isArray(d.training)) state.training = state.training.filter(t => t.saved).concat(d.training);
     if(d.texts) Object.keys(state.texts).forEach(k => { if(!state.texts[k] && d.texts[k]) state.texts[k] = d.texts[k]; });
     if(d.overall && !state.overallRating) state.overallRating = d.overall;
   }
-  const allIds = [...state.kras.flatMap(k => [k.id, ...k.goals.map(g => g.id)]), ...state.attributes.map(a => a.id), ...state.training.map(t => t.id)];
-  seq = Math.max(seq, allIds.reduce((m, id) => Math.max(m, parseInt(String(id).slice(1)) || 0), 0) + 1);
-  if(d.appraiser && !val('appraiserName')) document.getElementById('appraiserName').value = d.appraiser;
+  const ids = [...state.kras.flatMap(k => [k.id, ...(k.goals||[]).map(g => g.id)]), ...state.attributes.map(a => a.id), ...state.training.map(t => t.id)];
+  seq = Math.max(seq, ids.reduce((m, id) => Math.max(m, parseInt(String(id).slice(1)) || 0), 0) + 1);
   return true;
 }
 function clearDraft(){ try{ localStorage.removeItem(draftKey()); }catch(e){} }
-function val(id){ const el = document.getElementById(id); return el ? el.value : ''; }
 
 /* ======================= SUBMIT ======================= */
 function mainAction(){ if(state.phase === 'targets') submitTargets(); else if(state.phase === 'rating') submitRating(); }
 function lock(on){ state.busy = on; document.getElementById('mainBtn').disabled = on; }
-
 function validateTargets(){
   if(!state.kras.length) return 'Add at least one Target (KRA).';
   for(let i = 0; i < state.kras.length; i++){
@@ -1008,101 +1012,67 @@ function validateTargets(){
   for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].name.trim()) return `Role Attribute ${i+1}: enter the name (or remove it).`;
   return '';
 }
-/* STEP 1 → KRA, Goal, Competency records + Review (Status Draft).
-   Records already created (recId set) are skipped on a retry. */
 async function submitTargets(){
   if(state.busy) return;
   applyWeights();
   const problem = validateTargets(); if(problem){ setStatus('❌ ' + problem, false); return; }
-  const me = state.me, q = state.quarter, y = state.year;
   lock(true);
+  setStatus('Saving your targets… please do not close this page.', null);
   try{
-    setStatus('Checking…', null);
-    const already = await getAllSafe(CONFIG.REPORTS.review, `(Employee_Lookup == ${me.ID} && Quarter == "${q}" && Year_field == "${y}")`);
-    if(already.length && !state.kras.some(k => k.recId)){ setStatus('Targets for ' + q + ' ' + y + ' are already saved — reloading.', null); lock(false); return loadPeriod(); }
-    const total = state.kras.reduce((n,k) => n + 1 + k.goals.length, 0) + state.attributes.length + 1;
-    let step = 0; const tick = w => setStatus(`Saving ${w}… (${++step}/${total}) — do not close this page.`, null);
-    for(const k of state.kras){
-      tick('targets');
-      if(!k.recId){ const r = await addRecord(CONFIG.FORMS.kra, { KRA_Name:k.name.trim(), Description:k.description || '', Employee_Name:me.name, Quarter:q, Year_field1:y, Weightage:k.weightage }); k.recId = String(r.ID); saveDraft(); }
-      for(const g of k.goals){
-        tick('tasks');
-        if(!g.recId){ const r = await addRecord(CONFIG.FORMS.goal, { Goal_Name:g.name.trim(), Description:g.name.trim(), KRA:k.recId, Weightage:g.weightage, Data_Source:'Manual' }); g.recId = String(r.ID); saveDraft(); }
-      }
-    }
-    for(const a of state.attributes){
-      tick('role attributes');
-      if(!a.recId){ const r = await addRecord(CONFIG.FORMS.competency, { Attribute_Name:a.name.trim(), Weightage:a.weightage, Employee_Name1:me.name, Quarter:q, Year_field1:y }); a.recId = String(r.ID); saveDraft(); }
-    }
-    tick('review');
-    if(!already.length){
-      await addRecord(CONFIG.FORMS.review, { Employee_Lookup:me.ID, Status:CONFIG.STATUS.targetsSet, Appraiser_Name:val('appraiserName'),
-        Department:me.department, Quarter:q, Year_field:y });
-    }
+    await call('save_targets', { quarter:state.quarter, year:state.year,
+      kras:state.kras.map(k => ({ name:k.name.trim(), description:(k.description||'').trim(), goals:k.goals.map(g => ({ name:g.name.trim() })) })),
+      attributes:state.attributes.map(a => ({ name:a.name.trim() })) });
     clearDraft();
     lock(false);
     await loadPeriod();
-    setStatus('✅ Targets saved. Come back to this page for Step 2 — Self Rating.', true);
+    setStatus('✅ Targets saved. Open this link again later for Step 2 — Self Rating. You can download the PDF now.', true);
   }catch(err){
-    console.error('TARGETS ERROR', err); lock(false);
-    setStatus('❌ Save failed: ' + errText(err) + ' — click Submit Targets again (saved items are not duplicated).', false);
+    lock(false);
+    setStatus('❌ ' + err.message, false);
   }
 }
 function validateRating(){
+  if(!state.kras.length) return 'No targets found for this quarter.';
   for(let i = 0; i < state.kras.length; i++) for(let j = 0; j < state.kras[i].goals.length; j++)
     if(!state.kras[i].goals[j].selfRating) return `Task ${i+1}.${j+1}: select your self rating.`;
   for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].rating) return `Role Attribute ${i+1}: select a rating.`;
-  if(!state.kras.length) return 'No targets found for this quarter.';
   return '';
 }
-/* STEP 2 → update Goal + Competency ratings, add Training_Need,
-   then Review Status "Submitted for Approval" (done last). */
 async function submitRating(){
   if(state.busy) return;
   const problem = validateRating(); if(problem){ setStatus('❌ ' + problem, false); return; }
-  const me = state.me, q = state.quarter, y = state.year, s = computeScores();
   lock(true);
+  setStatus('Saving your self rating… please do not close this page.', null);
   try{
-    const goals = state.kras.flatMap(k => k.goals), newTrain = state.training.filter(t => !t.recId && t.need.trim());
-    const total = goals.length + state.attributes.length + newTrain.length + 1;
-    let step = 0; const tick = w => setStatus(`Saving ${w}… (${++step}/${total}) — do not close this page.`, null);
-    for(const g of goals){ tick('self ratings'); await updateRecord(CONFIG.REPORTS.goal, g.recId, { Achievement:g.achievement || '', Self_Rating:String(g.selfRating) }); }
-    for(const a of state.attributes){ tick('role attributes'); await updateRecord(CONFIG.REPORTS.competency, a.recId, { Rating:String(a.rating) }); }
-    for(const t of newTrain){
-      tick('training needs');
-      const r = await addRecord(CONFIG.FORMS.training, { Training_Need:t.need.trim(), Expected_Benefit:t.benefit || '', How_Fulfilled:t.fulfilled || '', Employee_Name:me.name, Quarter1:q, Year_field:y });
-      t.recId = String(r.ID); saveDraft();
-    }
-    tick('review');
-    const data = { Status:CONFIG.STATUS.selfRated, Appraiser_Name:val('appraiserName'),
-      Facilitating_Factors1:state.texts.facFactors, Constraining_Factors:state.texts.conFactors, Outstanding_Achievement:state.texts.outAchieve,
-      Appraiser_Comments:state.texts.apprComments, My_Learnings:state.texts.myLearnings, Overall_Rating:state.overallRating || '',
-      KRA_Score:s.kra, Competency_Score:s.role, Final_Score:s.total };
-    if(state.review) await updateRecord(CONFIG.REPORTS.review, state.review.ID, data);
-    else await addRecord(CONFIG.FORMS.review, Object.assign({ Employee_Lookup:me.ID, Department:me.department, Quarter:q, Year_field:y }, data));
+    const r = await call('save_rating', { quarter:state.quarter, year:state.year,
+      goals:state.kras.flatMap(k => k.goals).map(g => ({ id:g.recId, achievement:g.achievement || '', self_rating:String(g.selfRating) })),
+      attributes:state.attributes.map(a => ({ id:a.recId, rating:String(a.rating) })),
+      training:state.training.filter(t => !t.saved && t.need.trim()).map(t => ({ need:t.need.trim(), benefit:t.benefit || '', fulfilled:t.fulfilled || '' })),
+      facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
+      comments:state.texts.comments, learnings:state.texts.learnings, overall:state.overallRating || '' });
     clearDraft();
     lock(false);
     await loadPeriod();
-    setStatus('✅ Self rating submitted. Download your PDF anytime.', true);
+    setStatus('✅ Self rating submitted' + (r.final_score !== undefined ? ' (score ' + r.final_score + ' / 100)' : '') + '. Download your PDF anytime.', true);
   }catch(err){
-    console.error('RATING ERROR', err); lock(false);
-    setStatus('❌ Save failed: ' + errText(err) + ' — your entries are kept, click Submit Self Rating again.', false);
+    lock(false);
+    setStatus('❌ ' + err.message, false);
   }
 }
 
 /* ======================= PDF ======================= */
 function downloadPdf(){
-  if(state.phase === 'loading'){ setStatus('Please wait — still loading.', null); return; }
+  if(!(state.phase === 'targets' || state.phase === 'rating' || state.phase === 'done')){ setStatus('Please wait — still loading.', null); return; }
   applyWeights();
-  const sh = { kra:kraTotal(), role:roleTotal() };
+  const me = state.me || {};
   downloadAppraisalPdf({
-    employeeName:state.me.name, department:state.me.department, appraiser:val('appraiserName'), year:state.year, quarter:state.quarter,
-    kraSectionWeight:Math.round(sh.kra*100)/100 || 100, roleSectionWeight:Math.round(sh.role*100)/100, ratingMap:CONFIG.RATING_PCT,
+    employeeName:me.name, department:me.department, appraiser:me.manager || '', year:state.year, quarter:state.quarter,
+    kraSectionWeight:Math.round(kraTotal()*100)/100 || 100, roleSectionWeight:Math.round(roleTotal()*100)/100, ratingMap:RATING_PCT,
     kras:state.kras.map(k => ({ name:k.name, description:k.description, weightage:k.weightage,
       goals:k.goals.filter(g => g.name || g.achievement).map(g => ({ name:g.name, achievement:g.achievement, weightage:g.weightage, selfRating:g.selfRating, apprRating:g.apprRating })) })),
     attributes:state.attributes.map(a => ({ name:a.name, weightage:a.weightage, rating:a.rating })),
-    facilitating:state.texts.facFactors, constraining:state.texts.conFactors, outstanding:state.texts.outAchieve,
-    comments:state.texts.apprComments, learnings:state.texts.myLearnings,
+    facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
+    comments:state.texts.comments, learnings:state.texts.learnings,
     training:state.training.map(t => ({ need:t.need, benefit:t.benefit, fulfilled:t.fulfilled })),
     overallRating:state.overallRating || ''
   }, setStatus);
@@ -1114,23 +1084,13 @@ function fmt(n){ const x = Number(n) || 0; return (Math.round(x * 100) / 100).to
 
 /* ======================= INIT ======================= */
 window.addEventListener('beforeunload', () => saveDraft());
-(async function init(){
-  if(!(window.ZOHO && ZOHO.CREATOR)){ loginMsg('Zoho Creator SDK not found — open this page as a Creator widget.', false); return; }
-  try{
-    await ZOHO.CREATOR.init();
-    state.creatorUser = await getCreatorUser();
-    await loadEmployees();
-    state.sdkReady = true;
-    document.getElementById('loginBtn').disabled = false;
-    loginMsg('', null);
-    let saved = ''; try{ saved = sessionStorage.getItem('mega_pa_session') || ''; }catch(e){}
-    const input = document.getElementById('loginEmail');
-    input.value = saved || state.creatorUser || '';
-    if(saved && state.employees.some(e => e.email === saved) && (!state.creatorUser || state.creatorUser === saved)) doLogin();
-    else input.focus();
-  }catch(err){
-    console.error('INIT ERROR', err);
-    loginMsg('Could not load the employee list: ' + errText(err) + '. Check CONFIG.EMPLOYEE_REPORTS and your permission on that report.', false);
+(function init(){
+  let s = null;
+  try{ s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); }catch(e){}
+  if(s && s.auth && s.me && Number(s.auth.sexp) > Date.now()){
+    state.auth = s.auth; state.me = s.me; openApp();      // same tab refreshed → stay signed in
+  } else {
+    document.getElementById('loginEmail').focus();
   }
 })();
 </script>
