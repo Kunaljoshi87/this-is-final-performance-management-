@@ -3,481 +3,1136 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Employee Performance - Mega Engineering</title>
+<title>Performance Appraisal — Mega Engineering</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://static.zohocdn.com/creator/widgets/version/1.0/widgetsdk-min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
-:root{--bg:#F4F6F8;--panel:#fff;--line:#D7DEE5;--navy:#1E4E8C;--red:#C0392B;--green:#1E8E5A;--text:#1F2937;--muted:#6B7A8F;--amber:#B7791F}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif}body{padding:24px 28px 92px;min-height:100vh}
-input,textarea,select{background:#F9FAFB;border:1px solid var(--line);color:var(--text);font-family:Inter,sans-serif;font-size:13px;padding:8px 10px;width:100%;outline:none}input:focus,textarea:focus,select:focus{border-color:var(--navy)}input:disabled,textarea:disabled,select:disabled{background:#EEF1F4;color:var(--muted)}textarea{resize:vertical;min-height:70px}label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:4px}
-button{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:transparent;border:1px solid var(--navy);color:var(--navy);padding:9px 15px;cursor:pointer}button:hover{background:var(--navy);color:#fff}button.solid{background:var(--navy);color:#fff}button.danger{border-color:var(--red);color:var(--red)}button.danger:hover{background:var(--red);color:#fff}button:disabled{opacity:.45;cursor:not-allowed}
-.tabs{display:flex;gap:8px;margin-bottom:18px}.tab{border:1px solid var(--line);background:var(--panel);padding:10px 18px;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer}.tab.active{border-color:var(--navy);color:var(--navy);background:#EAF1FA;font-weight:600}
-.section{border:1px solid var(--line);background:var(--panel);padding:20px 22px;margin-bottom:18px;box-shadow:0 1px 3px rgba(31,41,55,.05)}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px}.section-head h2{font-family:'Space Grotesk',sans-serif;font-size:17px;color:var(--navy);margin:0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.readonly{background:#EEF1F4;border:1px solid var(--line);padding:8px 10px;min-height:36px;font-size:13px}.note{font-size:12px;color:var(--muted);line-height:1.45}.badge{font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid var(--line);padding:4px 8px}.badge.ok{color:var(--green);border-color:var(--green)}.badge.bad{color:var(--red);border-color:var(--red)}.badge.warn{color:var(--amber);border-color:var(--amber)}
-.quarters{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.quarter{padding:8px 14px;border:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;color:var(--muted)}.quarter.active{border-color:var(--navy);color:var(--navy);font-weight:600}
-.kra-card{border:1px dashed var(--line);padding:14px;margin-bottom:14px}.kra-top{display:grid;grid-template-columns:2fr 2fr 1fr auto;gap:10px;align-items:end}.goal-card{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}.goal-grid-setup{display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end}.goal-grid-self{display:grid;grid-template-columns:2fr 2fr 1fr;gap:10px;align-items:start}.attr-row{display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px}.self-attr-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:end;margin-bottom:10px}
-.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.summary-card{border:1px solid var(--line);padding:14px;background:#FAFBFC}.summary-card .value{font-family:'Space Grotesk',sans-serif;font-size:24px;color:var(--navy);font-weight:700}.summary-card .caption{font-size:11px;color:var(--muted);margin-top:3px}
-.footer{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 28px;display:flex;gap:10px;align-items:center;z-index:20}.status{margin-right:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}.status.ok{color:var(--green)}.status.bad{color:var(--red)}.hidden{display:none!important}.reject-box{border:1px solid #f0c3be;background:#fff7f6;padding:12px;margin-bottom:14px;color:var(--red);font-size:12px}
-.modal-backdrop{position:fixed;inset:0;background:rgba(31,41,55,.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}.modal{width:min(520px,100%);background:#fff;border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.2)}.modal-head{padding:16px 18px;border-bottom:1px solid var(--line);font-family:'Space Grotesk',sans-serif;font-size:17px;color:var(--navy);font-weight:600}.modal-body{padding:18px;font-size:13px;line-height:1.55;white-space:pre-wrap}.modal-actions{padding:0 18px 18px;text-align:right}.modal.error .modal-head{color:var(--red)}.modal.success .modal-head{color:var(--green)}
-@media(max-width:800px){body{padding:14px 14px 100px}.two,.kra-top,.goal-grid-setup,.goal-grid-self,.attr-row,.self-attr-row,.summary{grid-template-columns:1fr}.footer{padding:10px 14px;flex-wrap:wrap}}
+  :root{
+    --bg:#F4F6F8; --panel:#FFFFFF; --line:#D7DEE5;
+    --navy:#1E4E8C; --amber:#B7791F; --red:#C0392B; --green:#1E8E5A;
+    --text:#1F2937; --muted:#6B7A8F;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
+  body{padding:24px 28px 100px; min-height:100vh;}
+  .wrap{max-width:1150px; margin:0 auto;}
+  h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif; margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .hidden{display:none !important;}
+  input,textarea,select{
+    background:#F9FAFB; border:1px solid var(--line); color:var(--text);
+    font-family:'Inter',sans-serif; font-size:13px; padding:8px 10px; width:100%; outline:none;
+  }
+  input:focus,textarea:focus,select:focus{border-color:var(--navy);}
+  input:disabled,select:disabled{background:#EEF1F4; color:var(--muted); cursor:not-allowed;}
+  textarea{resize:vertical; min-height:60px;}
+  label{font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); display:block; margin-bottom:4px;}
+  .req{color:var(--red);}
+  button{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em; text-transform:uppercase;
+    background:transparent; border:1px solid var(--navy); color:var(--navy); padding:8px 14px; cursor:pointer;
+  }
+  button:hover{background:var(--navy); color:#FFFFFF;}
+  button.danger{border-color:var(--red); color:var(--red);}
+  button.danger:hover{background:var(--red); color:#FFFFFF;}
+  button.solid{background:var(--navy); color:#FFFFFF;}
+  button.small{padding:5px 10px; font-size:10px;}
+  button:disabled{opacity:.4; cursor:not-allowed;}
+  button:disabled:hover{background:transparent; color:var(--navy);}
+  button.solid:disabled:hover{background:var(--navy); color:#fff;}
+
+  /* ===== LOGIN ===== */
+  .login-wrap{max-width:440px; margin:50px auto 0;}
+  .login-card{background:var(--panel); border:1px solid var(--line); border-top:3px solid var(--navy); padding:28px; box-shadow:0 1px 3px rgba(31,41,55,.06);}
+  .login-card h2{font-size:20px; color:var(--navy); margin-bottom:6px;}
+  .login-card p{font-size:13px; color:var(--muted); margin:0 0 18px; line-height:1.5;}
+  .login-card input{font-size:15px; padding:11px 12px;}
+  .login-card button{width:100%; margin-top:14px; padding:12px; font-size:12px;}
+  .login-msg{font-size:12px; margin-top:12px; min-height:16px; line-height:1.45;}
+  .login-msg.bad{color:var(--red);} .login-msg.ok{color:var(--green);}
+  .logo-row{display:flex; align-items:center; gap:12px; margin-bottom:18px;}
+  .logo-row img{height:34px;}
+
+  .who-bar{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; background:#EAF1FA; border:1px solid var(--navy); padding:10px 14px; margin-bottom:16px; font-size:13px;}
+
+  .titleblock{border:1px solid var(--line); background:var(--panel); padding:20px 24px; margin-bottom:20px; box-shadow:0 1px 3px rgba(31,41,55,.06); border-top:3px solid var(--navy);}
+  .tb-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+  .quarter-row{display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;}
+  .quarter-btn{padding:8px 16px; border:1px solid var(--line); color:var(--muted); cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:11px; background:#fff;}
+  .quarter-btn.active{border-color:var(--navy); color:var(--navy); font-weight:600; background:#EAF1FA;}
+  .readonly-box{background:#EEF1F4; padding:8px 10px; font-size:13px; border:1px solid var(--line); min-height:35px;}
+
+  /* ===== AUTO SCORE BAR ===== */
+  .score-bar{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:20px;}
+  .score-tile{background:var(--panel); border:1px solid var(--line); padding:12px 14px;}
+  .score-tile .k{font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);}
+  .score-tile .v{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; margin-top:4px; color:var(--navy);}
+  .score-tile .s{font-size:11px; color:var(--muted); margin-top:2px;}
+  .score-tile.final{border-color:var(--navy); background:#EAF1FA;}
+
+  .section{border:1px solid var(--line); background:var(--panel); padding:22px; margin-bottom:20px; box-shadow:0 1px 3px rgba(31,41,55,.05);}
+  .section-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px; border-bottom:1px solid var(--line); padding-bottom:12px;}
+  .section-head h2{font-size:17px; color:var(--navy);}
+  .weight-badge{font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 9px; border:1px solid var(--green); color:var(--green); background:#EAF7F0;}
+  .note{font-size:11px; color:var(--muted); margin:-6px 0 14px;}
+
+  .kra-block{border:1px dashed var(--line); padding:16px; margin-bottom:16px;}
+  .kra-top{display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;}
+  .kra-top .fields{flex:1; min-width:260px; display:grid; grid-template-columns:2fr 2fr 1fr; gap:10px;}
+  .kra-actions{display:flex; gap:6px; flex-shrink:0; margin-top:16px;}
+  .goal-row{border-top:1px solid var(--line); padding-top:12px; margin-top:12px; display:grid; grid-template-columns:1fr; gap:10px; padding-left:14px; border-left:3px solid #EAF1FA;}
+  .goal-row-header{display:flex; justify-content:space-between; align-items:center;}
+  .goal-tag{font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted);}
+  .achievement-grid{display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:10px;}
+  .attr-row{display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:10px; align-items:end; margin-bottom:10px;}
+  .empty{color:var(--muted); font-size:13px;}
+
+  .train-table{width:100%; border-collapse:collapse;}
+  .train-table th{text-align:left; font-size:10px; text-transform:uppercase; color:var(--muted); padding:8px 6px; border-bottom:1px solid var(--line);}
+  .train-table td{padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top;}
+
+  .overall-options{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-top:8px;}
+  .overall-opt{border:1px solid var(--line); padding:10px 12px; cursor:pointer; font-size:13px; text-align:center;}
+  .overall-opt.selected{border-color:var(--navy); color:var(--navy); background:#EAF1FA; font-weight:600;}
+
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+
+  .footer-bar{position:fixed; bottom:0; left:0; right:0; background:var(--panel); border-top:1px solid var(--line);
+    padding:14px 28px; display:flex; justify-content:space-between; align-items:center; z-index:10;
+    box-shadow:0 -2px 6px rgba(31,41,55,.06); gap:12px; flex-wrap:wrap;}
+  .status{font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace;}
+  .status.ok{color:var(--green);} .status.bad{color:var(--red);}
+
+  .done-banner{border:1px solid var(--green); background:#EAF7F0; color:#145C3B; padding:14px 18px; margin-bottom:20px; font-size:14px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
+
+  /* ===== TABS / APPROVALS ===== */
+  .tab-row{display:flex; gap:8px; margin-bottom:16px;}
+  .tab-btn{padding:10px 18px; border:1px solid var(--line); background:var(--panel); color:var(--muted); cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:12px;}
+  .tab-btn.active{border-color:var(--navy); color:var(--navy); font-weight:600; background:#EAF1FA;}
+  .tab-badge{background:var(--red); color:#fff; font-size:10px; padding:1px 6px; border-radius:10px; margin-left:6px;}
+  .approval-card{border:1px solid var(--line); background:var(--panel); padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;}
+  .approval-card .meta{font-size:12px; color:var(--muted);}
+  .role-tag{font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 8px; border:1px solid var(--amber); color:var(--amber);}
+  .approval-detail-block{border:1px dashed var(--line); padding:14px; margin-bottom:12px;}
+  .approval-goal-row{display:grid; grid-template-columns:2fr 2fr 1fr 1fr; gap:10px; align-items:end; margin-top:10px; padding-top:10px; border-top:1px solid var(--line);}
+
+  @media(max-width:760px){
+    body{padding:16px 16px 150px;}
+    .two-col, .kra-top .fields, .achievement-grid, .attr-row, .approval-goal-row{grid-template-columns:1fr;}
+    .footer-bar{padding:12px 16px;}
+  }
+  /* ===== STEP BANNER ===== */
+  .step-banner{display:flex; gap:14px; align-items:center; background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--navy); padding:14px 18px; margin-bottom:20px; flex-wrap:wrap;}
+  .step-banner .num{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px; color:#fff; background:var(--navy); padding:4px 10px;}
+  .step-banner.rating{border-left-color:var(--amber);} .step-banner.rating .num{background:var(--amber);}
+  .step-banner.done{border-left-color:var(--green);} .step-banner.done .num{background:var(--green);}
+  .step-banner .t{font-weight:600; font-size:15px;} .step-banner .d{font-size:12px; color:var(--muted); margin-top:2px;}
+  .steps{display:flex; gap:6px; margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10px;}
+  .steps span{padding:3px 8px; border:1px solid var(--line); color:var(--muted);}
+  .steps span.on{border-color:var(--navy); color:var(--navy); font-weight:600;}
+  .ro{background:#EEF1F4; padding:8px 10px; font-size:13px; border:1px solid var(--line); min-height:35px; white-space:pre-wrap;}
+  .rate-grid{display:grid; grid-template-columns:3fr 3fr 1fr 1.3fr; gap:10px; align-items:start;}
+  .loading-box{padding:40px; text-align:center; color:var(--muted); font-size:13px;}
+  @media(max-width:760px){ .rate-grid{grid-template-columns:1fr;} .steps{margin-left:0;} }
 </style>
 </head>
 <body>
 
-<div class="tabs">
-  <div class="tab active" id="tabSetup" onclick="switchMode('setup')">KRA Setup</div>
-  <div class="tab" id="tabSelf" onclick="switchMode('self')">Self Rating</div>
-</div>
-
-<div id="setupView">
-  <div class="section">
-    <div class="section-head"><h2>KRA / Goal Setup</h2><span class="badge warn">Quarter Beginning</span></div>
-    <div class="grid">
-      <div><label>Employee</label><select id="setupEmp"><option value="">Loading...</option></select></div>
-      <div><label>Department</label><div class="readonly" id="setupDept">-</div></div>
-      <div><label>Appraiser Name</label><input id="setupAppraiser" placeholder="e.g. Kunal Joshi"></div>
-      <div><label>Year</label><input id="setupYear" value="2026"></div>
-      <div><label>Department Head</label><select id="setupHead"><option value="">Loading...</option></select></div>
-      <div><label>HR Approver</label><select id="setupHr"><option value="">Loading...</option></select></div>
-    </div>
-    <div class="quarters" id="setupQuarters"></div>
-    <div class="note" style="margin-top:12px">Performance Settings are controlled by Department Head / HR and are hidden here. KRA and Role Attribute weights are distributed automatically. Task weightage is also distributed automatically whenever tasks are added or removed, but you can change task weights manually before submission.</div>
-  </div>
-
-  <div class="section">
-    <div class="section-head"><h2>Targets (KRA) and Tasks</h2><span class="badge" id="kraBadge">0 / 80</span></div>
-    <div id="setupKraList"></div>
-    <button class="solid" onclick="addKra()">+ Add KRA</button>
-  </div>
-
-  <div class="section">
-    <div class="section-head"><h2>Role Attributes</h2><span class="badge" id="attrBadge">0 / 20</span></div>
-    <div id="setupAttrList"></div>
-    <button class="solid" onclick="addAttribute()">+ Add Attribute</button>
+<!-- =================== EMAIL SIGN-IN =================== -->
+<div class="login-wrap" id="loginView">
+  <div class="login-card">
+    <div class="logo-row"><img class="mega-logo" alt="MEGA"><div><b>Performance Appraisal</b><div style="font-size:11px;color:var(--muted)">Mega Engineering</div></div></div>
+    <h2>Sign in</h2>
+    <p>Enter your official email address — the one registered in the Mega employee list.</p>
+    <label>Email address</label>
+    <input id="loginEmail" type="email" autocomplete="email" placeholder="name@mega.tc" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="solid" id="loginBtn" onclick="doLogin()" disabled>Continue</button>
+    <div class="login-msg" id="loginMsg">Connecting…</div>
   </div>
 </div>
 
-<div id="selfView" class="hidden">
-  <div class="section">
-    <div class="section-head"><h2>Self Rating</h2><span class="badge warn" id="selfStageBadge">Load KRA</span></div>
-    <div class="grid">
-      <div><label>Employee</label><select id="selfEmp"><option value="">Loading...</option></select></div>
-      <div><label>Quarter</label><select id="selfQuarter"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
-      <div><label>Year</label><input id="selfYear" value="2026"></div>
-      <div style="align-self:end"><button class="solid" onclick="loadSelfRating()">Load My KRA</button></div>
-    </div>
-    <div class="note" style="margin-top:12px">Self Rating accepts any value from 0 to 5, including decimals such as 3.5 or 4.2. After final submission, Self Rating is permanently locked.</div>
+<!-- =================== APPRAISAL PAGE =================== -->
+<div class="wrap hidden" id="appView">
+  <div class="who-bar">
+    <div>Signed in as <b id="whoName">—</b> · <span id="whoEmail" class="mono"></span></div>
+    <button class="small" onclick="logout()">Sign out</button>
   </div>
 
-  <div id="selfContent" class="hidden">
-    <div id="rejectionBox" class="reject-box hidden"></div>
-
-    <div class="section">
-      <div class="section-head"><h2>My KRA and Task Rating</h2><span class="badge" id="selfKraStatus">-</span></div>
-      <div id="selfKraList"></div>
+  <div class="titleblock">
+    <div class="logo-row" style="margin-bottom:14px;"><img class="mega-logo" alt="MEGA"><h2 style="font-size:18px;">Performance Appraisal Form</h2></div>
+    <div class="tb-grid">
+      <div><label>Employee</label><div class="readonly-box" id="empNameDisplay">—</div></div>
+      <div><label>Department</label><div class="readonly-box" id="deptDisplay">—</div></div>
+      <div><label>Name of Appraiser</label><input id="appraiserName" placeholder="e.g. Kunal Joshi" onchange="markUnsaved()"></div>
+      <div><label>Year</label><select id="yearSelect" onchange="changePeriod()"></select></div>
     </div>
-
-    <div class="section">
-      <div class="section-head"><h2>Role Attribute Self Rating</h2></div>
-      <div id="selfAttrList"></div>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><h2>Self Rating Summary</h2><span class="badge" id="selfFormulaBadge">KRA 80% / Role 20%</span></div>
-      <div class="summary">
-        <div class="summary-card"><div class="value" id="selfKraScore">0.00</div><div class="caption">KRA Rating / 5</div></div>
-        <div class="summary-card"><div class="value" id="selfRoleScore">0.00</div><div class="caption">Role Attribute Rating / 5</div></div>
-        <div class="summary-card"><div class="value" id="selfOverallScore">0.00</div><div class="caption">Overall Self Rating / 5</div></div>
-      </div>
-    </div>
-
-    <div class="section two">
-      <div><label>Facilitating Factors</label><textarea id="selfFac"></textarea></div>
-      <div><label>Constraining Factors</label><textarea id="selfCon"></textarea></div>
-      <div><label>Outstanding Achievement / Contribution</label><textarea id="selfOutstanding"></textarea></div>
-      <div><label>My Learnings</label><textarea id="selfLearnings"></textarea></div>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><h2>Training Need Identification</h2></div>
-      <div id="trainingRows"></div>
-      <button id="addTrainingBtn" onclick="addTraining()">+ Add Training Need</button>
-      <div class="note" style="margin-top:10px">Training rows are created on final Self Rating submission.</div>
-    </div>
+    <div class="quarter-row" id="quarterRow"></div>
   </div>
+
+  <div id="stepBanner"></div>
+  <div id="pageBody"></div>
 </div>
 
-<div class="footer">
-  <span class="status" id="statusText">Loading Creator...</span>
-  <button id="setupSubmitBtn" class="solid" onclick="submitKraPlan()">Submit KRA Plan</button>
-  <button id="selfDraftBtn" class="hidden" onclick="saveSelfRating(false)">Save Self Rating Draft</button>
-  <button id="selfSubmitBtn" class="solid hidden" onclick="saveSelfRating(true)">Submit Self Rating</button>
-</div>
-
-<div id="modalBackdrop" class="modal-backdrop hidden" onclick="modalBackdropClick(event)">
-  <div id="modalBox" class="modal">
-    <div class="modal-head" id="modalTitle">Message</div>
-    <div class="modal-body" id="modalMessage"></div>
-    <div class="modal-actions"><button class="solid" onclick="closeModal()">OK</button></div>
+<div class="footer-bar hidden" id="footerBar">
+  <span class="status" id="statusText">—</span>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button onclick="downloadPdf()">Download PDF</button>
+    <button class="solid" id="mainBtn" onclick="mainAction()">Submit</button>
   </div>
 </div>
 
 <script>
-const REPORTS={employees:'All_Employees',kra:'KRA_Report',goal:'Goal_Report',competency:'Competency_Report',review:'Review_Report'};
-const FORMS={kra:'KRA',goal:'Goal',competency:'Competency',review:'Review',training:'Training_Need'};
-const STAGE={READY_SELF:'Ready for Self Rating',KRA_SUBMITTED:'Ready for Self Rating',SELF_SUBMITTED:'Self Rating Submitted',HEAD_SUBMITTED:'Department Head Rating Submitted',HEAD_APPROVED:'Department Head Rating Submitted',APPROVED:'Approved',REJECTED:'Rejected'};
-const DEFAULT_KRA_SECTION_WEIGHT=80;
-const DEFAULT_ROLE_SECTION_WEIGHT=20;
-const state={mode:'setup',quarter:'Q1',employees:[],currentUserEmail:'',currentEmployee:null,kras:[],attributes:[],training:[],self:null,settings:{kraWeight:DEFAULT_KRA_SECTION_WEIGHT,attrWeight:DEFAULT_ROLE_SECTION_WEIGHT}};
-let kraSeq=1,goalSeq=1,attrSeq=1,trainingSeq=1;
-const quarters=[{id:'Q1',label:'Q1: Apr-Jun'},{id:'Q2',label:'Q2: Jul-Sep'},{id:'Q3',label:'Q3: Oct-Dec'},{id:'Q4',label:'Q4: Jan-Mar'}];
-console.log('MEGA PERFORMANCE VERSION: 2026-08-14-STAGE-SERVER-FIX-02');
+"use strict";
+/* ======================================================================
+   MEGA ENGINEERING — PERFORMANCE APPRAISAL  (one Creator widget, one page)
+   ----------------------------------------------------------------------
+   Sign in with email (must exist in the employee report), then per quarter:
+     STEP 1  first visit   → Set Targets: KRA + tasks (weightage automatic)
+                             saved to KRA, Goal, Competency + Review(Status "Draft")
+     STEP 2  second visit  → Self Rating only: achievement + self rating per
+                             task, role-attribute rating, factors, learnings,
+                             training, overall → Review Status "Submitted for Approval"
+     DONE    later visits  → read-only + Download PDF
+   Uses only your EXISTING forms/fields. No Deluge functions, no Custom API.
+   ====================================================================== */
 
-function showModal(title,message,type){document.getElementById('modalTitle').textContent=title||'Message';document.getElementById('modalMessage').textContent=message||'';const box=document.getElementById('modalBox');box.className='modal'+(type?' '+type:'');document.getElementById('modalBackdrop').classList.remove('hidden')}
-function closeModal(){document.getElementById('modalBackdrop').classList.add('hidden')}
-function modalBackdropClick(e){if(e.target.id==='modalBackdrop')closeModal()}
-function setStatus(msg,ok){const e=document.getElementById('statusText');e.textContent=msg||'';e.classList.remove('ok','bad');if(ok===true)e.classList.add('ok');if(ok===false)e.classList.add('bad')}
-function esc(v){return(v===null||v===undefined?'':String(v)).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c))}
-function textValue(v){if(v===null||v===undefined)return'';if(typeof v==='object')return String(v.display_value||v.zc_display_value||v.value||'');return String(v)}
-function lookupId(v){if(!v)return'';if(typeof v==='object')return String(v.ID||v.id||'');return String(v)}
-function numberValue(v,fallback=0){const raw=String(v===null||v===undefined?'':v).replace(/,/g,'').replace(/%/g,'').trim();if(raw==='')return fallback;const n=Number(raw);return Number.isFinite(n)?n:fallback}function optionalNumber(v){const raw=String(v===null||v===undefined?'':v).replace(/,/g,'').replace(/%/g,'').trim();if(raw==='')return null;const n=Number(raw);return Number.isFinite(n)?n:null}
-function num(v,places=2){const n=numberValue(v,0);const f=Math.pow(10,places);return String(Math.round((n+Number.EPSILON)*f)/f)}
-function round2(v){return Math.round((numberValue(v,0)+Number.EPSILON)*100)/100}
-function ratingValid(v){const n=numberValue(v,NaN);return Number.isFinite(n)&&n>=0&&n<=5}
-function noData(err){const s=((err&&err.responseText)||'')+' '+((err&&err.message)||'')+' '+((err&&err.code)||'');return s.indexOf('3100')>=0||s.indexOf('No Data Available')>=0}
-function errorText(err){let s='';try{s=((err&&err.responseText)||'')+' '+((err&&err.message)||'')+' '+((err&&err.description)||'')+' '+((err&&err.code)||'')}catch(e){}return s}
-function friendlyError(err,context){const raw=errorText(err);let msg='Unable to complete this action. Please try again.';if(raw.indexOf('Goal_Name')>=0&&raw.indexOf('3001')>=0)msg='One task title is longer than the Goal Name field allows. The full task is stored in Description; please try again.';else if(raw.indexOf('3002')>=0)msg='One of the values is not valid for its Creator field. Please check numeric fields and try again.';else if(raw.indexOf('2945')>=0||raw.indexOf('EXTRA_KEY_FOUND_IN_JSON')>=0)msg='Creator rejected the update format. Please refresh once and try again.';else if(raw.indexOf('3100')>=0)msg='No matching record was found.';if(context)msg=context+'\n\n'+msg;showModal('Action could not be completed',msg,'error');console.error(context||'Creator error',err)}
-function setBusy(id,busy,busyText){const b=document.getElementById(id);if(!b)return;if(busy){b.dataset.oldText=b.textContent;b.disabled=true;if(busyText)b.textContent=busyText}else{b.disabled=false;if(b.dataset.oldText)b.textContent=b.dataset.oldText}}
+/* ============================ CONFIG ============================ */
+const CONFIG = {
+  EMPLOYEE_REPORTS: ["All_Employees", "Employ_to_Create_ticket_Report"],   // first one with data is used
+  EMP_FIELDS: { name:"Employee_Name", email:"Email", department:"Department" },
+  REPORTS: { kra:"KRA_Report", goal:"Goal_Report", competency:"Competency_Report", review:"Review_Report", training:"Training_Need_Report" },
+  FORMS:   { kra:"KRA", goal:"Goal", competency:"Competency", review:"Review", training:"Training_Need" },
+  STATUS:  { targetsSet:"Draft", selfRated:"Submitted for Approval" },     // existing Review.Status values
+  KRA_SHARE: 80, ROLE_SHARE: 20,               // total 100; no role attributes → targets get 100
+  RATING_PCT: { 5:100, 4:90, 3:75, 2:50, 1:25 },
+  MATCH_CREATOR_LOGIN: true,                   // typed email must equal the signed-in Creator user
+  PAGE_SIZE: 200, MAX_PAGES: 20
+};
+const RATING_LABELS = { 5:'5 - Outstanding', 4:'4 - Very Good', 3:'3 - Good', 2:'2 - Fair', 1:'1 - Poor' };
+const QUARTERS = [{id:'Q1',label:'Q1: Apr–Jun'},{id:'Q2',label:'Q2: Jul–Sep'},{id:'Q3',label:'Q3: Oct–Dec'},{id:'Q4',label:'Q4: Jan–Mar'}];
+const OVERALL_LABELS = ['Outstanding','Exceeds Expectations','Meets Expectations','Needs Improvement','Unacceptable'];
 
-function getAll(reportName,criteria){let page=1,out=[];function next(){const config={reportName:reportName,page:page,pageSize:200};if(criteria)config.criteria=criteria;return ZOHO.CREATOR.API.getAllRecords(config).then(r=>{const rows=r&&r.data?r.data:[];out=out.concat(rows);if(rows.length<200||page>=50)return out;page++;return next()}).catch(err=>{if(noData(err))return out;throw err})}return next()}
-function addRecord(formName,fields){const config={formName,data:{data:fields}};return ZOHO.CREATOR.API.addRecord(config).then(r=>{if(r&&r.code==3000)return r.data;throw r})}
-function updateRecord(reportName,id,fields){const wrapped={reportName,id:String(id),data:{data:fields}};return ZOHO.CREATOR.API.updateRecord(wrapped).then(r=>{if(r&&r.code==3000)return r.data;throw r}).catch(err=>{const t=errorText(err);if(t.indexOf('2945')>=0||t.indexOf('EXTRA_KEY_FOUND_IN_JSON')>=0){return ZOHO.CREATOR.API.updateRecord({reportName,id:String(id),data:fields}).then(r=>{if(r&&r.code==3000)return r.data;throw r})}throw err})}
+/* ============================================================
+   PDF TEMPLATE ENGINE — exact replica of
+   "Performance Appraisal Form - Revised 3.1.2" (Word)
+   Page 1: Logo · Quarter strip · Name/Dept/Appraiser · Rating legend
+           Target-1..5 + Additional Target (tasks listed under each KRA)
+           Total · Appraiser's/HOD's Remark · Signatures
+   Page 2: Logo · Facilitating / Constraining / Outstanding / Comments
+           Role Attributes (5 rows + Total) · My Learnings
+           Training Need · Overall Performance Rating · Signatures
+   ============================================================ */
+const PDF_LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANIAAABLCAIAAACKkk6eAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAIdUAACHVAQSctJ0AABuTSURBVHhe7Z13WFNX/8DFioAQRhKyB8OBBRVx1T3a1123tiAKjteforZa96BonYAMBRcI4mQEQa2rTlABwQUohBX2nmFmX35PiMTk3JsQIFZ8n3ye7x+anHMuuXw494zvvenVqkHDv04v8AUNGr48Gu00fAU02mn4CqhZuxa+qLKJz6zlvixujCtsqG7mgyU0aFCXdnyhKKWiOTi9dsvz0oV38hbcyfd4U1HTLADLadDQRne1K2/kXUiumnY7b1h4Nulyhta5tD9iitNrOQIRBBbVoKGdrmvHFYi8Xpdjg5jGF5noi8x+gekGQcwPlc0QpBFOQwd0WjuhCMplc88kV1ldzdQLTMeEZGBCMtDBzF/vF2TXcsDSGjQg0TntBCJRZFbdT7dyDYOYEuEwIRl6gelH3lSUN2pmDxpUpRPaCQSC/z4qJF1imlz87BwmJCMqo5InFIGlNWhQjEraQRBU3MAbG8WStQ0TkjHgaua9XLaKgzmRCOLw+HVNnIS0goA7CZv8bs7Zf2n81oDxWwN+3B3065HQP0MeXHv0Ni23pLaxpYXLF4pEKras4ZujY+0gCEqtavnxVq5xsFwnN+haZnhmHVgaCT6f/zGv7MLj5OUnbpg4eessPa6z3FPH8QTG2Ru3ykcSOo4nxOHgqbPsuKmzt70n4+TthGfJrPKaBrA5Dd8+HWtX2cSffDPXSN45TEjGHVbHzolEopTs4i3n743YGYRacQK1wgsro5qSQK30Qi33pK7zm3M0/FDky/JajXz/U3SgnVAoHBqRAwzmdAPTr2XUqXIF9AiPJaw9hXbyRqtmGxAYZ2+0kzdmlc+4XcEfc0vA1jV8syjTjicUuTwpAjo542Dm3rjSFr4QLC2DQCjKKa4cs/W8joMnXKYuhP4Kr96Lj11/8r6ZwwMPpuEbRKF2EAT9zWLTrmQC2k27mZtVo2x9jsPjRz7/MMjljK7jCbhA3QkDe4/9lx9rRnv/AyjUrryJv+x+von8kA4VlB6Z1cGQ7vTNeMt1fhgnL7g3ksA6e+us8BLHcs9P0fZfeEkgTJ29cat9twTcYzcp815Dz0ehdrdYbIMLnzYhpDE7mqV8s9XvxnP9X8RTUbg0Rk7eWvYeWouODFjv91/vSPewZ/7RL68+ehN8N/HQ5UeOx8PIq3y0Fh/TcvBErC41D7XCa9eFe+CBNXxTIGsHQdBM2Cod6kJ6VnULWLQdLl8QdC9Rf5m7rCVYZ2+Mszdpvb/t7+d3X7j/7F1WY7PCFiAIqqipj4xJnvHXdcvN50ycfUyckP3ru+TYub8T+AJl40sNqhAbG/v777+Dr355kLVLLWvsJ9/VoYKY6x4XguXaEQpFtxKYA9b7Y2VE0bf3GLcz6Pfgh3cTmU1NTWAdpXzMLTsR+WLi3hB9ew+4duJw8rmVwASraegkHz9+3L9/P/jqlwdZu1/v5gNdnW5g+pOiRrBcO6zyWqstAdLxHGq558B1p3yi4pgFFRxeF/dqhUIhq6TaJype2/EEaiU48sM6e087cJVVUg1W0/AtgKBdZRNftz21RBrTbuTks7lg0Xbm/nlZr31O0MfxxCrf6Kq6RlUW9gSCDlJBRSJRErPAYr2/ifwcRTzIc/B0Z7zUXGq/RRC0e8hi9wtMk3XO5CLT5Vkxm4OgCARBPtFxukuPS3a6xuwIvpeQBhZSTFNL/YeCWC5f4YBPQkwyy/aPQGP5Ps9opZf1pjP55bVgaQ09HgTtdr0sxcp3dagg5oHXFYhz2Ffp+SZrT2GcvOjrTu258qSzi2p8Affph8D4zFChEMFpWV6k5g10OW0ob56uvcfxsBiwqIYeD4J28+4XoOV3w0wuMn1SqsByra2NLVwnn5smTl4EZ5+bLz82c7uyhZBdluR5e2pmcQL4Box3OaVo+bktxtkbs/xEh1dqDT0NUDs2RzDtVi6gHeVyxqV08FoGQdCdVxm41b6Ga08VlIHvqk4Tp/7C0//uuNa/sr5Q+XBQKBKdu5tkKL+w992vHvdedeKyrqEnAGpX1sibEMUCtKNdzrjGBMVqbOGu9o2e/df1suoO9i06JCbt6p8R47zvLCmvywPfkye/vObHg9eAPm/R4VDlvmroaYDa5dZyRjNyAO1wIRlnP4BLFUnMQmfvqMLK7jrX2tpawS44wPjBjTGBkXCwiVMPvi0DBEEhT97j1vjKamfucqZSkxn1TQFql13DGRkBaocKYrq/B8d2nmFPaxs6mIGqiEgkPHXf8QBjslvEuHe5d5R3XRwef8CWAFntCOtPJ6Xng+U09GBA7XIUaLc9rkw22UkgEDQ3N8vV7B7xGTf3hY0+GDnlWNTsRg54QQe4/CCxt/3nlCrM2pOMmBSwkIYeDKhdVRN3cjQ4tjMKZi66k1/e1MX9BlVgN1XtDR1+MHKKa/gPYXGu4NvyNDU14WUyVkhrfN0jX4CFNPRgQO2EQuHiB+ACCiYkw/JqZprSNLvuc/zmzwcjpxyMnLI3bERmSSL4tjx/nLtj0L6Gh3Hy3hz8CCyhoQcDaie+hH2oxsk7J9mTDYVNZtVL+MtDf0aMOxg55QBj8umH9kKhsl2vZ+9zdJcdl2iHXum14dx9sISGHgyCdkX1PPieLCYkY1Y0S/lgv5vEfry6P3yUpMM7dnN2WqGy62ZpbYPp2pOSG4LQTt4bgh6CJTT0YBC0a21tHcfIgWvX70J6fKGy1Y1uklnyal+YnUQ7t4gJt1+78wUKkw/qmzm/uEeg2kZ4Gu2+OZC1u5fN1g2QywaQxLCwbOXXvu5QUpOxL2yEVDu/+ysr2QVgoXZ4PIFbaIxEO1Nn711XnoAlNPRgkLWDIGjINfDmHUxIBj6EeSEZXMBTF2V1OQcYkyXaHWBM3hc2PKPkJVioHaFQeO5eIqrtzjT6f08G3UsCS2jowSBr19raei65Sh92L4XJReaoSFaa4tT2LsDlcIqLi/Pz8t6nvdobNH1H4ARJbD03MuyhV35+QWFhIeIaYejLNEm2FWbtqbsJ6cC7lZWV+Xl5SqKmpgaoIkUgEJSWlsKrdCvyCxobFebJwhEKhXV1dcXFJdnZ2ampqe/evn0DIzk5OT09vaCgoLa2FhKp+TE0EARxOJyamtrS0tKCgkLw4yiKggIer+OMEIXa5dRxf4jMAR5AIYnVT4rquOpJ+uByucFBQfPmzp09fcasGdPHjLMeOXagNCZOHjVn5uy5s2bv3rW7srISqPv0fY7lhtNYZ2/yev8PrM83b4tEougbUYsWL549fYaScLC3z8rKkmuxnfDw8IXz58OrdCfmzJy1ds2a6pqOVwPy8vIiwsL27Nnj6Oi4YM7PP02ZNtpuhN0w22E2NkDYDRs2Yey4OdNnOjos37ljx927d6uqunstEgqFhYWFd+7c3bVrl4uLi729/cI5P8+dNQf+iRBj1k8zNm/e3KF5CrUTiCCfd5WEEATtjILSjySUgRW6RGFhIY1KpZHIdBKFTqaYU+lA0EkUGolMMMHu2bkbqPsuq2jItkCMs3d/lzPNnM+Tj7i4uFHD7ch4grhNxUHE4X9ZulSuxTYEAgGZRKYSSfAq3QwTA5S//2nweDJkZma6bNjw/eDBAy0sqCQSmUCkEUlmZIoZhWpBo8PDjEI1o4jPHoVAJBOIAy3729oMOentK+pqz5eZkbFu7Vobq+8HWfQnt7VJJhCphE6cChqR1KtXr/j4eLBpeRRq15YEJZx8Mxd4EoUkvjufdjGlCjHxs1NkZWWhDAws6WYdhk7fvhyO3Ho1M7989J4QEyevlR4M6YsCgcDNzY2Iw8NbgIeZmZlsgxIaGxt1+urAC3c/iKa43bvBPx4JDQ0NJ319MWg0jUSGV1Q9zKk0PV09E31UQkICn6/qrhIEQTU1NXt279bu04dkioM326kw6KV9/14Hd5Qq006ckpTfgEO6zkqeSnE6uaoOKdNddVTXDtVP/1LIJdm6rJKqCfsu9bL3CHvyTvpiaWnpgjk/UwkkeAvw6CHasVi5q1evwaLRFjQ6vFYXwoxCpVIop075qTia/PDh4/x583BojFp+ADVo19raGp1VA3dOMr0gXcrYH1farPR5KMpRXTs6iWxrO1x20FBYXjvV7Wqvxceq2J9P7qtXr+gUioqn71/WDmeCcXX9Ezhcdnb2f6bPwGNN4eW7E3QyhU6jX74k94eKSFlZ2cSJE0l4AryRroV6tBOJRH6pVXDtxI8svsg0upA++1ZueWMHQ0hFqK6dJd2sX79+798nS+uKtdt7yeF4mGyD7seOmxoaw+siRqe0s6DRKXgi1tBYHCgjuX+gjD6/Ig35V4x19fv07p2ckip7rIaGBkdHRwpJYd9sQaMTsabG2np9kED10cEZo82pNHhFSZ+Hx+E6vEN50thxFAIRXl0aZBwe/GhtQcBg4YXVpp04xY0v2pNQhkWaXkgCH8K8k8Nu4gs7u3vWKe3IOPzBgwelh5Bodz8pQ9qaQCAYMXy4ol8DPDqlHZ1CXbpkaUBgYMD5812IC0FBGRmff1TJ3/O1q1ctzczhfbMFjU4nU2imhOG2w91cXRmMyLiXL9++fScbrxJe3b7996HDR2yHDqW1TTvgPzNa1+D8+fOyB5UFgqDQsAiCIRpe8dPPQCKb080cHBx8T56Cf6Id27fjTBDqqk07ca4RT+j+vqr/1UxUELiYJ77gBjMJIRkbY4pjCxs6dUONIu0kMzXgRTMqbfqPP1VXf8pzziutdjoRWV77+Qr7Mi5OX08P3poiETulHRmH93B3B0t3g5qa2oXzF5Dw4OxH8sHnz5sfFxfX4UqEpMsMOHfenEKFf0wKnjB/3gKwQjv19fVz586lI/lqTqVRCMRt27fn5uUp6kpevnih3acPvK46tZPwML9+9q1cRPMwIRmGQenDwrLXPC5ILGnkCVSawyvSrr8l3WqwuTlVzjxzKs3OZuizp88kdT/mljGevm/hfp6vOTgsp8DGKFQCcfas2fBfyVfXLj4+Hoc1hf91UUkk+19+LSnuxGMkRSJR4PnzhigU+AEp1KmTJ4Ol23nz5s2oESMRu0ljQ6NrV64ASwcA/552EARVNQtc40r7IaWoSMM0hOlwryC5rINRhRLtBg00/3GR9cCBcr8SCxqdgMN5enpK9oXzy2rySqqlf4tl5RXGxsbAb5FKIDo6LN+69Q8y0pLK19XOzdUVb4KBH+j7gYOePH6sqI9RhEAgcHJeZYQylD0Derq6Xj4nwaLtBAUF4U0RvMcbo3f8sb3Dxb9/TzspubWc1Q8Lvw/NJlwS5x7DzZOs7Q0Jzw5IqX5X0VzdLOAi9X+KtLMaaOGw3W7YsP7A6xQc4dfFSyT7Wvw2pE1dvnKVhJVbc7Kg0Y0NDUOvX9+0aXNP004oFA6w7A/vgy1o9HHjxjU0dOWOJDab/deBg2NGj7Zrx+OEF1ioHQ6Hs3/fPjwWnBZY0OhkAvHFC2VZZxK+gnaSr+PJqeH6JletflI8NYpFaMuMAtKSjYOZuoHptMsZTv8U7IwvC/hY86ygobCe28z/pKAS7dYdGTNj7mgzEtjhmdPpycmf57MSWlpaflm6DLhemFGogwdZpaambli/oadpV1JS0uc7hN8ZBU/YtXMXWLoziEQiYRvKu6uamprFCxZQYXNYKok0Z9bsggKFT/eS8nW0k9LIE2bVcGKLGy+l1xxMKFv1oGDaDRbxklg77YA07YA0cXd4kTkiNGv1g4KTieXPC+qr2r98UYl2LscmhTB8dbV1gbdwJuizp88AP0N6evr4H8aayXceZDxh1apVdXV1PVC72NjniNoZaetFR0eDpb8ALBaLSCDAu1sygeDi4oKYewHwlbWTAHUSSS1F2g3oTz14eg27qbJXr17wPmyotQ1w9AvnA8g4PHAS6WTKSR9fCILUop05lWaKwfTqPPPmzK2vB9NjIxkMjIEh/ChaWlpJiR3cR6IWIiNvIJ55C7qZ36lTqowse4R2XYOZmYb44Qf2p1+7Ie7S/P1Pow2NgHd1++q8fvNW2khjY+NvmzcTYJuJdkNtUz98bG1tVYt2XQ6SKW7JokXADqm3t4+pkQm8sJaWVnZWtmxJRLhcblFRUR487wgWimajLus3kEwRzomN1eCkJJWSF79V7YRC4dmo7VgDhH0h8Wzu6VPJ1g0OgwW6MZIpbu2atdJ28vPzh1jb0MkU2TLmVNqSJUskJ/3ramdOpU2dOrWuTu7xCUeOHCUibYhpaWmVlJTKloTD4XDOnDk7d9acWdNnzJ4xU1lMn/Hbb7/V1oLZVjwej9aW1QL/Aezs7NhssG9G5FvVLjrx+NbTY8kocHhhSTezHmQVGxsrUXOF40oKTm41TrxPRaaUl5dL2rl58xZK3wA4icbaegzGp8yUHqjdoUOHFWkn/VyKYLFYJCKRRvyULaYsSBQcGh14IQho4d3bt4gjS5IpbtPGjUBhRXwR7SAIEomEEKRsNtQ1IAgSivgPU867RYzfdmY8onY2VoNfPH8uKXz9+nWMCZidQSOSo6OiJA06LncEVoktaHRtbW3puPjraides4Vp5+7ujrinqaWlVVhYJFsSzocPHwz09eF1EcOcStsDS3vx8DyBRdq5NtDq++DBA4EKCAWC2JiYL6JdRV1hWlFMBTtflQGm6jS01D5473+QMeUAY1KH2knO8rjRY4CJBY1EdlruyONyq6qq4B/e1AS95fct0iOqRTsLGp1GJuOxpp0NHBa7e/duYDnD//RZLAocs0q0y8zMlC0Jp5vaCQSCUXYjEDcnMP0M9+/d5+Hu3mGc8PTctmUr4l9Ot7Rr+w4nflpR7LmH//f3G/fc8hSBUNW0QSVkl7wJfrbhAGPSAcakg5FTVNGuoaFh7arVQJaEGZk6ddLk7Oxsf39/YxQ4JdTT1c3M/Jywri7tFi9c6O7ufqyTBAQEwEdXYeERxjr94EfR0tJKeNXBTDY3NxdjZIzoDTzg2rFYuSTFOS8ENBaLxqgSiKdUDdp92g1rKPK4veDQjSk+d5fGfgyrawTvaVCR+ubqyIS/jkT/x40xQXJ7mIraQRAUfDEEKGBBo5PwhOvXrw8aNAiYcFCJpFkzZ8lmJKhFOzKecPzYMfBiowLgAdpITEzSRhpdGenpM258GjwogsvlHjl8xBCFAvKgEEUk4fCHDx2SrR4VFQVfrlNjqEE7CZX1BQGP1rlFTNgXNnpvqN2p+ysepQTnVryvaypv4rA5/GaBkC97EZGMC/kCbguvkd1cmV32mhF/bF/YSNfwsVLhVNdOclfLoEGDgDI0Enna5Clm8hNYCxrdxMjY399fdmCgHu3UulzMZrO1+2jD55JErOnevfvA0khwudwmGSAIopHIcJ+IWFM/P39pLZFItH71WvjmhBpDbdqJ91IaSm8mHW57BN1Et4gJ+8NG7Q21PRo1K/DxpvA4t4cpZ5+nX3qVHZqYzUjMjojPvB6TdvHvN17Xnu/xvL1wf/gY1whQuE5pJxKJli1bBr/PAH6izSjUARaWcfK3kPRA7VpbW0cMG06HfSJLutmIESNUTEaXpb6+oW/fvvDWMPqG0dE3pcUqK6sW/DwffibVGOrUTvJU9ZT8f/wfrHSNGNN+E/Ukt4gJf0aM/TNirGv4D/vDR7uGS//xw58RY90iJri1jeEUhYraiXOuHj7S00GwAQgqkfTLsmWV8vft9UztvL280UYI08lB/fv/888/YOmOuHL1mpE+mPgkTsnuq/vx4+dnO797937sqNFmZITLsTmV1tmAN6J+7SRXT3ZTxY1XR/eHjYQ71IX4zc9ORe0EAoGWlhbi8EU26GTKkUOHgKl3z9QuPT0dcYeGTCAsXbq0oqICrKCYoqIiU1NTC5gHZhQqRsdA9vkh4eHheKQkPxqRZNV/wDCbIZ0KxF+H+rWTkl367tzD1Uejp4svu4yJcJ+UhBtjohtj4pGo/5x9uOqfuEjEUw/XrrW11dfHB2uMsKEkG9YDrWT3zSSoRTsKnnD0yJEWDqelS3A4HGANhc1mO690IsPyUsULQGjM0sWLk98nV1dXc7lcxAUskUjE4XAqKiqfPH48auRIxOsm2tDozNlz0io8Hu+A2wEcGkzyM6fShgz+Pj4uTu4AHZGU9Bq+dPVltZMsr6QXxf39xtPv/grX8DGu4WMlayKK4gBjUtsleMype443Xh36UPhMIOTl5OSorl1WVpap0pvqzKm0GTNmtLSAz8pQi3YWNPqsGTP/2LZta5fYsWNHaKjc3UYikSgqOtrS3ALxakVEY8k4wnKH5Tt37jx69OhxGIcPH962bduyhYstzcwpRIQFERqRbDtsGJvNlh6xoaFhwbwFNFhhGon885y5RUUdLFMDfJFdChXhC7gV7Pz04pi7b06debB2X/iofWF2ktgfPkb6793XrU/edbzz5mRaUUx5XZ70254UZaAgasdpaXG0d6DgFc7C0LoGISEhQC01akcni58l0OUg4AmJSa+BY23euBGeiC8JcyqNSiDC25ENKp6I+HcozsTGYMPlRS8vLyfg8PDyFCJp3br/43IVPtYNka+pnQTZjKaKuoKskjfvWY9fZd5+nX0/NT+2vE68zyFFtmKntBM/5encOSwa4W4lSfTW6o14f55atOt+YFFG/n5+wOFaWloGDxhIhKXPdDMIpqa//fZ7s/y39969e8+gH8L2xkALy7OnzyBeypXw9bXrMoq0E6cCxCB8mVhSYuII2+GII1kcGrN5M/I38vYQ7UyNTDw8T4DHazNv8fwFdAqVTlb1xnIlQSEQzSjU1atX17TfYidl4/oNiPkHVgMGwBO2O+Qb1k7R2M56kFUMknZ1dXVLly6jwobP5lRaPz29lBTkrwnY6LIRrp05lfZva2do7OPjAx6vDXZ9vY+Pz/AhQ40MDRGHeqoEnUTGGBqPHz/hjL8/vNfn8Xh4Uxxca3MqzcrKqgsrhd+wdmVl5XZ2dngsVvLwImnYWFtnIWU7QhD06NEjMolMMsVJC9PJFBNDw00bNykanURFRRv00wcOoaeru2fvXrBo26Xc1mYo3hgDlO9+6PbViVM8W+RxuVmZmd4+viNsh+v07WtiYCipBf+9yoYFjU4lkjD6KJ2+fSeNG38pJCQ3F/nOVh6P17t3b4SfSkfnovzDZVSksrLyu97fUfAEoMHevbQQf3eyfGXt2u7WfDt7xsxhNkNsh4hjyPfWE8aNfxmn7ElVKSmp8+f+PNTaRlJl5HA7X29veOK4FIFA4H7cfaTtcOlRhlrb7Nun8MvKWSzWogULpYW7H8NshoweMTIsNBQ8EhJ8Pj8lNdXP//TiBQvxRmgjIyNDBRgZGVkQKKucna9cvZafr/CBu1LCIxhDrW2k522otc3USZOftt933AViY2MnT5gge1Z/nDo1Pr7jL8v8+tppUIJIJGppaWlQgOqPEutpaLTT8BXQaKfhK/D/PNsvMS9+jsYAAAAASUVORK5CYII=";
+const PDF_DEV_DIGITS = ['०','१','२','३','४','५','६','७','८','९'];
+const PDF_QUARTERS = [
+  {id:'Q1', label:'Q1: April to June'},
+  {id:'Q2', label:'Q2 : July to September'},
+  {id:'Q3', label:'Q3 :October- December'},
+  {id:'Q4', label:'Q4: January to March'}
+];
+const PDF_OVERALL = ['Outstanding','Exceeds Expectations','Meets Expectations','Needs Improvement','Unacceptable'];
+const PDF_FIXED_TARGETS = 5;      // "Five Targets are must"
+const PDF_MIN_ATTR_ROWS = 5;      // Role attribute table always shows 5 rows
+const PDF_MIN_TRAIN_ROWS = 1;
 
-/* =====================================================
-   EXACT APPRAISAL SCOPE
+function pdfEsc(s){ return (s===null||s===undefined?'':String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function pdfMultiline(s){ return pdfEsc(s).replace(/\n/g,'<br>'); }
+function pdfDev(n){ return String(n).split('').map(d => /\d/.test(d) ? PDF_DEV_DIGITS[+d] : d).join(''); }
+function pdfNum(v){ const n = parseFloat(v); return isNaN(n) ? null : n; }
+function pdfFmt(n, dp){ if(n===null||n===undefined||isNaN(n)) return ''; const f = Number(n).toFixed(dp===undefined?1:dp); return f.replace(/\.0+$/,'').replace(/(\.\d*?)0+$/,'$1'); }
+function pdfPlain(v){
+  if(v===null||v===undefined) return '';
+  if(typeof v === 'object') return v.display_value || v.zc_display_value || '';
+  return String(v);
+}
 
-   Every new appraisal gets one Appraisal_Key.
-   The same key is stored on Review, KRA, Goal,
-   Competency and Training Need records.
+/* Rating (1–5) → percentage using the editable rating map */
+function pdfRatingPct(model, rating){
+  const r = parseInt(rating, 10);
+  if(!r || !model.ratingMap || model.ratingMap[r] === undefined) return null;
+  return parseFloat(model.ratingMap[r]) || 0;
+}
 
-   This prevents old records from another appraisal,
-   even for the same employee / quarter / year,
-   from appearing in Self, Head or HR review.
-===================================================== */
-function criteriaEscape(value){return String(value===null||value===undefined?'':value).replace(/\\/g,'\\\\').replace(/"/g,'\\"')}
-function makeAppraisalKey(empId,quarter,year){return 'APPR-'+String(empId)+'-'+String(quarter)+'-'+String(year)+'-'+Date.now()}
-function appraisalKey(review){return textValue(review&&review.Appraisal_Key).trim()}
-function idCompareDesc(a,b){const x=String(a&&a.ID||''),y=String(b&&b.ID||'');if(x.length!==y.length)return y.length-x.length;return y.localeCompare(x)}
-function chooseLatestWeightedSet(rows,targetWeight,weightGetter){
-  const sorted=(rows||[]).slice().sort(idCompareDesc);
-  const target=Math.max(0,Math.round(numberValue(targetWeight,0)*100));
-  if(!sorted.length||target<=0)return sorted;
-  const dp=new Array(target+1).fill(null);dp[0]=[];
-  for(const row of sorted){
-    const w=Math.max(0,Math.round(numberValue(weightGetter(row),0)*100));
-    if(w<=0||w>target)continue;
-    for(let sum=target;sum>=w;sum--){
-      if(dp[sum]===null&&dp[sum-w]!==null)dp[sum]=dp[sum-w].concat([row]);
-    }
-    if(dp[target])return dp[target];
+/* Weighted average rating of a KRA's tasks (by task weightage; equal if none) */
+function pdfKraAvgRating(kra, key){
+  let sum = 0, wt = 0, cnt = 0;
+  (kra.goals||[]).forEach(g => {
+    const r = pdfNum(g[key]); if(r===null) return;
+    const w = pdfNum(g.weightage) || 0;
+    sum += r * (w > 0 ? w : 1); wt += (w > 0 ? w : 1); cnt++;
+  });
+  return cnt ? sum / wt : null;
+}
+
+/* KRA section score (out of KRA section weight) for 'selfRating' or 'apprRating' */
+function pdfKraScore(model, key){
+  let total = 0, any = false;
+  (model.kras||[]).forEach(kra => {
+    const kw = pdfNum(kra.weightage) || 0;
+    if(!kw || !(kra.goals||[]).length) return;
+    let ws = 0, wt = 0;
+    kra.goals.forEach(g => {
+      let r = g[key];
+      if(key === 'apprRating' && (r===''||r===null||r===undefined)) return;
+      const pct = pdfRatingPct(model, r); if(pct===null) return;
+      const gw = pdfNum(g.weightage) || 1;
+      ws += gw * pct; wt += gw; any = true;
+    });
+    if(wt > 0) total += kw * (ws / wt) / 100;
+  });
+  return any ? total : null;
+}
+function pdfAttrScore(model){
+  let total = 0, any = false;
+  (model.attributes||[]).forEach(a => {
+    const pct = pdfRatingPct(model, a.rating); if(pct===null) return;
+    total += (pdfNum(a.weightage)||0) * pct / 100; any = true;
+  });
+  return any ? total : null;
+}
+
+/* ---------- Page-1 target block ---------- */
+function pdfTargetLabel(i){
+  const n = i + 1;
+  if(i < PDF_FIXED_TARGETS) return `Target-${n} (उद्दिष्ट ${pdfDev(n)} ) :`;
+  if(i === PDF_FIXED_TARGETS) return `Additional Target ( If any) : (उद्दिष्ट ${pdfDev(n)}):`;
+  return `Additional Target : (उद्दिष्ट ${pdfDev(n)}):`;
+}
+function pdfTargetBlock(kra, i){
+  const n = i + 1;
+  const label = pdfTargetLabel(i);
+  const achLabel = `Achievement: (प्राप्ति ${pdfDev(n)})`;
+  if(!kra || (!kra.name && !(kra.goals||[]).length)){
+    return `<tr class="pa-avoid"><td class="pa-tcell"><div class="pa-b">${label}</div><div class="pa-blank"></div><div class="pa-b">${achLabel}</div><div class="pa-blank-s"></div></td><td></td><td></td></tr>`;
   }
-  for(let sum=target;sum>=0;sum--){if(dp[sum]&&dp[sum].length)return dp[sum]}
-  return sorted;
+  const selfAvg = pdfKraAvgRating(kra, 'selfRating');
+  const apprAvg = pdfKraAvgRating(kra, 'apprRating');
+  const kw = pdfNum(kra.weightage);
+  let html = `<tr class="pa-avoid pa-target-row">
+    <td class="pa-tcell">
+      <div><span class="pa-b">${label}</span> <span class="pa-b">${pdfEsc(kra.name)}</span>${kw!==null?` <span class="pa-wt">(Weightage ${pdfFmt(kw,2)}%)</span>`:''}</div>
+      ${kra.description ? `<div class="pa-desc">${pdfMultiline(kra.description)}</div>` : ''}
+    </td>
+    <td class="pa-rc pa-b">${selfAvg!==null?pdfFmt(selfAvg,1):''}</td>
+    <td class="pa-rc pa-b">${apprAvg!==null?pdfFmt(apprAvg,1):''}</td>
+  </tr>`;
+  const goals = kra.goals || [];
+  if(!goals.length){
+    html += `<tr class="pa-avoid"><td class="pa-tcell pa-task"><div class="pa-b">${achLabel}</div><div class="pa-blank-s"></div></td><td></td><td></td></tr>`;
+  }
+  goals.forEach((g, gi) => {
+    const gw = pdfNum(g.weightage);
+    html += `<tr class="pa-avoid">
+      <td class="pa-tcell pa-task">
+        <div><span class="pa-tasktag">Task ${n}.${gi+1}${gw!==null?` · ${pdfFmt(gw,2)}%`:''}</span> ${pdfMultiline(g.name)}</div>
+        <div class="pa-ach"><span class="pa-b">${achLabel}</span> ${pdfMultiline(g.achievement)}</div>
+      </td>
+      <td class="pa-rc">${pdfEsc(g.selfRating)}</td>
+      <td class="pa-rc">${pdfEsc(g.apprRating)}</td>
+    </tr>`;
+  });
+  return html;
 }
-function employeeRecordMatches(field,empId,empName){const id=lookupId(field);if(id&&String(id)===String(empId))return true;return textValue(field).trim()===String(empName||'').trim()}
-async function safeTagRecord(reportName,id,key){if(!id||!key)return;try{await updateRecord(reportName,id,{Appraisal_Key:key})}catch(e){console.warn('Could not tag legacy record with Appraisal_Key:',reportName,id,e)}}
 
+/* ---------- Full document ---------- */
+function buildAppraisalPdfHtml(model){
+  const m = model;
+  const kras = (m.kras||[]).filter(k => k && (k.name || (k.goals||[]).length));
+  const slots = Math.max(PDF_FIXED_TARGETS + 1, kras.length);
+  let targetRows = '';
+  for(let i = 0; i < slots; i++) targetRows += pdfTargetBlock(kras[i], i);
 
-function buildGoalName(fullTask,taskNumber){const raw=String(fullTask||'').trim();if(!raw)return'Task '+taskNumber;const first=(raw.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||raw).replace(/^[\s\u2022*\-]+/,'').replace(/\s+/g,' ').trim();return first.length<=80?first:first.slice(0,77).trim()+'...'}
-function goalNameTooLong(err){const t=errorText(err);return t.indexOf('3001')>=0&&t.indexOf('Goal_Name')>=0}
-async function addGoalRecord(kraId,goal,taskNumber,key){
-  const fullTask=String(goal.name||'').trim();
-  const base={Description:fullTask,KRA:String(kraId),Weightage:num(goal.weight),Data_Source:'Manual',Appraisal_Key:key};
-  try{return await addRecord(FORMS.goal,Object.assign({Goal_Name:buildGoalName(fullTask,taskNumber)},base))}
-  catch(err){if(goalNameTooLong(err))return addRecord(FORMS.goal,Object.assign({Goal_Name:'Task '+taskNumber},base));throw err}
+  const kraW = pdfNum(m.kraSectionWeight); const roleW = pdfNum(m.roleSectionWeight);
+  const selfScore = pdfKraScore(m, 'selfRating');
+  const apprScore = pdfKraScore(m, 'apprRating');
+  const attrScore = pdfAttrScore(m);
+
+  const quarterCells = PDF_QUARTERS.map(q => {
+    const sel = q.id === m.quarter;
+    return `<td class="${sel?'pa-qsel':''}">${sel?`<b>${q.label.split(':')[0]}:</b>${q.label.substring(q.label.indexOf(':')+1)} ${pdfEsc(m.year||'')}`:q.label}</td>`;
+  }).join('');
+
+  const attrs = (m.attributes||[]).filter(a => a && a.name);
+  const attrRows = Math.max(PDF_MIN_ATTR_ROWS, attrs.length);
+  let attrHtml = '';
+  for(let i = 0; i < attrRows; i++){
+    const a = attrs[i];
+    attrHtml += `<tr><td class="pa-b pa-sno">${i+1}</td><td>${a?pdfEsc(a.name)+(pdfNum(a.weightage)!==null?` <span class="pa-wt">(${pdfFmt(a.weightage,2)}%)</span>`:''):''}</td><td class="pa-rc">${a?pdfEsc(a.rating):''}</td></tr>`;
+  }
+
+  const train = (m.training||[]).filter(t => t && (t.need||t.benefit||t.fulfilled));
+  const trainRows = Math.max(PDF_MIN_TRAIN_ROWS, train.length);
+  let trainHtml = '';
+  for(let i = 0; i < trainRows; i++){
+    const t = train[i] || {};
+    trainHtml += `<tr class="pa-avoid"><td>${pdfMultiline(t.need)}</td><td>${pdfMultiline(t.benefit)}</td><td>${pdfMultiline(t.fulfilled)}</td></tr>`;
+  }
+
+  const ovr = String(m.overallRating||'').toLowerCase();
+  const tick = l => `<span class="pa-tick">${ovr===l.toLowerCase()?'☑':'☐'}</span> ${l}`;
+
+  return `
+<div class="pa-pdf">
+  <!-- ================= PAGE 1 ================= -->
+  <div class="pa-page">
+    <div class="pa-head"><img class="pa-logo" src="${PDF_LOGO}" alt="MEGA"><div class="pa-title">Performance Appraisal Form</div></div>
+    <table class="pa-qtable"><tr>${quarterCells}</tr></table>
+    <div class="pa-info">
+      <div class="pa-info-row"><span class="pa-b">Name: ${pdfEsc(m.employeeName)}</span><span class="pa-b pa-dept">Department: ${pdfEsc(m.department)}</span></div>
+      <div class="pa-info-row"><span class="pa-b">Name of Appraiser:&nbsp; ${pdfEsc(m.appraiser)}</span></div>
+    </div>
+    <div class="pa-legend pa-b"><span class="pa-nw">Five Targets are must. Rating : 5 = Outstanding ( 96% and above), 4=Very Good ( 86%-95%) 3 = Good ( 71-85%) 2= Fair ( 50-70%)</span><br><span class="pa-nw">1= Poor ( below 50%)<span class="pa-gap2"></span>Target Achievement: ${pdfFmt(kraW===null?80:kraW,2)}% Weightage</span></div>
+    <table class="pa-grid pa-targets">
+      <thead><tr>
+        <th class="pa-th-main"><div class="pa-b">Performance Parameter, Targets and Achievements</div><div class="pa-th-sub">Targets to be linked to Company Goal/Departmental Goal/Cross Functional Team/ System Development/ Self Development/ People Development</div></th>
+        <th class="pa-th-r">Self Rating</th>
+        <th class="pa-th-r">Appraiser’s rating</th>
+      </tr></thead>
+      <tbody>
+        ${targetRows}
+        <tr class="pa-avoid"><td class="pa-total-cell"><span class="pa-b">Total</span> <span class="pa-wt">(KRA score out of ${pdfFmt(kraW===null?80:kraW,2)})</span></td><td class="pa-rc pa-b">${selfScore!==null?pdfFmt(selfScore,2):''}</td><td class="pa-rc pa-b">${apprScore!==null?pdfFmt(apprScore,2):''}</td></tr>
+        <tr class="pa-avoid"><td colspan="3" class="pa-remark"><span class="pa-b">Appraiser’s / HOD’s Remark:</span> ${pdfMultiline(m.hodRemark)}<div class="pa-blank-s"></div></td></tr>
+      </tbody>
+    </table>
+    <div class="pa-note pa-b">Signature of appraise is to confirm that feedback is given to him and rating given by appraiser is jointly agreed between Appraisee and Appraiser</div>
+    <div class="pa-sign pa-b">Signature Appraisee……………………………..Sign. Appraiser…………………………Sign. HOD</div>
+  </div>
+
+  <!-- ================= PAGE 2 ================= -->
+  <div class="pa-page pa-page2">
+    <div class="pa-head"><img class="pa-logo" src="${PDF_LOGO}" alt="MEGA"></div>
+    <table class="pa-grid pa-factors">
+      <tr class="pa-avoid"><td><span class="pa-b">Facilitating Factors</span>: उद्दिष्ट सुलभ करणारे&nbsp; घटक <i>(Appraisee to write which were the factors that helped to achieve the targets. Please give reference to specific target number)</i><div class="pa-fill">${pdfMultiline(m.facilitating)}</div></td></tr>
+      <tr class="pa-avoid"><td><span class="pa-b">Constraining Factors</span>: उद्दिष्ट साध्य करण्यासाठी आलेले अडथळे&nbsp;&nbsp; <i>(Appraisee to write the factors which were constraints to achieve the targets. Please give reference to specific target number)</i><div class="pa-fill">${pdfMultiline(m.constraining)}</div></td></tr>
+      <tr class="pa-avoid"><td><span class="pa-b">Outstanding Achievement/ Significant Contribution</span>: उल्लेखनीय कामगिरी/ योगदान&nbsp;&nbsp; <i>( Mention quantified benefits to company)</i>&nbsp; कंपनीला झालेला फायदा<div class="pa-fill">${pdfMultiline(m.outstanding)}</div></td></tr>
+      <tr class="pa-avoid"><td><span class="pa-b">Comments of Appraiser</span>: <i>(How facilitating factors will be reinforced and constraining factors will be reduced/ eliminated. Comment on Outstanding achievement)</i><div class="pa-fill">${pdfMultiline(m.comments)}</div></td></tr>
+    </table>
+    <div class="pa-attr-head pa-b"><span>Appraisal on Role Attributes:</span><span>${pdfFmt(roleW===null?20:roleW,2)}%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; weightage</span></div>
+    <div class="pa-p">Rating: 5 = Outstanding,&nbsp; 4= Very Good,&nbsp; 3= Good, 2 = Fair,&nbsp; 1= Poor</div>
+    <table class="pa-grid pa-attr">
+      <tr><th class="pa-sno">S.No</th><th>Role Attribute</th><th class="pa-th-r">Rating</th></tr>
+      ${attrHtml}
+      <tr><td></td><td class="pa-center pa-b">Total <span class="pa-wt">(Role score out of ${pdfFmt(roleW===null?20:roleW,2)})</span></td><td class="pa-rc pa-b">${attrScore!==null?pdfFmt(attrScore,2):''}</td></tr>
+    </table>
+    <div class="pa-center pa-b pa-sub">My Learnings</div>
+    <table class="pa-grid">
+      <tr><td>Appraisee to write details of learnings from: Visit outside organization/ Customer Visit/ Training/ Reading of book/ journal/ internet information/ External Course</td></tr>
+      <tr class="pa-avoid"><td class="pa-learn">${pdfMultiline(m.learnings)}</td></tr>
+    </table>
+    <div class="pa-b pa-sub2">Training Need Identification</div>
+    <div class="pa-p">Appraisee to identify the training needs to improve job performance in consultation with Appraiser</div>
+    <table class="pa-grid pa-train">
+      <tr><th>Training need</th><th>Expected benefit after training</th><th>How training need will be fulfilled ( Internal faculty/ Self-study/ Outside training</th></tr>
+      ${trainHtml}
+    </table>
+    <div class="pa-p"><span class="pa-b">OVERALL PERFORMANCE RATING</span>: (Tick <b>one</b> applicable word)</div>
+    <table class="pa-overall">
+      <tr><td>${tick('Outstanding')}</td><td>${tick('Exceeds Expectations')}</td><td>${tick('Meets Expectations')}</td></tr>
+      <tr><td>${tick('Needs Improvement')}</td><td>${tick('Unacceptable')}</td><td></td></tr>
+    </table>
+    <div class="pa-sign pa-b">Sign. Appraiser……………………………Sign. HOD…………………………</div>
+  </div>
+</div>`;
 }
-function fullGoalText(goal){return textValue(goal&&goal.Description)||textValue(goal&&goal.Goal_Name)}
 
-function getCurrentUser(){try{const r=ZOHO.CREATOR.UTIL.getInitParams();if(r&&typeof r.then==='function')return r.then(x=>x&&x.loginUser?String(x.loginUser):'').catch(()=> '');return Promise.resolve(r&&r.loginUser?String(r.loginUser):'')}catch(e){return Promise.resolve('')}}
-function empName(rec){const v=rec.Employee_Name;if(!v)return String(rec.ID);if(typeof v==='string')return v;if(typeof v==='object')return v.display_value||v.zc_display_value||[v.prefix,v.first_name,v.last_name,v.suffix].filter(Boolean).join(' ')||String(rec.ID);return String(v)}
-function findEmployee(id){return state.employees.find(e=>String(e.ID)===String(id))||null}
-function loadEmployees(){return getAll(REPORTS.employees).then(rows=>{state.employees=rows.map(r=>({ID:r.ID,name:empName(r),department:textValue(r.Department),email:textValue(r.Email)}));const options='<option value="">-- Select --</option>'+state.employees.map(e=>'<option value="'+esc(e.ID)+'">'+esc(e.name)+'</option>').join('');['setupEmp','setupHead','setupHr','selfEmp'].forEach(id=>document.getElementById(id).innerHTML=options);document.getElementById('setupEmp').onchange=function(){const e=findEmployee(this.value);document.getElementById('setupDept').textContent=e?(e.department||'-'):'-'};return getCurrentUser()}).then(email=>{state.currentUserEmail=email||'';state.currentEmployee=state.employees.find(e=>e.email&&state.currentUserEmail&&e.email.toLowerCase()===state.currentUserEmail.toLowerCase())||null;if(state.currentEmployee){document.getElementById('selfEmp').value=state.currentEmployee.ID;document.getElementById('selfEmp').disabled=true}console.log('CURRENT EMPLOYEE',state.currentEmployee)})}
+const PDF_CSS = `
+.pa-pdf{width:718px;background:#fff;color:#000;font-family:Calibri,Carlito,'Noto Sans','Nirmala UI','Noto Sans Devanagari',Arial,sans-serif;font-size:12px;line-height:1.3}
+.pa-pdf *{box-sizing:border-box}
+.pa-page{padding:4px 2px 0}
+.pa-page2{page-break-before:always;break-before:page}
+.pa-b{font-weight:700}
+.pa-head{display:flex;align-items:center;gap:60px;margin-bottom:6px}
+.pa-logo{width:85px;height:auto}
+.pa-title{font-weight:700;font-size:13.5px}
+.pa-qtable{border-collapse:collapse;width:100%;margin-bottom:16px}
+.pa-qtable td{border:1px solid #000;padding:2px 5px;font-style:italic;font-size:11.5px;white-space:nowrap}
+.pa-qsel{background:#E8EEF7}
+.pa-info{margin-bottom:10px}
+.pa-info-row{display:flex;margin-bottom:6px;font-size:12.5px}
+.pa-dept{margin-left:auto;margin-right:110px}
+.pa-legend{margin-bottom:4px;font-size:12px;word-spacing:0}
+.pa-nw{white-space:nowrap}
+.pa-gap2{display:inline-block;width:36px}
+.pa-grid{border-collapse:collapse;width:100%}
+.pa-grid th,.pa-grid td{border:1px solid #000;padding:3px 5px;vertical-align:top;text-align:left}
+.pa-grid th{font-weight:700}
+.pa-th-main{width:78%}
+.pa-th-sub{font-style:italic;font-weight:400;font-size:9.5px}
+.pa-th-r{width:11%;}
+.pa-tcell{min-height:60px}
+.pa-target-row td{border-bottom:none;padding-top:5px}
+.pa-task{border-top:none !important;padding-left:14px !important}
+.pa-tasktag{font-weight:700;font-size:10.5px;background:#EEF1F4;padding:0 4px;margin-right:2px}
+.pa-ach{margin-top:3px}
+.pa-desc{font-size:11px;font-style:italic;margin-top:2px}
+.pa-wt{font-weight:400;font-size:10px;color:#333}
+.pa-rc{text-align:center !important;vertical-align:middle !important}
+.pa-blank{height:30px}
+.pa-blank-s{height:14px}
+.pa-total-cell{text-align:center !important}
+.pa-remark{min-height:40px}
+.pa-note{font-size:10px;margin-top:3px}
+.pa-sign{margin-top:16px;font-size:12px}
+.pa-factors td{height:auto;padding:4px 5px 8px}
+.pa-fill{min-height:34px;margin-top:4px;font-size:12px}
+.pa-attr-head{display:flex;justify-content:space-between;padding-right:60px;margin-top:2px}
+.pa-p{margin:8px 0}
+.pa-sno{width:44px}
+.pa-center{text-align:center !important}
+.pa-sub{margin:2px 0 6px}
+.pa-sub2{margin-top:22px}
+.pa-learn{min-height:34px}
+.pa-train th{width:33.3%}
+.pa-overall{border-collapse:collapse;width:90%;margin-bottom:4px}
+.pa-overall td{padding:5px 0;font-weight:700;width:33%}
+.pa-tick{font-size:14px;font-weight:400}
+`;
 
-function renderQuarterButtons(){document.getElementById('setupQuarters').innerHTML=quarters.map(q=>'<div class="quarter '+(state.quarter===q.id?'active':'')+'" onclick="setSetupQuarter(\''+q.id+'\')">'+q.label+'</div>').join('')}
-function setSetupQuarter(q){state.quarter=q;renderQuarterButtons()}
-function switchMode(mode){state.mode=mode;document.getElementById('setupView').classList.toggle('hidden',mode!=='setup');document.getElementById('selfView').classList.toggle('hidden',mode!=='self');document.getElementById('tabSetup').classList.toggle('active',mode==='setup');document.getElementById('tabSelf').classList.toggle('active',mode==='self');document.getElementById('setupSubmitBtn').classList.toggle('hidden',mode!=='setup');syncSelfButtons();setStatus(mode==='setup'?'Create KRA plan.':'Load your KRA for Self Rating.',true)}
+/* Inject PDF CSS once */
+(function(){ const st = document.createElement('style'); st.id = 'paPdfCss'; st.textContent = PDF_CSS; document.head.appendChild(st); })();
 
-function distribute(total,count){if(count<=0)return[];const each=Math.floor((total/count)*100)/100;const a=new Array(count).fill(each);a[count-1]=Math.round((total-each*(count-1))*100)/100;return a}
-function autoDistributeTasks(kra){const weights=distribute(numberValue(kra.weight,0),kra.goals.length);kra.goals.forEach((g,i)=>g.weight=weights[i]===undefined?'':weights[i])}
-function redistributeSetup(){const kw=distribute(state.settings.kraWeight,state.kras.length);state.kras.forEach((k,i)=>{k.weight=kw[i]||0;autoDistributeTasks(k)});const aw=distribute(state.settings.attrWeight,state.attributes.length);state.attributes.forEach((a,i)=>a.weight=aw[i]||0)}
-function addKra(){state.kras.push({uid:'k'+kraSeq++,name:'',description:'',weight:0,goals:[]});redistributeSetup();renderSetup()}
-function removeKra(uid){state.kras=state.kras.filter(k=>k.uid!==uid);redistributeSetup();renderSetup()}
-function addGoal(kuid){const k=state.kras.find(x=>x.uid===kuid);if(!k)return;k.goals.push({uid:'g'+goalSeq++,name:'',weight:0});autoDistributeTasks(k);renderSetup()}
-function removeGoal(kuid,guid){const k=state.kras.find(x=>x.uid===kuid);if(!k)return;k.goals=k.goals.filter(g=>g.uid!==guid);autoDistributeTasks(k);renderSetup()}
-function rebalanceTasks(kuid){const k=state.kras.find(x=>x.uid===kuid);if(!k)return;autoDistributeTasks(k);renderSetup()}
-function setKra(uid,f,v){const k=state.kras.find(x=>x.uid===uid);if(k)k[f]=v}
-function setGoal(kuid,guid,f,v){const k=state.kras.find(x=>x.uid===kuid);if(!k)return;const g=k.goals.find(x=>x.uid===guid);if(g){g[f]=v;if(f==='weight')renderSetup()}}
-function addAttribute(){state.attributes.push({uid:'a'+attrSeq++,name:'',weight:0});redistributeSetup();renderSetup()}
-function removeAttribute(uid){state.attributes=state.attributes.filter(a=>a.uid!==uid);redistributeSetup();renderSetup()}
-function setAttr(uid,f,v){const a=state.attributes.find(x=>x.uid===uid);if(a)a[f]=v}
-function goalWeight(k){return k.goals.reduce((s,g)=>s+numberValue(g.weight,0),0)}
-
-function renderSetup(){document.getElementById('kraBadge').textContent=state.kras.reduce((s,k)=>s+numberValue(k.weight,0),0).toFixed(2)+' / '+state.settings.kraWeight;document.getElementById('attrBadge').textContent=state.attributes.reduce((s,a)=>s+numberValue(a.weight,0),0).toFixed(2)+' / '+state.settings.attrWeight;
-  document.getElementById('setupKraList').innerHTML=state.kras.length?state.kras.map((k,i)=>'<div class="kra-card"><div class="kra-top"><div><label>KRA '+(i+1)+'</label><input value="'+esc(k.name)+'" onchange="setKra(\''+k.uid+'\',\'name\',this.value)"></div><div><label>Description</label><input value="'+esc(k.description)+'" onchange="setKra(\''+k.uid+'\',\'description\',this.value)"></div><div><label>KRA Weightage</label><input value="'+numberValue(k.weight,0).toFixed(2)+'%" disabled></div><div><button class="danger" onclick="removeKra(\''+k.uid+'\')">Remove</button></div></div>'+k.goals.map((g,gi)=>'<div class="goal-card"><div class="goal-grid-setup"><div><label>Task '+(gi+1)+'</label><textarea onchange="setGoal(\''+k.uid+'\',\''+g.uid+'\',\'name\',this.value)">'+esc(g.name)+'</textarea></div><div><label>Task Weightage (auto / manual)</label><input type="number" step="0.01" min="0" value="'+esc(g.weight)+'" onchange="setGoal(\''+k.uid+'\',\''+g.uid+'\',\'weight\',this.value)"></div><div><button class="danger" onclick="removeGoal(\''+k.uid+'\',\''+g.uid+'\')">Remove</button></div></div></div>').join('')+'<div class="note" style="margin:8px 0">Task weight assigned: '+goalWeight(k).toFixed(2)+' / '+numberValue(k.weight,0).toFixed(2)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="addGoal(\''+k.uid+'\')">+ Add Task</button><button onclick="rebalanceTasks(\''+k.uid+'\')">Rebalance Tasks</button></div></div>').join(''):'<div class="note">No KRA added yet.</div>';
-  document.getElementById('setupAttrList').innerHTML=state.attributes.length?state.attributes.map((a,i)=>'<div class="attr-row"><div><label>Attribute '+(i+1)+'</label><input value="'+esc(a.name)+'" onchange="setAttr(\''+a.uid+'\',\'name\',this.value)"></div><div><label>Weightage</label><input value="'+numberValue(a.weight,0).toFixed(2)+'%" disabled></div><div><button class="danger" onclick="removeAttribute(\''+a.uid+'\')">Remove</button></div></div>').join(''):'<div class="note">No role attributes added yet.</div>'}
-
-function validatePlan(){if(!state.kras.length)return'Add at least one KRA.';if(!state.attributes.length)return'Add at least one Role Attribute.';for(const k of state.kras){if(!String(k.name).trim())return'Every KRA needs a name.';if(!k.goals.length)return'Every KRA needs at least one task.';for(const g of k.goals){if(!String(g.name).trim())return'Every task needs a description.';if(numberValue(g.weight,-1)<0)return'Task weightage cannot be negative.'}if(Math.abs(goalWeight(k)-numberValue(k.weight,0))>.01)return'Task weightage under "'+k.name+'" must equal '+numberValue(k.weight,0).toFixed(2)+'%.'}for(const a of state.attributes){if(!String(a.name).trim())return'Every Role Attribute needs a name.'}return''}
-function findReview(rows,empId,quarter,year){
-  const matches=(rows||[]).filter(r=>lookupId(r.Employee_Lookup)===String(empId)&&textValue(r.Quarter)===String(quarter)&&textValue(r.Year_field)===String(year)).sort(idCompareDesc);
-  return matches[0]||null;
+function pdfSafeFileName(model){
+  return ('Performance_Appraisal_' + (model.employeeName||'Employee') + '_' + (model.quarter||'') + '_' + (model.year||''))
+    .replace(/[^A-Za-z0-9_\-]+/g,'_').replace(/_+/g,'_') + '.pdf';
 }
-function normalizeStage(value){
-  const s=String(value===null||value===undefined?'':value).trim();
-  if(s===STAGE.READY_SELF||s==='KRA Submitted')return STAGE.READY_SELF;
-  if(s===STAGE.SELF_SUBMITTED)return STAGE.SELF_SUBMITTED;
-  if(s===STAGE.HEAD_SUBMITTED||s==='Head Approved')return STAGE.HEAD_SUBMITTED;
-  if(s===STAGE.APPROVED)return STAGE.APPROVED;
-  if(s===STAGE.REJECTED)return STAGE.REJECTED;
-  return'';
-}
-function getStage(review){
-  if(!review)return'';
-  const resolved=normalizeStage(review._resolvedStage);
-  if(resolved)return resolved;
-  return normalizeStage(textValue(review.Process_Stage));
-}
-async function resolveReviewStage(review){
-  if(!review||!review.ID)return'';
-  let stage=getStage(review);
-  if(stage){review._resolvedStage=stage;return stage;}
 
-  const checks=[
-    {stored:STAGE.READY_SELF,resolved:STAGE.READY_SELF},
-    {stored:'KRA Submitted',resolved:STAGE.READY_SELF},
-    {stored:STAGE.SELF_SUBMITTED,resolved:STAGE.SELF_SUBMITTED},
-    {stored:STAGE.HEAD_SUBMITTED,resolved:STAGE.HEAD_SUBMITTED},
-    {stored:'Head Approved',resolved:STAGE.HEAD_SUBMITTED},
-    {stored:STAGE.APPROVED,resolved:STAGE.APPROVED},
-    {stored:STAGE.REJECTED,resolved:STAGE.REJECTED}
-  ];
+/* Print-window fallback if html2pdf is unavailable / blocked */
+function pdfPrintFallback(html){
+  const w = window.open('', '_blank');
+  if(!w){ return false; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Performance Appraisal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
+    <style>@page{size:A4;margin:10mm} body{margin:0} ${PDF_CSS} .pa-pdf{width:auto}</style></head><body>${html}
+    <script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script></body></html>`);
+  w.document.close();
+  return true;
+}
 
-  for(const check of checks){
-    try{
-      const criteria='(ID == '+String(review.ID)+' && Process_Stage == "'+check.stored+'")';
-      const rows=await getAll(REPORTS.review,criteria);
-      if(rows.length){
-        review._resolvedStage=check.resolved;
-        review.Process_Stage=check.resolved;
-        if(check.stored!==check.resolved){
-          try{await updateRecord(REPORTS.review,review.ID,{Process_Stage:check.resolved});}catch(migrateErr){console.warn('Legacy stage could not be migrated.',migrateErr);}
-        }
-        return check.resolved;
+/* Main entry: build + download PDF. Returns a Promise. */
+async function downloadAppraisalPdf(model, onStatus){
+  const say = onStatus || function(){};
+  const html = buildAppraisalPdfHtml(model);
+  if(typeof html2pdf === 'undefined'){
+    say('PDF library not loaded — opening print view (choose "Save as PDF").', null);
+    if(!pdfPrintFallback(html)) say('Pop-up blocked. Allow pop-ups to print / save PDF.', false);
+    return;
+  }
+  say('Generating PDF…', null);
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:absolute;left:0;top:0;width:718px;background:#fff;z-index:-1;pointer-events:none;';
+  const prevScroll = [window.scrollX, window.scrollY]; window.scrollTo(0,0);
+  holder.innerHTML = html;
+  document.body.appendChild(holder);
+  try{
+    if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
+    const imgs = Array.from(holder.querySelectorAll('img'));
+    await Promise.all(imgs.map(im => im.complete ? 1 : new Promise(r => { im.onload = im.onerror = r; })));
+    /* Render each form page separately so page 2 always starts on a fresh
+       sheet (no blank pages), while long target lists flow onto extra pages
+       without cutting a task row in half. */
+    const pages = Array.from(holder.querySelectorAll('.pa-page')).map(pg => {
+      const wrap = document.createElement('div');
+      wrap.className = 'pa-pdf';
+      const clone = pg.cloneNode(true);
+      clone.classList.remove('pa-page2');
+      wrap.appendChild(clone);
+      holder.appendChild(wrap);
+      return wrap;
+    });
+    holder.firstElementChild.style.display = 'none';
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: pdfSafeFileName(model),
+      image: { type: 'jpeg', quality: 0.96 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, x: 0, y: 0, windowWidth: 718 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css'], avoid: ['.pa-avoid'] }
+    };
+    /* 1) Each form page → canvas (html2pdf inserts "avoid" spacers so a
+          task row is never cut across two sheets).
+       2) Slice every canvas onto A4 sheets ourselves → page 2 of the form
+          always starts on a new sheet and no blank pages are produced. */
+    const canvases = [];
+    for(const el of pages){
+      canvases.push(await html2pdf().set(opt).from(el).toCanvas().get('canvas'));
+    }
+    const probe = document.createElement('div'); probe.style.cssText = 'width:10px;height:10px'; holder.appendChild(probe);
+    // html2pdf does not expose jsPDF globally: take its instance (1 probe page) and drop that page at the end.
+    const pdf = await html2pdf().set(opt).from(probe).toPdf().get('pdf');
+    const M = 10, innerW = 210 - 2*M, innerH = 297 - 2*M;
+    canvases.forEach(cv => {
+      const pxPerPage = Math.floor(cv.width * innerH / innerW);
+      for(let y = 0; y < cv.height; y += pxPerPage){
+        const sliceH = Math.min(pxPerPage, cv.height - y);
+        if(sliceH < 6) break;                         // ignore sub-pixel leftovers
+        const sc = document.createElement('canvas');
+        sc.width = cv.width; sc.height = sliceH;
+        const ctx = sc.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, sc.width, sc.height);
+        ctx.drawImage(cv, 0, y, cv.width, sliceH, 0, 0, cv.width, sliceH);
+        pdf.addPage();
+        pdf.addImage(sc.toDataURL('image/jpeg', 0.96), 'JPEG', M, M, innerW, sliceH * innerW / cv.width);
       }
-    }catch(stageError){
-      console.warn('Could not resolve Process_Stage by criteria.',stageError);
-      break;
-    }
+    });
+    pdf.deletePage(1);
+    pdf.save(opt.filename);
+    say('✅ PDF downloaded.', true);
+  } catch(err){
+    console.error('PDF ERROR', err);
+    say('Direct download failed — opening print view (choose "Save as PDF").', false);
+    pdfPrintFallback(html);
+  } finally {
+    document.body.removeChild(holder);
+    window.scrollTo(prevScroll[0], prevScroll[1]);
   }
-
-  const status=textValue(review.Status).trim();
-  if(status==='Approved'){review._resolvedStage=STAGE.APPROVED;return STAGE.APPROVED;}
-  if(status==='Rejected'){review._resolvedStage=STAGE.REJECTED;return STAGE.REJECTED;}
-
-  // A legacy/blank stage is never treated as Self Rating Submitted automatically.
-  // It is made ready for Self Rating so the employee can complete and submit it once.
-  review._resolvedStage=STAGE.READY_SELF;
-  review.Process_Stage=STAGE.READY_SELF;
-  try{
-    await updateRecord(REPORTS.review,review.ID,{Status:'Submitted for Approval',Process_Stage:STAGE.READY_SELF});
-  }catch(stageErr){
-    console.warn('Could not initialize blank Process_Stage to Ready for Self Rating.',stageErr);
-  }
-  return STAGE.READY_SELF;
 }
 
-async function submitKraPlan(){
-  const empId=document.getElementById('setupEmp').value;
-  const headId=document.getElementById('setupHead').value;
-  const hrId=document.getElementById('setupHr').value;
-  const year=String(document.getElementById('setupYear').value).trim();
-  const emp=findEmployee(empId);
-  if(!emp){showModal('KRA Setup','Select an employee.','error');return}
-  if(!headId){showModal('KRA Setup','Select Department Head.','error');return}
-  if(!hrId){showModal('KRA Setup','Select HR Approver.','error');return}
-  if(!year){showModal('KRA Setup','Enter year.','error');return}
-  const problem=validatePlan();if(problem){showModal('KRA Setup',problem,'error');return}
-  setBusy('setupSubmitBtn',true,'Submitting...');setStatus('Submitting KRA plan...',null);
+
+document.querySelectorAll('.mega-logo').forEach(i => i.src = PDF_LOGO);
+
+/* ============================ STATE ============================ */
+const state = {
+  sdkReady:false, creatorUser:'', employees:[], me:null,
+  quarter:currentQuarter(), year:String(new Date().getFullYear()),
+  phase:'loading',            // loading | targets | rating | done
+  review:null,                // existing Review record (or null)
+  kras:[], attributes:[], training:[], overallRating:'',
+  texts:{ facFactors:'', conFactors:'', outAchieve:'', apprComments:'', myLearnings:'' },
+  busy:false, loadToken:0
+};
+let seq = 1;
+function nid(p){ return p + (seq++); }
+function currentQuarter(){ const m = new Date().getMonth(); return m <= 2 ? 'Q4' : m <= 5 ? 'Q1' : m <= 8 ? 'Q2' : 'Q3'; }
+
+/* ======================= CREATOR API HELPERS ======================= */
+async function getAll(reportName, criteria){
+  const out = [];
+  for(let page = 1; page <= CONFIG.MAX_PAGES; page++){
+    const cfg = { reportName, page, pageSize:CONFIG.PAGE_SIZE };
+    if(criteria) cfg.criteria = criteria;
+    let resp;
+    try{ resp = await ZOHO.CREATOR.API.getAllRecords(cfg); }
+    catch(err){ if(page === 1 && !isEmptyErr(err)) throw err; break; }
+    const rows = (resp && resp.data) ? resp.data : [];
+    out.push(...rows);
+    if(rows.length < CONFIG.PAGE_SIZE) break;
+  }
+  return out;
+}
+function isEmptyErr(err){ return /9220|No records|no data/i.test(JSON.stringify(err || '')); }
+async function getAllSafe(r, c){ try{ return await getAll(r, c); }catch(e){ console.warn('read failed', r, e); return []; } }
+function addRecord(formName, data){
+  return ZOHO.CREATOR.API.addRecord({ formName, data:{ data } }).then(resp => { if(resp && resp.code === 3000) return resp.data; throw resp; });
+}
+function updateRecord(reportName, id, data){
+  return ZOHO.CREATOR.API.updateRecord({ reportName, id, data:{ data } }).then(resp => { if(resp && resp.code === 3000) return resp.data; throw resp; });
+}
+function errText(err){
+  if(!err) return 'unknown error';
+  if(typeof err === 'string') return err;
+  if(err.message) return err.message;
+  if(err.error) return typeof err.error === 'string' ? err.error : JSON.stringify(err.error);
+  try{ return JSON.stringify(err).slice(0, 220); }catch(e){ return String(err); }
+}
+function plain(v){ if(v === null || v === undefined) return ''; if(typeof v === 'object') return v.display_value || v.zc_display_value || ''; return String(v); }
+function critStr(v){ return String(v || '').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
+function byId(a, b){ const x = String(a.ID), y = String(b.ID); return x.length - y.length || (x < y ? -1 : x > y ? 1 : 0); }
+
+/* ======================= EMPLOYEES + LOGIN ======================= */
+function empName(rec){
+  const v = rec[CONFIG.EMP_FIELDS.name];
+  if(!v) return '';
+  if(typeof v === 'string') return v.trim();
+  if(typeof v === 'object') return (v.display_value || v.zc_display_value || [v.prefix,v.first_name,v.last_name,v.suffix].filter(Boolean).join(' ')).trim();
+  return String(v).trim();
+}
+async function loadEmployees(){
+  let lastErr = null;
+  for(const rep of CONFIG.EMPLOYEE_REPORTS){
+    try{
+      const list = (await getAll(rep)).map(r => ({
+        ID:String(r.ID), name:empName(r),
+        department:plain(r[CONFIG.EMP_FIELDS.department]).trim(),
+        email:plain(r[CONFIG.EMP_FIELDS.email]).trim().toLowerCase()
+      })).filter(e => e.name);
+      if(list.length && list.some(e => e.email)){ state.employees = list; return; }
+    }catch(err){ lastErr = err; console.warn('Employee report failed:', rep, err); }
+  }
+  throw lastErr || new Error('No employee report returned data');
+}
+function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function loginMsg(msg, ok){ const el = document.getElementById('loginMsg'); el.textContent = msg || ''; el.className = 'login-msg' + (ok===true?' ok':ok===false?' bad':''); }
+async function getCreatorUser(){
+  try{ let r = ZOHO.CREATOR.UTIL.getInitParams(); if(r && typeof r.then === 'function') r = await r;
+       const u = (r && r.loginUser) ? String(r.loginUser).trim().toLowerCase() : ''; return isEmail(u) ? u : ''; }
+  catch(e){ return ''; }
+}
+function doLogin(){
+  if(!state.sdkReady){ loginMsg('Still connecting to Creator — please wait.', null); return; }
+  const mail = (document.getElementById('loginEmail').value || '').trim().toLowerCase();
+  if(!isEmail(mail)){ loginMsg('Please enter a valid email address.', false); return; }
+  const emp = state.employees.find(e => e.email === mail);
+  if(!emp){ loginMsg('This email is not in the Mega employee list. Use your official email or contact HR.', false); return; }
+  if(CONFIG.MATCH_CREATOR_LOGIN && state.creatorUser && state.creatorUser !== mail){
+    loginMsg('This email does not match the Creator account you are signed in with (' + state.creatorUser + ').', false); return;
+  }
+  state.me = emp;
+  try{ sessionStorage.setItem('mega_pa_session', mail); }catch(e){}
+  openApp();
+}
+function logout(){ saveDraft(); try{ sessionStorage.removeItem('mega_pa_session'); }catch(e){} location.reload(); }
+
+/* ======================= PAGE + PERIOD ======================= */
+function openApp(){
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('appView').classList.remove('hidden');
+  document.getElementById('footerBar').classList.remove('hidden');
+  document.getElementById('whoName').textContent = state.me.name;
+  document.getElementById('whoEmail').textContent = state.me.email;
+  document.getElementById('empNameDisplay').textContent = state.me.name;
+  document.getElementById('deptDisplay').textContent = state.me.department || '—';
+  const y = new Date().getFullYear();
+  document.getElementById('yearSelect').innerHTML = [y-1, y, y+1].map(v => `<option ${String(v)===state.year?'selected':''}>${v}</option>`).join('');
+  renderQuarters();
+  loadPeriod();
+}
+function renderQuarters(){
+  document.getElementById('quarterRow').innerHTML = QUARTERS.map(q =>
+    `<div class="quarter-btn ${state.quarter===q.id?'active':''}" onclick="setQuarter('${q.id}')">${q.label}</div>`).join('');
+}
+function setQuarter(q){ if(state.busy || q === state.quarter) return; saveDraft(); state.quarter = q; renderQuarters(); loadPeriod(); }
+function changePeriod(){ if(state.busy) return; saveDraft(); state.year = document.getElementById('yearSelect').value; loadPeriod(); }
+
+/* Decides which step to show for the selected quarter / year */
+async function loadPeriod(){
+  const token = ++state.loadToken;
+  state.phase = 'loading'; resetData();
+  document.getElementById('appraiserName').value = '';
+  renderPage();
+  setStatus('Loading your ' + state.quarter + ' ' + state.year + ' appraisal…', null);
+  const me = state.me, q = state.quarter, y = state.year;
+  const [reviews, kraRecs] = await Promise.all([
+    getAllSafe(CONFIG.REPORTS.review, `(Employee_Lookup == ${me.ID} && Quarter == "${q}" && Year_field == "${y}")`),
+    getAllSafe(CONFIG.REPORTS.kra, `(Employee_Name == "${critStr(me.name)}" && Quarter == "${q}" && Year_field1 == "${y}")`)
+  ]);
+  if(token !== state.loadToken) return;                 // user switched period meanwhile
+
+  if(!reviews.length && !kraRecs.length){
+    state.phase = 'targets';
+    if(!restoreDraft()) addKRA(true);
+  } else {
+    state.review = reviews.length ? reviews.sort(byId)[0] : null;
+    const [goalLists, comps, trains] = await Promise.all([
+      Promise.all(kraRecs.sort(byId).map(k => getAllSafe(CONFIG.REPORTS.goal, `(KRA == ${k.ID})`))),
+      getAllSafe(CONFIG.REPORTS.competency, `(Employee_Name1 == "${critStr(me.name)}" && Quarter == "${q}" && Year_field1 == "${y}")`),
+      getAllSafe(CONFIG.REPORTS.training, `(Employee_Name == "${critStr(me.name)}" && Quarter1 == "${q}" && Year_field == "${y}")`)
+    ]);
+    if(token !== state.loadToken) return;
+    state.kras = kraRecs.map((k, i) => ({
+      id:nid('k'), recId:String(k.ID), name:plain(k.KRA_Name), description:plain(k.Description), weightage:parseFloat(plain(k.Weightage)) || 0,
+      goals:goalLists[i].sort(byId).map(g => ({ id:nid('g'), recId:String(g.ID), name:plain(g.Goal_Name), achievement:plain(g.Achievement),
+        weightage:parseFloat(plain(g.Weightage)) || 0, selfRating:plain(g.Self_Rating), apprRating:plain(g.Appraiser_Rating) }))
+    }));
+    state.attributes = comps.sort(byId).map(c => ({ id:nid('a'), recId:String(c.ID), name:plain(c.Attribute_Name), weightage:parseFloat(plain(c.Weightage)) || 0, rating:plain(c.Rating) }));
+    const r = state.review || {};
+    const status = plain(r.Status);
+    state.phase = (state.review && status && status !== CONFIG.STATUS.targetsSet) ? 'done' : 'rating';
+    document.getElementById('appraiserName').value = plain(r.Appraiser_Name);
+    state.texts = { facFactors:plain(r.Facilitating_Factors1), conFactors:plain(r.Constraining_Factors), outAchieve:plain(r.Outstanding_Achievement),
+                    apprComments:plain(r.Appraiser_Comments), myLearnings:plain(r.My_Learnings) };
+    state.overallRating = plain(r.Overall_Rating);
+    state.training = trains.sort(byId).map(t => ({ id:nid('t'), recId:String(t.ID), need:plain(t.Training_Need), benefit:plain(t.Expected_Benefit), fulfilled:plain(t.How_Fulfilled) }));
+    if(state.phase === 'rating') restoreDraft();
+  }
+  renderPage();
+  const msg = { targets:'Step 1 — add your Targets (KRA) and tasks, then click Submit Targets.',
+                rating:'Step 2 — fill achievement and self rating for each task, then click Submit Self Rating.',
+                done:'This appraisal is complete. You can download the PDF.' }[state.phase];
+  setStatus(msg, true);
+}
+function resetData(){
+  state.review = null; state.kras = []; state.attributes = []; state.training = []; state.overallRating = '';
+  state.texts = { facFactors:'', conFactors:'', outAchieve:'', apprComments:'', myLearnings:'' };
+}
+
+/* ======================= AUTO WEIGHTAGE ======================= */
+function splitEven(total, count){
+  if(count <= 0) return [];
+  const each = Math.floor((total / count) * 100) / 100;
+  const arr = new Array(count).fill(each);
+  arr[count-1] = Math.round((total - each * (count-1)) * 100) / 100;
+  return arr;
+}
+function sectionShares(){ const r = state.attributes.length > 0; return { kra: r ? CONFIG.KRA_SHARE : 100, role: r ? CONFIG.ROLE_SHARE : 0 }; }
+/* Only in Step 1 — later the saved weights are used as they are */
+function applyWeights(){
+  if(state.phase !== 'targets') return;
+  const sh = sectionShares(), kw = splitEven(sh.kra, state.kras.length);
+  state.kras.forEach((k, i) => { k.weightage = kw[i]; const gw = splitEven(k.weightage, k.goals.length); k.goals.forEach((g, j) => g.weightage = gw[j]); });
+  const aw = splitEven(sh.role, state.attributes.length);
+  state.attributes.forEach((a, i) => a.weightage = aw[i]);
+}
+function pct(r){ const n = parseInt(r, 10); return CONFIG.RATING_PCT[n] !== undefined ? CONFIG.RATING_PCT[n] : 0; }
+function computeScores(){
+  let kra = 0, role = 0;
+  state.kras.forEach(k => k.goals.forEach(g => { kra += (g.weightage || 0) * pct(g.selfRating) / 100; }));
+  state.attributes.forEach(a => { role += (a.weightage || 0) * pct(a.rating) / 100; });
+  kra = Math.round(kra*100)/100; role = Math.round(role*100)/100;
+  return { kra, role, total: Math.round((kra + role)*100)/100 };
+}
+function suggestedOverall(s){ return s >= 96 ? 'Outstanding' : s >= 86 ? 'Exceeds Expectations' : s >= 71 ? 'Meets Expectations' : s >= 50 ? 'Needs Improvement' : 'Unacceptable'; }
+function kraTotal(){ return state.kras.reduce((s,k) => s + (k.weightage||0), 0); }
+function roleTotal(){ return state.attributes.reduce((s,a) => s + (a.weightage||0), 0); }
+
+/* ======================= STEP 1 EDITING ======================= */
+function newGoal(){ return { id:nid('g'), recId:'', name:'', achievement:'', weightage:0, selfRating:'', apprRating:'' }; }
+function addKRA(silent){ state.kras.push({ id:nid('k'), recId:'', name:'', description:'', weightage:0, goals:[newGoal()] }); if(!silent){ renderPage(); markUnsaved(); } }
+function removeKRA(id){ state.kras = state.kras.filter(k => k.id !== id); renderPage(); markUnsaved(); }
+function findKra(id){ return state.kras.find(k => k.id === id); }
+function findGoal(kid, gid){ return findKra(kid).goals.find(g => g.id === gid); }
+function addGoal(kid){ findKra(kid).goals.push(newGoal()); renderPage(); markUnsaved(); }
+function removeGoal(kid, gid){ const k = findKra(kid); k.goals = k.goals.filter(g => g.id !== gid); renderPage(); markUnsaved(); }
+function addAttribute(){ state.attributes.push({ id:nid('a'), recId:'', name:'', weightage:0, rating:'' }); renderPage(); markUnsaved(); }
+function removeAttribute(id){ state.attributes = state.attributes.filter(a => a.id !== id); renderPage(); markUnsaved(); }
+/* text edits never re-render (keeps the cursor where the user clicked) */
+function setKra(id, f, v){ findKra(id)[f] = v; markUnsaved(); }
+function setGoal(kid, gid, f, v){ findGoal(kid, gid)[f] = v; if(f === 'selfRating') renderScores(); markUnsaved(); }
+function setAttr(id, f, v){ state.attributes.find(a => a.id === id)[f] = v; if(f === 'rating') renderScores(); markUnsaved(); }
+function setText(id, v){ state.texts[id] = v; markUnsaved(); }
+
+/* ======================= STEP 2 EXTRAS ======================= */
+function addTrainingRow(){ state.training.push({ id:nid('t'), recId:'', need:'', benefit:'', fulfilled:'' }); renderPage(); markUnsaved(); }
+function removeTrainingRow(id){ state.training = state.training.filter(t => t.id !== id); renderPage(); markUnsaved(); }
+function setTrain(id, f, v){ state.training.find(t => t.id === id)[f] = v; markUnsaved(); }
+function setOverall(l){ state.overallRating = l; renderOverall(); markUnsaved(); }
+
+/* ======================= RENDER ======================= */
+function ratingSelect(value, onchange){
+  return `<select onchange="${onchange}"><option value="">— Rate —</option>${[5,4,3,2,1].map(r =>
+    `<option value="${r}" ${String(value)===String(r)?'selected':''}>${RATING_LABELS[r]}</option>`).join('')}</select>`;
+}
+function renderBanner(){
+  const p = state.phase, el = document.getElementById('stepBanner');
+  if(p === 'loading'){ el.innerHTML = ''; return; }
+  const info = {
+    targets:['STEP 1','Set your Targets','Add each Target (KRA) and the tasks under it. Weightage is calculated automatically. Ratings are given later in Step 2.',''],
+    rating:['STEP 2','Self Rating','Your targets are saved. Fill the achievement and your self rating for every task, then submit.','rating'],
+    done:['DONE','Appraisal submitted','Status: ' + (plain(state.review && state.review.Status) || 'Submitted') + '. Your entries are locked — download the PDF anytime.','done']
+  }[p];
+  el.innerHTML = `<div class="step-banner ${info[3]}"><span class="num">${info[0]}</span><div><div class="t">${info[1]}</div><div class="d">${info[2]}</div></div>
+    <div class="steps"><span class="${p==='targets'?'on':''}">1 · Targets</span><span class="${p==='rating'?'on':''}">2 · Self Rating</span><span class="${p==='done'?'on':''}">✓ Done</span></div></div>`;
+  const btn = document.getElementById('mainBtn');
+  btn.classList.toggle('hidden', p === 'done');
+  btn.textContent = p === 'targets' ? 'Submit Targets' : 'Submit Self Rating';
+  btn.disabled = state.busy;
+  document.getElementById('appraiserName').disabled = p === 'done';
+}
+function renderPage(){
+  applyWeights();
+  renderBanner();
+  const body = document.getElementById('pageBody');
+  if(state.phase === 'loading'){ body.innerHTML = '<div class="section"><div class="loading-box">Loading…</div></div>'; return; }
+  if(state.phase === 'targets') body.innerHTML = targetsHtml();
+  else body.innerHTML = ratingHtml(state.phase === 'done');
+  renderScores(); renderOverall();
+}
+
+/* ---------- STEP 1 page ---------- */
+function targetsHtml(){
+  const sh = sectionShares();
+  return `
+  <div class="section">
+    <div class="section-head"><h2>Targets (KRA) &amp; Tasks</h2><span class="weight-badge">${fmt(sh.kra)}% · ${state.kras.length} target(s)</span></div>
+    <div class="note">Weightage is automatic: ${fmt(sh.kra)}% is split equally between Targets, and each Target's share is split equally between its tasks.</div>
+    ${state.kras.length ? state.kras.map((k, i) => `
+      <div class="kra-block">
+        <div class="kra-top">
+          <div class="fields">
+            <div><label>Target ${i+1} <span class="req">*</span></label><input value="${esc(k.name)}" placeholder="e.g. Zoho Creator Development" onchange="setKra('${k.id}','name',this.value)"></div>
+            <div><label>Description</label><input value="${esc(k.description)}" placeholder="What this target covers" onchange="setKra('${k.id}','description',this.value)"></div>
+            <div><label>Weightage (auto)</label><input value="${fmt(k.weightage)}%" disabled></div>
+          </div>
+          <div class="kra-actions"><button class="small danger" onclick="removeKRA('${k.id}')">Remove</button></div>
+        </div>
+        ${k.goals.map((g, j) => `
+          <div class="goal-row">
+            <div class="goal-row-header"><span class="goal-tag">TASK ${i+1}.${j+1} · ${fmt(g.weightage)}%</span><button class="small danger" onclick="removeGoal('${k.id}','${g.id}')">Remove</button></div>
+            <div><label>Task <span class="req">*</span></label><textarea placeholder="Describe the task" onchange="setGoal('${k.id}','${g.id}','name',this.value)">${esc(g.name)}</textarea></div>
+          </div>`).join('')}
+        <div style="margin-top:12px;"><button class="small" onclick="addGoal('${k.id}')">+ Add Task under Target ${i+1}</button></div>
+      </div>`).join('') : '<div class="empty">No targets yet.</div>'}
+    <div style="margin-top:14px;"><button class="solid" onclick="addKRA()">+ Add Target (KRA)</button></div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(sh.role)}% · ${state.attributes.length} attribute(s)</span></div>
+    <div class="note">Optional. If you add role attributes they share 20% and Targets get 80%. You will rate them in Step 2.</div>
+    ${state.attributes.length ? state.attributes.map((a, i) => `
+      <div class="attr-row" style="grid-template-columns:3fr 1fr auto;">
+        <div><label>Attribute ${i+1} <span class="req">*</span></label><input value="${esc(a.name)}" placeholder="e.g. Leadership" onchange="setAttr('${a.id}','name',this.value)"></div>
+        <div><label>Weightage (auto)</label><input value="${fmt(a.weightage)}%" disabled></div>
+        <div><button class="small danger" onclick="removeAttribute('${a.id}')">✕</button></div>
+      </div>`).join('') : '<div class="empty">No role attributes — Targets carry the full 100%.</div>'}
+    <div style="margin-top:10px;"><button class="small" onclick="addAttribute()">+ Add Role Attribute</button></div>
+  </div>`;
+}
+
+/* ---------- STEP 2 page (and read-only DONE page) ---------- */
+function ratingHtml(ro){
+  const ta = (id, ph) => ro ? `<div class="ro">${esc(state.texts[id]) || '—'}</div>`
+                            : `<textarea placeholder="${ph}" onchange="setText('${id}',this.value)">${esc(state.texts[id])}</textarea>`;
+  return `
+  <div class="score-bar" id="scoreBar"></div>
+  <div class="section">
+    <div class="section-head"><h2>Targets (KRA) &amp; Tasks</h2><span class="weight-badge">${fmt(kraTotal())}% · ${state.kras.length} target(s)</span></div>
+    ${state.kras.length ? '' : '<div class="empty">No targets were found for this quarter.</div>'}
+    ${state.kras.map((k, i) => `
+      <div class="kra-block">
+        <div><b>Target ${i+1}: ${esc(k.name)}</b> <span class="goal-tag">· ${fmt(k.weightage)}%</span></div>
+        ${k.description ? `<div style="font-size:12px;color:var(--muted);margin-top:3px;">${esc(k.description)}</div>` : ''}
+        ${k.goals.map((g, j) => `
+          <div class="goal-row">
+            <div class="rate-grid">
+              <div><label>Task ${i+1}.${j+1} · ${fmt(g.weightage)}%</label><div class="ro">${esc(g.name)}</div></div>
+              <div><label>Achievement</label>${ro ? `<div class="ro">${esc(g.achievement) || '—'}</div>`
+                 : `<textarea placeholder="What was achieved" onchange="setGoal('${k.id}','${g.id}','achievement',this.value)">${esc(g.achievement)}</textarea>`}</div>
+              <div><label>Self Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(g.selfRating) || '—'}</div>` : ratingSelect(g.selfRating, `setGoal('${k.id}','${g.id}','selfRating',this.value)`)}</div>
+              <div><label>Appraiser Rating</label><div class="ro">${esc(g.apprRating) || '—'}</div></div>
+            </div>
+          </div>`).join('')}
+      </div>`).join('')}
+  </div>
+  ${state.attributes.length ? `
+  <div class="section">
+    <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
+    <div class="note">Rating: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
+    ${state.attributes.map((a, i) => `
+      <div class="attr-row" style="grid-template-columns:3fr 1fr 1.3fr;">
+        <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
+        <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
+        <div><label>Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
+      </div>`).join('')}
+  </div>` : ''}
+  <div class="section two-col">
+    <div><label>Facilitating Factors</label>${ta('facFactors','Factors that helped achieve the targets (mention target number)')}</div>
+    <div><label>Constraining Factors</label>${ta('conFactors','Factors that were constraints (mention target number)')}</div>
+    <div><label>Outstanding Achievement / Significant Contribution</label>${ta('outAchieve','Quantified benefit to company')}</div>
+    <div><label>Comments of Appraiser</label>${ta('apprComments','Comments')}</div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>My Learnings</h2></div>
+    ${ta('myLearnings','Visit outside organization / Customer Visit / Training / Reading / External Course')}
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>Training Need Identification</h2>${ro ? '' : '<button class="small" onclick="addTrainingRow()">+ Add Row</button>'}</div>
+    <table class="train-table">
+      <thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled</th>${ro?'':'<th style="width:50px"></th>'}</tr></thead>
+      <tbody>${state.training.length ? state.training.map(t => ro || t.recId ? `
+        <tr><td>${esc(t.need)}</td><td>${esc(t.benefit)}</td><td>${esc(t.fulfilled)}</td>${ro?'':'<td></td>'}</tr>` : `
+        <tr><td><input value="${esc(t.need)}" onchange="setTrain('${t.id}','need',this.value)"></td>
+            <td><input value="${esc(t.benefit)}" onchange="setTrain('${t.id}','benefit',this.value)"></td>
+            <td><input value="${esc(t.fulfilled)}" placeholder="Internal / Self-study / Outside" onchange="setTrain('${t.id}','fulfilled',this.value)"></td>
+            <td><button class="small danger" onclick="removeTrainingRow('${t.id}')">✕</button></td></tr>`).join('')
+        : `<tr><td colspan="4" class="empty">${ro ? 'None.' : 'No training needs added yet.'}</td></tr>`}</tbody>
+    </table>
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>Overall Performance Rating</h2></div>
+    <div class="overall-options" id="overallOptions"></div>
+  </div>`;
+}
+function renderScores(){
+  const el = document.getElementById('scoreBar'); if(!el) return;
+  const s = computeScores();
+  const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0), rated = state.kras.reduce((n,k) => n + k.goals.filter(g => g.selfRating).length, 0);
+  el.innerHTML = `
+    <div class="score-tile"><div class="k">Targets (KRA)</div><div class="v">${fmt(s.kra)} / ${fmt(kraTotal())}</div><div class="s">${rated} of ${tasks} task(s) rated</div></div>
+    <div class="score-tile"><div class="k">Role Attributes</div><div class="v">${fmt(s.role)} / ${fmt(roleTotal())}</div><div class="s">${state.attributes.length} attribute(s)</div></div>
+    <div class="score-tile final"><div class="k">Self Score (auto)</div><div class="v">${fmt(s.total)} / 100</div><div class="s">≈ ${suggestedOverall(s.total)}</div></div>`;
+}
+function renderOverall(){
+  const el = document.getElementById('overallOptions'); if(!el) return;
+  const ro = state.phase === 'done';
+  el.innerHTML = OVERALL_LABELS.map(l => `<div class="overall-opt ${state.overallRating===l?'selected':''}" ${ro?'':`onclick="setOverall('${l}')"`}>${l}</div>`).join('');
+}
+
+/* ======================= STATUS / DRAFT ======================= */
+function setStatus(msg, ok){ const s = document.getElementById('statusText'); s.textContent = msg; s.classList.remove('ok','bad'); if(ok===true) s.classList.add('ok'); if(ok===false) s.classList.add('bad'); }
+function draftKey(){ return `mega_pa::${state.me ? state.me.email : ''}::${state.quarter}::${state.year}::${state.phase}`; }
+function markUnsaved(){ if(state.phase !== 'targets' && state.phase !== 'rating') return; saveDraft(); setStatus('Draft kept in this browser — remember to submit.', null); }
+function saveDraft(){
+  if(!state.me || (state.phase !== 'targets' && state.phase !== 'rating')) return;
+  let d;
+  if(state.phase === 'targets') d = { kras:state.kras, attributes:state.attributes, appraiser:val('appraiserName') };
+  else d = {
+    goals:Object.fromEntries(state.kras.flatMap(k => k.goals).map(g => [g.recId, { a:g.achievement, r:g.selfRating }])),
+    attrs:Object.fromEntries(state.attributes.map(a => [a.recId, a.rating])),
+    training:state.training, texts:state.texts, overall:state.overallRating, appraiser:val('appraiserName')
+  };
+  try{ localStorage.setItem(draftKey(), JSON.stringify(d)); }catch(e){}
+}
+function restoreDraft(){
+  let d = null; try{ d = JSON.parse(localStorage.getItem(draftKey()) || 'null'); }catch(e){}
+  if(!d) return false;
+  if(state.phase === 'targets'){
+    if(!Array.isArray(d.kras) || !d.kras.length) return false;
+    state.kras = d.kras; state.attributes = d.attributes || [];
+  } else {
+    state.kras.forEach(k => k.goals.forEach(g => { const x = d.goals && d.goals[g.recId]; if(x){ if(x.a && !g.achievement) g.achievement = x.a; if(x.r && !g.selfRating) g.selfRating = x.r; } }));
+    state.attributes.forEach(a => { const r = d.attrs && d.attrs[a.recId]; if(r && !a.rating) a.rating = r; });
+    if(Array.isArray(d.training)){ const saved = state.training.filter(t => t.recId); state.training = saved.concat(d.training.filter(t => !t.recId)); }
+    if(d.texts) Object.keys(state.texts).forEach(k => { if(!state.texts[k] && d.texts[k]) state.texts[k] = d.texts[k]; });
+    if(d.overall && !state.overallRating) state.overallRating = d.overall;
+  }
+  const allIds = [...state.kras.flatMap(k => [k.id, ...k.goals.map(g => g.id)]), ...state.attributes.map(a => a.id), ...state.training.map(t => t.id)];
+  seq = Math.max(seq, allIds.reduce((m, id) => Math.max(m, parseInt(String(id).slice(1)) || 0), 0) + 1);
+  if(d.appraiser && !val('appraiserName')) document.getElementById('appraiserName').value = d.appraiser;
+  return true;
+}
+function clearDraft(){ try{ localStorage.removeItem(draftKey()); }catch(e){} }
+function val(id){ const el = document.getElementById(id); return el ? el.value : ''; }
+
+/* ======================= SUBMIT ======================= */
+function mainAction(){ if(state.phase === 'targets') submitTargets(); else if(state.phase === 'rating') submitRating(); }
+function lock(on){ state.busy = on; document.getElementById('mainBtn').disabled = on; }
+
+function validateTargets(){
+  if(!state.kras.length) return 'Add at least one Target (KRA).';
+  for(let i = 0; i < state.kras.length; i++){
+    const k = state.kras[i];
+    if(!k.name.trim()) return `Target ${i+1}: enter the target name.`;
+    if(!k.goals.length) return `Target ${i+1}: add at least one task.`;
+    for(let j = 0; j < k.goals.length; j++) if(!k.goals[j].name.trim()) return `Task ${i+1}.${j+1}: describe the task (or remove it).`;
+  }
+  for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].name.trim()) return `Role Attribute ${i+1}: enter the name (or remove it).`;
+  return '';
+}
+/* STEP 1 → KRA, Goal, Competency records + Review (Status Draft).
+   Records already created (recId set) are skipped on a retry. */
+async function submitTargets(){
+  if(state.busy) return;
+  applyWeights();
+  const problem = validateTargets(); if(problem){ setStatus('❌ ' + problem, false); return; }
+  const me = state.me, q = state.quarter, y = state.year;
+  lock(true);
   try{
-    const reviews=await getAll(REPORTS.review);
-    if(findReview(reviews,empId,state.quarter,year)){
-      showModal('KRA already exists','An appraisal already exists for this Employee / Quarter / Year. Open Self Rating instead of creating another KRA set.','error');return;
-    }
-    const key=makeAppraisalKey(empId,state.quarter,year);
+    setStatus('Checking…', null);
+    const already = await getAllSafe(CONFIG.REPORTS.review, `(Employee_Lookup == ${me.ID} && Quarter == "${q}" && Year_field == "${y}")`);
+    if(already.length && !state.kras.some(k => k.recId)){ setStatus('Targets for ' + q + ' ' + y + ' are already saved — reloading.', null); lock(false); return loadPeriod(); }
+    const total = state.kras.reduce((n,k) => n + 1 + k.goals.length, 0) + state.attributes.length + 1;
+    let step = 0; const tick = w => setStatus(`Saving ${w}… (${++step}/${total}) — do not close this page.`, null);
     for(const k of state.kras){
-      const kr=await addRecord(FORMS.kra,{KRA_Name:k.name,Description:k.description||'',Employee_Name:emp.name,Quarter:state.quarter,Year_field1:year,Weightage:num(k.weight),Appraisal_Key:key});
-      for(let gi=0;gi<k.goals.length;gi++)await addGoalRecord(kr.ID,k.goals[gi],gi+1,key);
+      tick('targets');
+      if(!k.recId){ const r = await addRecord(CONFIG.FORMS.kra, { KRA_Name:k.name.trim(), Description:k.description || '', Employee_Name:me.name, Quarter:q, Year_field1:y, Weightage:k.weightage }); k.recId = String(r.ID); saveDraft(); }
+      for(const g of k.goals){
+        tick('tasks');
+        if(!g.recId){ const r = await addRecord(CONFIG.FORMS.goal, { Goal_Name:g.name.trim(), Description:g.name.trim(), KRA:k.recId, Weightage:g.weightage, Data_Source:'Manual' }); g.recId = String(r.ID); saveDraft(); }
+      }
     }
     for(const a of state.attributes){
-      await addRecord(FORMS.competency,{Attribute_Name:a.name,Weightage:num(a.weight),Employee_Name1:emp.name,Quarter:state.quarter,Year_field1:year,Appraisal_Key:key});
+      tick('role attributes');
+      if(!a.recId){ const r = await addRecord(CONFIG.FORMS.competency, { Attribute_Name:a.name.trim(), Weightage:a.weightage, Employee_Name1:me.name, Quarter:q, Year_field1:y }); a.recId = String(r.ID); saveDraft(); }
     }
-    await addRecord(FORMS.review,{Employee_Lookup:String(empId),Department_Head:String(headId),HR_Approver:String(hrId),Status:'Submitted for Approval',Process_Stage:STAGE.READY_SELF,Appraisal_Key:key,Appraiser_Name:document.getElementById('setupAppraiser').value||'',Department:emp.department||'',Quarter:state.quarter,Year_field:year,KRA_Section_Weight:num(state.settings.kraWeight),Role_Attribute_Weight:num(state.settings.attrWeight)});
-    setStatus('Ready for Self Rating.',true);
-    showModal('Ready for Self Rating',"KRA plan was submitted successfully. Only this appraisal's KRA and tasks will be used in Self Rating, Department Head Review and HR Review.",'success');
+    tick('review');
+    if(!already.length){
+      await addRecord(CONFIG.FORMS.review, { Employee_Lookup:me.ID, Status:CONFIG.STATUS.targetsSet, Appraiser_Name:val('appraiserName'),
+        Department:me.department, Quarter:q, Year_field:y });
+    }
+    clearDraft();
+    lock(false);
+    await loadPeriod();
+    setStatus('✅ Targets saved. Come back to this page for Step 2 — Self Rating.', true);
   }catch(err){
-    const raw=errorText(err);
-    if(raw.indexOf('Appraisal_Key')>=0){showModal('Creator setup required','Add a Single Line field with link name Appraisal_Key to Review, KRA, Goal, Competency and Training_Need forms/reports, then submit again.','error');console.error(err)}
-    else friendlyError(err,'KRA plan could not be submitted.');
-  }finally{setBusy('setupSubmitBtn',false)}
-}
-function selfLocked(){if(!state.self)return true;return getStage(state.self.review)!==STAGE.READY_SELF}
-function statusLabel(review){const stage=getStage(review);if(stage===STAGE.READY_SELF)return'Ready for Self Rating';if(stage===STAGE.SELF_SUBMITTED)return'Self Rating Submitted / Locked';if(stage===STAGE.HEAD_SUBMITTED)return'Department Head Rating Submitted';if(stage===STAGE.APPROVED)return'Approved';if(stage===STAGE.REJECTED)return'Rejected / Self Rating Locked';return stage}
-function selfGoalChange(kid,gid,f,v){const p=state.self&&state.self.kras.find(x=>String(x.kra.ID)===String(kid));if(!p)return;const g=p.goals.find(x=>String(x.ID)===String(gid));if(g){g[f]=v;renderSelfSummary()}}
-function selfAttrChange(id,v){const a=state.self&&state.self.attributes.find(x=>String(x.ID)===String(id));if(a){a.Rating=v;renderSelfSummary()}}
-function addTraining(){if(selfLocked())return;state.training.push({uid:'t'+trainingSeq++,need:'',benefit:'',fulfilled:''});renderTraining()}
-function removeTraining(uid){if(selfLocked())return;state.training=state.training.filter(t=>t.uid!==uid);renderTraining()}
-function trainingChange(uid,f,v){const t=state.training.find(x=>x.uid===uid);if(t)t[f]=v}
-function renderTraining(){document.getElementById('trainingRows').innerHTML=state.training.map(t=>'<div class="grid" style="margin-bottom:10px"><div><label>Training Need</label><input '+(selfLocked()?'disabled':'')+' value="'+esc(t.need)+'" onchange="trainingChange(\''+t.uid+'\',\'need\',this.value)"></div><div><label>Expected Benefit</label><input '+(selfLocked()?'disabled':'')+' value="'+esc(t.benefit)+'" onchange="trainingChange(\''+t.uid+'\',\'benefit\',this.value)"></div><div><label>How Fulfilled</label><input '+(selfLocked()?'disabled':'')+' value="'+esc(t.fulfilled)+'" onchange="trainingChange(\''+t.uid+'\',\'fulfilled\',this.value)"></div><div style="align-self:end"><button class="danger" '+(selfLocked()?'disabled':'')+' onclick="removeTraining(\''+t.uid+'\')">Remove</button></div></div>').join('')}
-
-function weightedRating(items,ratingGetter,weightGetter){let sum=0,weight=0,count=0,plain=0;items.forEach(item=>{const r=numberValue(ratingGetter(item),NaN);if(!Number.isFinite(r))return;const w=Math.max(0,numberValue(weightGetter(item),0));plain+=r;count++;if(w>0){sum+=r*w;weight+=w}});if(weight>0)return sum/weight;return count?plain/count:0}
-function resolveSelfPerformanceWeights(review,pairs,attrs){const reviewKra=optionalNumber(review&&review.KRA_Section_Weight),reviewRole=optionalNumber(review&&review.Role_Attribute_Weight),reviewTotal=(reviewKra===null?0:reviewKra)+(reviewRole===null?0:reviewRole);let kraWeight=reviewKra,attrWeight=reviewRole,source='Review';if(reviewKra===null||reviewRole===null||reviewTotal<=0){const kraTotal=(pairs||[]).reduce((sum,p)=>sum+Math.max(0,numberValue(p&&p.kra&&p.kra.Weightage,0)),0);const roleTotal=(attrs||[]).reduce((sum,a)=>sum+Math.max(0,numberValue(a&&a.Weightage,0)),0);if(kraTotal+roleTotal>0){kraWeight=kraTotal;attrWeight=roleTotal;source='KRA/Role records';}else{kraWeight=DEFAULT_KRA_SECTION_WEIGHT;attrWeight=DEFAULT_ROLE_SECTION_WEIGHT;source='default 80/20';}}const total=numberValue(kraWeight,0)+numberValue(attrWeight,0);if(total>0&&Math.abs(total-100)>0.01){kraWeight=numberValue(kraWeight,0)*100/total;attrWeight=numberValue(attrWeight,0)*100/total;source=source+' normalized';}const resolved={kraWeight:round2(kraWeight),attrWeight:round2(attrWeight)};console.log('SELF PERFORMANCE WEIGHTS AUTO RESOLVED:',{kraWeight:resolved.kraWeight,roleWeight:resolved.attrWeight,source:source});return resolved}
-function calculateSelfScores(){if(!state.self)return{kra:0,role:0,overall:0};const goals=[];state.self.kras.forEach(p=>p.goals.forEach(g=>goals.push(g)));const kra=weightedRating(goals,g=>g.Self_Rating,g=>g.Weightage);const role=weightedRating(state.self.attributes,a=>a.Rating,a=>a.Weightage);const kw=numberValue(state.self.settings.kraWeight,DEFAULT_KRA_SECTION_WEIGHT),rw=numberValue(state.self.settings.attrWeight,DEFAULT_ROLE_SECTION_WEIGHT),total=kw+rw;const overall=total>0?(kra*kw+role*rw)/total:0;return{kra:round2(kra),role:round2(role),overall:round2(overall)}}
-function renderSelfSummary(){if(!state.self)return;const s=calculateSelfScores();document.getElementById('selfKraScore').textContent=s.kra.toFixed(2);document.getElementById('selfRoleScore').textContent=s.role.toFixed(2);document.getElementById('selfOverallScore').textContent=s.overall.toFixed(2);document.getElementById('selfFormulaBadge').textContent='KRA '+numberValue(state.self.settings.kraWeight,0)+'% / Role '+numberValue(state.self.settings.attrWeight,0)+'%'}
-function syncSelfButtons(){const selfMode=state.mode==='self',loaded=!!state.self,locked=selfLocked();document.getElementById('selfDraftBtn').classList.toggle('hidden',!selfMode||!loaded||locked);document.getElementById('selfSubmitBtn').classList.toggle('hidden',!selfMode||!loaded||locked)}
-
-
-async function loadExactSelfDataset(review,emp,quarter,year){
-  const key=appraisalKey(review);
-  if(key){
-    const c='(Appraisal_Key == "'+criteriaEscape(key)+'")';
-    const results=await Promise.all([getAll(REPORTS.kra,c),getAll(REPORTS.goal,c),getAll(REPORTS.competency,c)]);
-    const kraIds={};results[0].forEach(k=>kraIds[String(k.ID)]=true);
-    const goals=results[1].filter(g=>kraIds[lookupId(g.KRA)]||results[0].some(k=>String(k.ID)===lookupId(g.KRA)));
-    return {key:key,kras:results[0],goals:goals,attrs:results[2]};
+    console.error('TARGETS ERROR', err); lock(false);
+    setStatus('❌ Save failed: ' + errText(err) + ' — click Submit Targets again (saved items are not duplicated).', false);
   }
-
-  // Legacy records: isolate the newest weighted KRA/Role set for this exact employee + quarter + year.
-  const results=await Promise.all([getAll(REPORTS.kra),getAll(REPORTS.goal),getAll(REPORTS.competency)]);
-  const candidateKras=results[0].filter(k=>employeeRecordMatches(k.Employee_Name,emp.ID,emp.name)&&textValue(k.Quarter)===quarter&&textValue(k.Year_field1)===year);
-  const candidateAttrs=results[2].filter(a=>employeeRecordMatches(a.Employee_Name1,emp.ID,emp.name)&&textValue(a.Quarter)===quarter&&textValue(a.Year_field1)===year);
-  const targetKra=numberValue(review.KRA_Section_Weight,DEFAULT_KRA_SECTION_WEIGHT);
-  const targetRole=numberValue(review.Role_Attribute_Weight,DEFAULT_ROLE_SECTION_WEIGHT);
-  const kras=chooseLatestWeightedSet(candidateKras,targetKra,k=>k.Weightage);
-  const attrs=chooseLatestWeightedSet(candidateAttrs,targetRole,a=>a.Weightage);
-  const ids={};kras.forEach(k=>ids[String(k.ID)]=true);
-  const goals=results[1].filter(g=>ids[lookupId(g.KRA)]);
-  return {key:'',kras:kras,goals:goals,attrs:attrs};
 }
-
-async function loadSelfRating(){
-  const empId=document.getElementById('selfEmp').value;
-  const quarter=document.getElementById('selfQuarter').value;
-  const year=String(document.getElementById('selfYear').value).trim();
-  const emp=findEmployee(empId);
-  if(!emp){showModal('Self Rating','Select employee.','error');return}
-  setStatus('Loading this appraisal only...',null);
+function validateRating(){
+  for(let i = 0; i < state.kras.length; i++) for(let j = 0; j < state.kras[i].goals.length; j++)
+    if(!state.kras[i].goals[j].selfRating) return `Task ${i+1}.${j+1}: select your self rating.`;
+  for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].rating) return `Role Attribute ${i+1}: select a rating.`;
+  if(!state.kras.length) return 'No targets found for this quarter.';
+  return '';
+}
+/* STEP 2 → update Goal + Competency ratings, add Training_Need,
+   then Review Status "Submitted for Approval" (done last). */
+async function submitRating(){
+  if(state.busy) return;
+  const problem = validateRating(); if(problem){ setStatus('❌ ' + problem, false); return; }
+  const me = state.me, q = state.quarter, y = state.year, s = computeScores();
+  lock(true);
   try{
-    const reviews=await getAll(REPORTS.review);
-    const review=findReview(reviews,empId,quarter,year);
-    if(!review){state.self=null;document.getElementById('selfContent').classList.add('hidden');syncSelfButtons();showModal('Self Rating','No KRA plan was found for this Employee / Quarter / Year.','error');return}
-    await resolveReviewStage(review);
-    const dataset=await loadExactSelfDataset(review,emp,quarter,year);
-    const pairs=dataset.kras.map(k=>({kra:k,goals:dataset.goals.filter(g=>lookupId(g.KRA)===String(k.ID))}));
-    const resolvedWeights=resolveSelfPerformanceWeights(review,pairs,dataset.attrs);
-    state.self={employee:emp,quarter:quarter,year:year,review:review,kras:pairs,attributes:dataset.attrs,settings:resolvedWeights,appraisalKey:dataset.key};
-    state.training=[];
-    renderSelf();
-    setStatus('Self Rating loaded for '+quarter+' / '+year+'.',true);
-  }catch(err){friendlyError(err,'Self Rating could not be loaded.');setStatus('Self Rating load failed.',false)}
-}
-
-function renderSelf(){const s=state.self;if(!s)return;document.getElementById('selfContent').classList.remove('hidden');const locked=selfLocked(),stage=getStage(s.review);document.getElementById('selfStageBadge').textContent=statusLabel(s.review);document.getElementById('selfKraStatus').textContent=s.employee.name+' / '+s.quarter+' / '+s.year;document.getElementById('rejectionBox').classList.toggle('hidden',stage!==STAGE.REJECTED);document.getElementById('rejectionBox').textContent=stage===STAGE.REJECTED?'Department Head returned this appraisal: '+(textValue(s.review.Rejection_Comments)||'No rejection comment provided. Self Rating remains locked.') : '';
-  document.getElementById('selfKraList').innerHTML=s.kras.length?s.kras.map(pair=>'<div class="kra-card"><strong>'+esc(textValue(pair.kra.KRA_Name))+'</strong><div class="note">'+esc(textValue(pair.kra.Description))+' | Weightage '+esc(textValue(pair.kra.Weightage))+'%</div>'+pair.goals.map(g=>'<div class="goal-card"><div class="readonly" style="margin-bottom:10px">'+esc(fullGoalText(g))+'</div><div class="goal-grid-self"><div><label>Achievement</label><textarea '+(locked?'disabled':'')+' onchange="selfGoalChange(\''+pair.kra.ID+'\',\''+g.ID+'\',\'Achievement\',this.value)">'+esc(textValue(g.Achievement))+'</textarea></div><div><label>Self Rating (0-5)</label><input type="number" min="0" max="5" step="0.1" value="'+esc(textValue(g.Self_Rating))+'" '+(locked?'disabled':'')+' oninput="selfGoalChange(\''+pair.kra.ID+'\',\''+g.ID+'\',\'Self_Rating\',this.value)"></div><div><label>Weightage</label><div class="readonly">'+esc(textValue(g.Weightage))+'%</div></div></div></div>').join('')+'</div>').join(''):'<div class="note">No KRA records found.</div>';
-  document.getElementById('selfAttrList').innerHTML=s.attributes.length?s.attributes.map(a=>'<div class="self-attr-row"><div><label>Attribute</label><div class="readonly">'+esc(textValue(a.Attribute_Name))+'</div></div><div><label>Weightage</label><div class="readonly">'+esc(textValue(a.Weightage))+'%</div></div><div><label>Self Rating (0-5)</label><input type="number" min="0" max="5" step="0.1" value="'+esc(textValue(a.Rating))+'" '+(locked?'disabled':'')+' oninput="selfAttrChange(\''+a.ID+'\',this.value)"></div></div>').join(''):'<div class="note">No Role Attribute records found.</div>';
-  document.getElementById('selfFac').value=textValue(s.review.Facilitating_Factors1);document.getElementById('selfCon').value=textValue(s.review.Constraining_Factors);document.getElementById('selfOutstanding').value=textValue(s.review.Outstanding_Achievement);document.getElementById('selfLearnings').value=textValue(s.review.My_Learnings);['selfFac','selfCon','selfOutstanding','selfLearnings'].forEach(id=>document.getElementById(id).disabled=locked);document.getElementById('addTrainingBtn').disabled=locked;renderTraining();renderSelfSummary();syncSelfButtons()}
-
-function lockSelfRatingUI(){
-  if(!state.self)return;
-  const ids=['selfFac','selfCon','selfOutstanding','selfLearnings','addTrainingBtn','selfDraftBtn','selfSubmitBtn'];
-  ids.forEach(function(id){const el=document.getElementById(id);if(el)el.disabled=true;});
-  const inputs=document.querySelectorAll('#selfKraList input,#selfKraList textarea,#selfKraList select,#selfAttrList input,#selfAttrList textarea,#selfAttrList select,#trainingRows input,#trainingRows textarea,#trainingRows select');
-  inputs.forEach(function(el){el.disabled=true;});
-  document.getElementById('selfDraftBtn').classList.add('hidden');
-  document.getElementById('selfSubmitBtn').classList.add('hidden');
-}
-
-function validateSelfSubmit(){for(const p of state.self.kras){for(const g of p.goals){if(!String(textValue(g.Achievement)).trim())return'Enter Achievement for every task.';if(!ratingValid(g.Self_Rating))return'Enter a Self Rating from 0 to 5 for every task.'}}for(const a of state.self.attributes){if(!ratingValid(a.Rating))return'Enter a Self Rating from 0 to 5 for every Role Attribute.'}return''}
-async function saveSelfRating(finalSubmit){
-  if(!state.self){showModal('Self Rating','Load Self Rating first.','error');return}
-  if(selfLocked()){showModal('Self Rating locked','This Self Rating has already been submitted and cannot be changed.','error');return}
-  if(finalSubmit){const p=validateSelfSubmit();if(p){showModal('Self Rating',p,'error');return}}
-  const buttonId=finalSubmit?'selfSubmitBtn':'selfDraftBtn';
-  setBusy(buttonId,true,finalSubmit?'Submitting...':'Saving...');
-  setStatus(finalSubmit?'Submitting Self Rating...':'Saving Self Rating draft...',null);
-  try{
-    const updates=[];
-    for(const pair of state.self.kras){
-      for(const g of pair.goals){
-        const f={Achievement:textValue(g.Achievement)};
-        if(String(textValue(g.Self_Rating)).trim()!=='')f.Self_Rating=num(g.Self_Rating,2);
-        updates.push(updateRecord(REPORTS.goal,g.ID,f));
-      }
+    const goals = state.kras.flatMap(k => k.goals), newTrain = state.training.filter(t => !t.recId && t.need.trim());
+    const total = goals.length + state.attributes.length + newTrain.length + 1;
+    let step = 0; const tick = w => setStatus(`Saving ${w}… (${++step}/${total}) — do not close this page.`, null);
+    for(const g of goals){ tick('self ratings'); await updateRecord(CONFIG.REPORTS.goal, g.recId, { Achievement:g.achievement || '', Self_Rating:String(g.selfRating) }); }
+    for(const a of state.attributes){ tick('role attributes'); await updateRecord(CONFIG.REPORTS.competency, a.recId, { Rating:String(a.rating) }); }
+    for(const t of newTrain){
+      tick('training needs');
+      const r = await addRecord(CONFIG.FORMS.training, { Training_Need:t.need.trim(), Expected_Benefit:t.benefit || '', How_Fulfilled:t.fulfilled || '', Employee_Name:me.name, Quarter1:q, Year_field:y });
+      t.recId = String(r.ID); saveDraft();
     }
-    for(const a of state.self.attributes){
-      if(String(textValue(a.Rating)).trim()!=='')updates.push(updateRecord(REPORTS.competency,a.ID,{Rating:num(a.Rating,2)}));
-    }
-    await Promise.all(updates);
-
-    const reviewFields={
-      Facilitating_Factors1:document.getElementById('selfFac').value,
-      Constraining_Factors:document.getElementById('selfCon').value,
-      Outstanding_Achievement:document.getElementById('selfOutstanding').value,
-      My_Learnings:document.getElementById('selfLearnings').value,
-      KRA_Section_Weight:num(state.self.settings.kraWeight),
-      Role_Attribute_Weight:num(state.self.settings.attrWeight),
-      Status:'Submitted for Approval',
-      Process_Stage:finalSubmit?STAGE.SELF_SUBMITTED:STAGE.READY_SELF
-    };
-
-    if(finalSubmit){
-      const scores=calculateSelfScores();
-      reviewFields.Self_KRA_Rating=num(scores.kra);
-      reviewFields.Self_Role_Rating=num(scores.role);
-      reviewFields.Self_Overall_Rating=num(scores.overall);
-    }
-
-    await updateRecord(REPORTS.review,state.self.review.ID,reviewFields);
-    state.self.review.Status='Submitted for Approval';
-    state.self.review.Process_Stage=reviewFields.Process_Stage;
-    state.self.review._resolvedStage=reviewFields.Process_Stage;
-
-    if(finalSubmit){
-      for(const t of state.training){
-        if(!String(t.need).trim())continue;
-        await addRecord(FORMS.training,{Training_Need:t.need,Expected_Benefit:t.benefit||'',How_Fulfilled:t.fulfilled||'',Employee_Name:state.self.employee.name,Quarter1:state.self.quarter,Year_field:state.self.year,Appraisal_Key:appraisalKey(state.self.review)||state.self.appraisalKey||''});
-      }
-      renderSelf();
-      lockSelfRatingUI();
-      showModal('Self Rating submitted','Your Self Rating has been submitted successfully. It is now locked and available in Department Head Review.','success');
-      setStatus('Self Rating submitted and locked.',true);
-    }else{
-      renderSelfSummary();
-      syncSelfButtons();
-      showModal('Draft saved','Self Rating draft was saved. It has NOT been sent to Department Head.','success');
-      setStatus('Self Rating draft saved.',true);
-    }
+    tick('review');
+    const data = { Status:CONFIG.STATUS.selfRated, Appraiser_Name:val('appraiserName'),
+      Facilitating_Factors1:state.texts.facFactors, Constraining_Factors:state.texts.conFactors, Outstanding_Achievement:state.texts.outAchieve,
+      Appraiser_Comments:state.texts.apprComments, My_Learnings:state.texts.myLearnings, Overall_Rating:state.overallRating || '',
+      KRA_Score:s.kra, Competency_Score:s.role, Final_Score:s.total };
+    if(state.review) await updateRecord(CONFIG.REPORTS.review, state.review.ID, data);
+    else await addRecord(CONFIG.FORMS.review, Object.assign({ Employee_Lookup:me.ID, Department:me.department, Quarter:q, Year_field:y }, data));
+    clearDraft();
+    lock(false);
+    await loadPeriod();
+    setStatus('✅ Self rating submitted. Download your PDF anytime.', true);
   }catch(err){
-    friendlyError(err,finalSubmit?'Self Rating could not be submitted.':'Self Rating draft could not be saved.');
-    setStatus('Self Rating save failed.',false);
-  }finally{
-    setBusy(buttonId,false);
-    if(finalSubmit&&state.self){
-      renderSelf();
-    }
+    console.error('RATING ERROR', err); lock(false);
+    setStatus('❌ Save failed: ' + errText(err) + ' — your entries are kept, click Submit Self Rating again.', false);
   }
 }
 
-renderQuarterButtons();redistributeSetup();renderSetup();renderTraining();
-if(window.ZOHO&&ZOHO.CREATOR){ZOHO.CREATOR.init().then(()=>loadEmployees()).then(()=>setStatus('Ready.',true)).catch(err=>{friendlyError(err,'Creator widget could not be initialized.');setStatus('Initialization failed.',false)})}else{showModal('Creator SDK not detected','Open this page inside Zoho Creator.','error');setStatus('Zoho Creator SDK not detected.',false)}
+/* ======================= PDF ======================= */
+function downloadPdf(){
+  if(state.phase === 'loading'){ setStatus('Please wait — still loading.', null); return; }
+  applyWeights();
+  const sh = { kra:kraTotal(), role:roleTotal() };
+  downloadAppraisalPdf({
+    employeeName:state.me.name, department:state.me.department, appraiser:val('appraiserName'), year:state.year, quarter:state.quarter,
+    kraSectionWeight:Math.round(sh.kra*100)/100 || 100, roleSectionWeight:Math.round(sh.role*100)/100, ratingMap:CONFIG.RATING_PCT,
+    kras:state.kras.map(k => ({ name:k.name, description:k.description, weightage:k.weightage,
+      goals:k.goals.filter(g => g.name || g.achievement).map(g => ({ name:g.name, achievement:g.achievement, weightage:g.weightage, selfRating:g.selfRating, apprRating:g.apprRating })) })),
+    attributes:state.attributes.map(a => ({ name:a.name, weightage:a.weightage, rating:a.rating })),
+    facilitating:state.texts.facFactors, constraining:state.texts.conFactors, outstanding:state.texts.outAchieve,
+    comments:state.texts.apprComments, learnings:state.texts.myLearnings,
+    training:state.training.map(t => ({ need:t.need, benefit:t.benefit, fulfilled:t.fulfilled })),
+    overallRating:state.overallRating || ''
+  }, setStatus);
+}
+
+/* ======================= UTIL ======================= */
+function esc(s){ return (s === null || s === undefined ? '' : String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(n){ const x = Number(n) || 0; return (Math.round(x * 100) / 100).toString(); }
+
+/* ======================= INIT ======================= */
+window.addEventListener('beforeunload', () => saveDraft());
+(async function init(){
+  if(!(window.ZOHO && ZOHO.CREATOR)){ loginMsg('Zoho Creator SDK not found — open this page as a Creator widget.', false); return; }
+  try{
+    await ZOHO.CREATOR.init();
+    state.creatorUser = await getCreatorUser();
+    await loadEmployees();
+    state.sdkReady = true;
+    document.getElementById('loginBtn').disabled = false;
+    loginMsg('', null);
+    let saved = ''; try{ saved = sessionStorage.getItem('mega_pa_session') || ''; }catch(e){}
+    const input = document.getElementById('loginEmail');
+    input.value = saved || state.creatorUser || '';
+    if(saved && state.employees.some(e => e.email === saved) && (!state.creatorUser || state.creatorUser === saved)) doLogin();
+    else input.focus();
+  }catch(err){
+    console.error('INIT ERROR', err);
+    loginMsg('Could not load the employee list: ' + errText(err) + '. Check CONFIG.EMPLOYEE_REPORTS and your permission on that report.', false);
+  }
+})();
 </script>
 </body>
 </html>
