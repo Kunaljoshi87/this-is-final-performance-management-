@@ -224,8 +224,8 @@
 
 /* ============================ CONFIG ============================ */
 const API = {
-  URL: "https://www.zohoapis.in/creator/custom/megaengg/appraisal_api",
-  PUBLIC_KEY: "https://www.zohoapis.in/creator/custom/megaengg/appraisal_api?publickey=juPuQV0bEKh1HAWyWv5Q5427z",
+  // Your Cloudflare Worker link (it forwards to the Zoho Custom API — Zoho blocks direct browser calls)
+  URL: "https://mega-appraisal.kunaljoshi8793.workers.dev",
   TIMEOUT_MS: 90000
 };
 const KRA_SHARE = 80, ROLE_SHARE = 20;                       // total 100; no role attributes → targets 100
@@ -636,7 +636,7 @@ async function call(action, payload){
   if(state.auth && action !== 'send_code' && action !== 'verify_code'){
     body.email = state.auth.email; body.session = state.auth.session; body.sexp = state.auth.sexp;
   }
-  const url = API.URL + '?publickey=' + encodeURIComponent(API.PUBLIC_KEY);
+  const url = API.URL;
   let res;
   try{
     res = await withTimeout(fetch(url, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
