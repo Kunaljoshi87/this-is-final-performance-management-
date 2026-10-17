@@ -138,6 +138,22 @@
   .code-input{font-family:'IBM Plex Mono',monospace !important; font-size:22px !important; letter-spacing:8px; text-align:center;}
   .linkish{background:none; border:none; color:var(--navy); text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif; font-size:12px; padding:0; margin-top:12px; width:auto !important; text-decoration:underline;}
   .linkish:hover{background:none; color:var(--navy);}
+  .choice-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:20px;}
+  .choice-card{background:var(--panel); border:1px solid var(--line); border-top:4px solid var(--navy); padding:26px; cursor:pointer; transition:box-shadow .15s, transform .15s;}
+  .choice-card:hover{box-shadow:0 6px 18px rgba(31,41,55,.12); transform:translateY(-2px);}
+  .choice-card.rating{border-top-color:var(--amber);}
+  .choice-card .ic{font-size:30px; margin-bottom:10px;}
+  .choice-card h3{font-size:19px; color:var(--navy); margin-bottom:6px;}
+  .choice-card.rating h3{color:var(--amber);}
+  .choice-card p{font-size:13px; color:var(--muted); margin:0; line-height:1.5;}
+  .period-chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; align-items:center;}
+  .period-chip{padding:7px 12px; border:1px solid var(--line); font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; background:#fff;}
+  .period-chip.active{border-color:var(--navy); color:var(--navy); background:#EAF1FA; font-weight:600;}
+  .period-chip .tag{font-size:9px; margin-left:6px; padding:1px 5px; border:1px solid currentColor;}
+  .notice{padding:28px; text-align:center;}
+  .notice h3{font-size:18px; color:var(--navy); margin-bottom:8px;}
+  .notice p{color:var(--muted); font-size:13px; margin:0 0 16px;}
+  @media(max-width:760px){ .choice-grid{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -173,7 +189,10 @@
 <div class="wrap hidden" id="appView">
   <div class="who-bar">
     <div>Signed in as <b id="whoName">—</b> · <span id="whoEmail" class="mono"></span></div>
-    <button class="small" onclick="logout()">Sign out</button>
+    <div style="display:flex; gap:8px;">
+      <button class="small hidden" id="menuBtn" onclick="showMenu()">← Menu</button>
+      <button class="small" onclick="logout()">Sign out</button>
+    </div>
   </div>
 
   <div class="titleblock">
@@ -186,9 +205,24 @@
     <div class="tb-grid" style="margin-top:16px;">
       <div><label>Reporting Manager (Appraiser)</label><div class="readonly-box" id="pMgr">—</div></div>
       <div><label>HR</label><div class="readonly-box" id="pHr">—</div></div>
-      <div><label>Year</label><select id="yearSelect" onchange="changeYear()"></select></div>
+      <div id="yearBox" class="hidden"><label>Year</label><select id="yearSelect" onchange="changeYear()"></select></div>
     </div>
-    <div class="quarter-row" id="quarterRow"></div>
+    <div class="quarter-row hidden" id="quarterRow"></div>
+    <div class="period-chips hidden" id="periodChips"></div>
+  </div>
+
+  <!-- CHOICE: New Appraisal / Self Rating -->
+  <div class="choice-grid hidden" id="choiceView">
+    <div class="choice-card" onclick="chooseNew()">
+      <div class="ic">📝</div>
+      <h3>New Appraisal</h3>
+      <p>Start a new quarter: choose the quarter and add your Targets (KRA), the tasks under each target and role attributes.</p>
+    </div>
+    <div class="choice-card rating" onclick="chooseRating()">
+      <div class="ic">⭐</div>
+      <h3>Self Rating</h3>
+      <p>Open your last quarter's appraisal. Targets and tasks are locked — add your achievement and self rating, then submit and download the PDF.</p>
+    </div>
   </div>
 
   <div id="stepBanner"></div>
@@ -623,6 +657,8 @@ const state = {
   reviewStatus:'',
   kras:[], attributes:[], training:[], overallRating:'',
   texts:{ facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'' },
+  mode:'menu',            // menu | new | rating
+  periods:[],
   busy:false, loadToken:0
 };
 let seq = 1;
@@ -729,15 +765,79 @@ function openApp(){
   document.getElementById('pHr').textContent = me.hr || '—';
   const y = new Date().getFullYear();
   document.getElementById('yearSelect').innerHTML = [y-1, y, y+1].map(v => `<option ${String(v)===state.year?'selected':''}>${v}</option>`).join('');
+  showMenu();
+}
+function show(id, on){ document.getElementById(id).classList.toggle('hidden', !on); }
+function showMenu(){
+  if(state.busy) return;
+  state.justSaved = false;
+  saveDraft();
+  state.mode = 'menu'; state.loadToken++; state.phase = 'menu'; resetData();
+  show('choiceView', true); show('menuBtn', false); show('footerBar', false);
+  show('yearBox', false); show('quarterRow', false); show('periodChips', false);
+  document.getElementById('stepBanner').innerHTML = '';
+  document.getElementById('pageBody').innerHTML = '';
+  window.scrollTo(0,0);
+}
+/* ---- New Appraisal: pick quarter, add targets ---- */
+function chooseNew(){
+  state.mode = 'new'; state.justSaved = false;
+  show('choiceView', false); show('menuBtn', true); show('footerBar', true);
+  show('yearBox', true); show('quarterRow', true); show('periodChips', false);
+  document.getElementById('yearSelect').value = state.year;
   renderQuarters();
   loadPeriod();
+}
+/* ---- Self Rating: open the latest quarter whose targets are waiting for rating ---- */
+const Q_ORDER = { Q1:1, Q2:2, Q3:3, Q4:4 };
+async function chooseRating(){
+  state.mode = 'rating';
+  show('choiceView', false); show('menuBtn', true); show('footerBar', true);
+  show('yearBox', false); show('quarterRow', false); show('periodChips', true);
+  document.getElementById('periodChips').innerHTML = '';
+  state.phase = 'loading'; resetData(); renderPage();
+  setStatus('Finding your last appraisal…', null);
+  const token = ++state.loadToken;
+  try{
+    const r = await call('periods', {});
+    if(token !== state.loadToken) return;
+    state.periods = (r.periods || []).map(p => ({ quarter:String(p.quarter), year:String(p.year).replace(/\.0+$/,''), phase:p.phase }))
+      .sort((a,b) => (Number(b.year) - Number(a.year)) || (Q_ORDER[b.quarter] - Q_ORDER[a.quarter]));
+    const pending = state.periods.filter(p => p.phase === 'rating');
+    const pick = pending[0] || null;
+    if(!pick){
+      renderPeriodChips();
+      state.phase = 'none'; renderPage();
+      setStatus(state.periods.length ? 'No appraisal is waiting for self rating.' : 'No targets found yet — start a New Appraisal first.', null);
+      return;
+    }
+    state.quarter = pick.quarter; state.year = pick.year;
+    renderPeriodChips();
+    loadPeriod();
+  }catch(err){
+    if(token !== state.loadToken) return;
+    state.phase = 'error'; renderPage(); setStatus('❌ ' + err.message, false);
+  }
+}
+function renderPeriodChips(){
+  const el = document.getElementById('periodChips');
+  if(!state.periods.length){ el.innerHTML = ''; return; }
+  el.innerHTML = '<label style="margin:0 6px 0 0;">Your appraisals:</label>' + state.periods.map(p =>
+    `<div class="period-chip ${p.quarter===state.quarter && p.year===state.year && state.phase!=='none' ? 'active' : ''}" onclick="pickPeriod('${p.quarter}','${p.year}')">${p.quarter} ${p.year}<span class="tag">${p.phase==='done'?'DONE':'TO RATE'}</span></div>`).join('');
+}
+function pickPeriod(q, y){
+  if(state.busy) return;
+  saveDraft();
+  state.quarter = q; state.year = y;
+  loadPeriod().then(renderPeriodChips);
+  renderPeriodChips();
 }
 function renderQuarters(){
   document.getElementById('quarterRow').innerHTML = QUARTERS.map(q =>
     `<div class="quarter-btn ${state.quarter===q.id?'active':''}" onclick="setQuarter('${q.id}')">${q.label}</div>`).join('');
 }
-function setQuarter(q){ if(state.busy || q === state.quarter) return; saveDraft(); state.quarter = q; renderQuarters(); loadPeriod(); }
-function changeYear(){ if(state.busy){ document.getElementById('yearSelect').value = state.year; return; } saveDraft(); state.year = document.getElementById('yearSelect').value; loadPeriod(); }
+function setQuarter(q){ if(state.busy || q === state.quarter) return; state.justSaved = false; saveDraft(); state.quarter = q; renderQuarters(); loadPeriod(); }
+function changeYear(){ if(state.busy){ document.getElementById('yearSelect').value = state.year; return; } state.justSaved = false; saveDraft(); state.year = document.getElementById('yearSelect').value; loadPeriod(); }
 
 async function loadPeriod(){
   const token = ++state.loadToken;
@@ -830,11 +930,12 @@ function ratingSelect(value, onchange){
 }
 function renderBanner(){
   const p = state.phase, el = document.getElementById('stepBanner'), btn = document.getElementById('mainBtn');
-  btn.classList.toggle('hidden', !(p === 'targets' || p === 'rating'));
+  const editable = (state.mode === 'new' && p === 'targets') || (state.mode === 'rating' && p === 'rating');
+  btn.classList.toggle('hidden', !editable);
   btn.textContent = p === 'targets' ? 'Submit Targets' : 'Submit Self Rating';
   btn.disabled = state.busy;
   document.getElementById('pdfBtn').disabled = !(p === 'targets' || p === 'rating' || p === 'done');
-  if(!(p === 'targets' || p === 'rating' || p === 'done')){ el.innerHTML = ''; return; }
+  if(!(p === 'targets' || p === 'rating' || p === 'done') || (state.mode === 'new' && p !== 'targets')){ el.innerHTML = ''; return; }
   const info = {
     targets:['STEP 1','Set your Targets','Add each Target (KRA) and the tasks under it. Weightage is calculated automatically. You rate them later in Step 2.',''],
     rating:['STEP 2','Self Rating','Your targets are saved and locked. Fill the achievement and your self rating for every task, then submit.','rating'],
@@ -848,7 +949,24 @@ function renderPage(){
   renderBanner();
   const body = document.getElementById('pageBody');
   if(state.phase === 'loading'){ body.innerHTML = '<div class="section"><div class="loading-box">Loading…</div></div>'; return; }
-  if(state.phase === 'error'){ body.innerHTML = '<div class="section"><div class="loading-box">Could not load this quarter. <button class="small" onclick="loadPeriod()">Try again</button></div></div>'; return; }
+  if(state.phase === 'error'){ body.innerHTML = '<div class="section"><div class="loading-box">Could not load. <button class="small" onclick="showMenu()">Back to menu</button></div></div>'; return; }
+  if(state.phase === 'none'){
+    body.innerHTML = `<div class="section notice"><h3>Nothing to rate</h3>
+      <p>${state.periods.length ? 'All your saved appraisals are already self-rated. Pick one above to view it or download its PDF.' : 'You have not set any targets yet. Start a New Appraisal first.'}</p>
+      <button class="solid" onclick="showMenu();chooseNew()">Start New Appraisal</button></div>`;
+    return;
+  }
+  if(state.mode === 'new' && state.phase !== 'targets'){
+    const q = state.quarter + ' ' + state.year;
+    body.innerHTML = state.justSaved
+      ? `<div class="section notice"><h3>✅ Targets saved for ${q}</h3>
+          <p>Your targets are saved in the system. You can download the PDF now. Later, open this link again and choose <b>Self Rating</b>.</p>
+          <button onclick="downloadPdf()">Download PDF</button> &nbsp; <button class="solid" onclick="showMenu()">Back to menu</button></div>`
+      : `<div class="section notice"><h3>Targets for ${q} are already saved</h3>
+          <p>${state.phase === 'rating' ? 'They are waiting for your self rating.' : 'This appraisal is already complete.'} Choose another quarter for a new appraisal, or go to Self Rating.</p>
+          <button class="solid" onclick="showMenu();chooseRating()">Go to Self Rating</button></div>`;
+    return;
+  }
   body.innerHTML = state.phase === 'targets' ? targetsHtml() : ratingHtml(state.phase === 'done');
   renderScores(); renderOverall();
 }
@@ -1024,6 +1142,7 @@ async function submitTargets(){
       attributes:state.attributes.map(a => ({ name:a.name.trim() })) });
     clearDraft();
     lock(false);
+    state.justSaved = true;
     await loadPeriod();
     setStatus('✅ Targets saved. Open this link again later for Step 2 — Self Rating. You can download the PDF now.', true);
   }catch(err){
