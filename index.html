@@ -138,7 +138,8 @@
   .code-input{font-family:'IBM Plex Mono',monospace !important; font-size:22px !important; letter-spacing:8px; text-align:center;}
   .linkish{background:none; border:none; color:var(--navy); text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif; font-size:12px; padding:0; margin-top:12px; width:auto !important; text-decoration:underline;}
   .linkish:hover{background:none; color:var(--navy);}
-  .choice-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:20px;}
+  .choice-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; margin-bottom:20px;}
+  .choice-card.view{border-top-color:var(--green);} .choice-card.view h3{color:var(--green);}
   .choice-card{background:var(--panel); border:1px solid var(--line); border-top:4px solid var(--navy); padding:26px; cursor:pointer; transition:box-shadow .15s, transform .15s;}
   .choice-card:hover{box-shadow:0 6px 18px rgba(31,41,55,.12); transform:translateY(-2px);}
   .choice-card.rating{border-top-color:var(--amber);}
@@ -271,6 +272,12 @@
       <div class="ic">⭐</div>
       <h3>Self Rating</h3>
       <p>Open your last quarter's appraisal. Targets and tasks are locked — add your achievement and self rating, then submit and download the PDF.</p>
+    </div>
+    <div class="choice-card view" onclick="chooseView()">
+      <span class="badge mute hidden" id="viewBadge"></span>
+      <div class="ic">📂</div>
+      <h3>My Appraisals</h3>
+      <p>View any of your submitted quarters — targets, tasks, achievement and ratings. Locked, read-only. Download the PDF anytime.</p>
     </div>
   </div>
 
@@ -855,7 +862,7 @@ function refreshPeriods(force){
   if(periodsPromise && !force) return periodsPromise;
   periodsPromise = call('periods', {}).then(r => {
     state.periods = normPeriods(r.periods); state.periodsLoaded = true;
-    renderMenuBadges(); if(state.mode === 'new') renderQuarters(); if(state.mode === 'rating') renderPeriodChips();
+    renderMenuBadges(); if(state.mode === 'new') renderQuarters(); if(state.mode === 'rating' || state.mode === 'view') renderPeriodChips();
     return state.periods;
   }).finally(() => { periodsPromise = null; });
   periodsPromise.catch(() => {});
@@ -873,6 +880,8 @@ function renderMenuBadges(){
   rb.textContent = toRate.length ? (toRate[0].quarter + ' ' + toRate[0].year + ' waiting') : (done.length ? '✓ All rated' : 'Nothing yet');
   nb.classList.remove('hidden');
   nb.textContent = state.periods.length ? (state.periods.length + ' quarter(s) saved') : 'Start here';
+  const vb = document.getElementById('viewBadge');
+  if(vb){ vb.classList.remove('hidden'); vb.textContent = state.periods.length ? (state.periods.length + ' quarter(s)') : 'None yet'; }
 }
 /* ---- New Appraisal: pick quarter, add targets ---- */
 function chooseNew(){
@@ -920,7 +929,29 @@ function renderPeriodChips(){
   const el = document.getElementById('periodChips');
   if(!state.periods.length){ el.innerHTML = ''; return; }
   el.innerHTML = '<label style="margin:0 6px 0 0;">Your appraisals:</label>' + state.periods.map(p =>
-    `<div class="period-chip ${p.phase==='done'?'done':''} ${p.quarter===state.quarter && p.year===state.year && state.phase!=='none' ? 'active' : ''}" onclick="pickPeriod('${p.quarter}','${p.year}')">${p.quarter} ${p.year}<span class="tag">${p.phase==='done'?'🔒 SUBMITTED':'TO RATE'}</span></div>`).join('');
+    `<div class="period-chip ${p.phase==='done'?'done':''} ${p.quarter===state.quarter && p.year===state.year && state.phase!=='none' ? 'active' : ''}" onclick="pickPeriod('${p.quarter}','${p.year}')">${p.quarter} ${p.year}<span class="tag">${p.phase==='done'?'🔒 SUBMITTED':(state.mode==='view'?'TARGETS ONLY':'TO RATE')}</span></div>`).join('');
+}
+/* ---- My Appraisals: read-only view of any saved quarter ---- */
+async function chooseView(q, y){
+  state.mode = 'view'; state.justSaved = false;
+  show('choiceView', false); show('menuBtn', true); show('footerBar', true);
+  show('yearBox', false); show('quarterRow', false); show('periodChips', true);
+  document.getElementById('periodChips').innerHTML = '';
+  state.phase = 'loading'; resetData(); renderPage();
+  setStatus('Loading your appraisals…', null);
+  const token = ++state.loadToken;
+  try{
+    await refreshPeriods(true);
+    if(token !== state.loadToken) return;
+    const pick = (q && y && periodOf(q, y)) || state.periods[0] || null;
+    if(!pick){ renderPeriodChips(); state.phase = 'none'; renderPage(); setStatus('No appraisals saved yet.', null); return; }
+    state.quarter = pick.quarter; state.year = pick.year;
+    renderPeriodChips();
+    loadPeriod();
+  }catch(err){
+    if(token !== state.loadToken) return;
+    state.phase = 'error'; renderPage(); setStatus('❌ ' + err.message, false);
+  }
 }
 function pickPeriod(q, y){
   if(state.busy) return;
@@ -957,7 +988,7 @@ async function loadPeriod(){
     state.overallRating = rv.overall || '';
     state.reviewStatus = rv.status || '';
     if(state.phase === 'targets'){ if(!restoreDraft()) addKRA(true); }
-    else if(state.phase === 'rating'){ restoreDraft(); }
+    else if(state.phase === 'rating' && state.mode !== 'view'){ restoreDraft(); }
     renderPage();
     setStatus({ targets:'Step 1 — add your Targets (KRA) and tasks, then click Submit Targets.',
                 rating:'Step 2 — fill achievement and self rating for each task, then click Submit Self Rating.',
@@ -1103,7 +1134,7 @@ function busyOverlay(msg){
 function addTrainingRow(){ state.training.push({ id:nid('t'), saved:false, need:'', benefit:'', fulfilled:'' }); renderPage(); markUnsaved(); }
 function removeTrainingRow(id){ state.training = state.training.filter(t => t.id !== id); renderPage(); markUnsaved(); }
 function setTrain(id, f, v){ state.training.find(t => t.id === id)[f] = v; markUnsaved(); }
-function setOverall(l){ if(state.phase !== 'rating') return; state.overallRating = l; renderOverall(); markUnsaved(); }
+function setOverall(l){ if(state.phase !== 'rating' || state.mode === 'view') return; state.overallRating = l; renderOverall(); markUnsaved(); }
 
 /* ======================= RENDER ======================= */
 function ratingSelect(value, onchange){
@@ -1113,6 +1144,12 @@ function ratingSelect(value, onchange){
 function renderBanner(){
   const p = state.phase, el = document.getElementById('stepBanner'), btn = document.getElementById('mainBtn');
   const editable = (state.mode === 'new' && p === 'targets') || (state.mode === 'rating' && p === 'rating');
+  if(state.mode === 'view'){
+    btn.classList.add('hidden');
+    document.getElementById('pdfBtn').disabled = !(p === 'rating' || p === 'done');
+    el.innerHTML = (p === 'rating' || p === 'done') ? `<div class="step-banner done"><span class="num">VIEW</span><div><div class="t">My Appraisal — ${state.quarter} ${state.year}</div><div class="d">Read-only. Status: ${esc(state.reviewStatus || (p === 'done' ? 'Submitted' : 'Targets submitted — self rating pending'))}</div></div></div>` : '';
+    return;
+  }
   btn.classList.toggle('hidden', !editable);
   btn.textContent = p === 'targets' ? 'Submit Targets' : 'Submit Self Rating';
   btn.disabled = state.busy;
@@ -1132,6 +1169,10 @@ function renderPage(){
   const body = document.getElementById('pageBody');
   if(state.phase === 'loading'){ body.innerHTML = '<div class="section"><div class="skel h"></div><div class="skel b"></div><div class="skel r"></div><div class="skel r"></div></div><div class="section"><div class="skel h"></div><div class="skel r"></div></div>'; return; }
   if(state.phase === 'error'){ body.innerHTML = `<div class="section notice"><h3>Could not load</h3><p>Please check your internet connection. Nothing you typed is lost.</p><button class="solid" onclick="${state.mode==='rating'?'chooseRating()':'loadPeriod()'}">Try again</button> &nbsp; <button onclick="showMenu()">Back to menu</button></div>`; return; }
+  if(state.phase === 'none' && state.mode === 'view'){
+    body.innerHTML = `<div class="section notice"><h3>No appraisals yet</h3><p>You have not submitted any targets yet. Start a New Appraisal first.</p><button class="solid" onclick="showMenu();chooseNew()">Start New Appraisal</button></div>`;
+    return;
+  }
   if(state.phase === 'none'){
     body.innerHTML = `<div class="section notice"><h3>Nothing to rate</h3>
       <p>${state.periods.length ? 'All your saved appraisals are already self-rated. Pick one above to view it or download its PDF.' : 'You have not set any targets yet. Start a New Appraisal first.'}</p>
@@ -1143,10 +1184,17 @@ function renderPage(){
     body.innerHTML = state.justSaved
       ? `<div class="section notice"><h3>✅ Targets saved for ${q}</h3>
           <p>Your targets are saved in the system. You can download the PDF now. Later, open this link again and choose <b>Self Rating</b>.</p>
-          <button onclick="downloadPdf()">Download PDF</button> &nbsp; <button class="solid" onclick="showMenu()">Back to menu</button></div>`
+          <button onclick="downloadPdf()">Download PDF</button> &nbsp; <button onclick="chooseView('${state.quarter}','${state.year}')">View it</button> &nbsp; <button class="solid" onclick="showMenu()">Back to menu</button></div>`
       : `<div class="section notice"><h3>Targets for ${q} are already saved</h3>
           <p>${state.phase === 'rating' ? 'They are waiting for your self rating.' : 'This appraisal is already complete.'} Choose another quarter for a new appraisal, or go to Self Rating.</p>
-          <button class="solid" onclick="showMenu();chooseRating()">Go to Self Rating</button></div>`;
+          <button onclick="chooseView('${state.quarter}','${state.year}')">View it</button> &nbsp; <button class="solid" onclick="showMenu();chooseRating()">Go to Self Rating</button></div>`;
+    return;
+  }
+  if(state.mode === 'view'){
+    if(state.phase === 'targets'){ body.innerHTML = `<div class="section notice"><h3>No appraisal for ${state.quarter} ${state.year}</h3><p>Pick a quarter above.</p></div>`; return; }
+    const isDone = state.phase === 'done';
+    body.innerHTML = `<div class="lock-note">🔒 <div><b>${state.quarter} ${state.year} — view only.</b> ${isDone ? 'Self rating is submitted. Nothing can be changed.' : 'Targets are submitted; self rating is still pending (do it from <b>Self Rating</b>).'}</div></div>` + ratingHtml(true);
+    renderScores(); renderOverall();
     return;
   }
   body.innerHTML = state.phase === 'targets' ? targetsHtml()
@@ -1275,7 +1323,7 @@ function renderScores(){
 }
 function renderOverall(){
   const el = document.getElementById('overallOptions'); if(!el) return;
-  const ro = state.phase !== 'rating';
+  const ro = state.phase !== 'rating' || state.mode === 'view';
   el.innerHTML = OVERALL_LABELS.map(l => `<div class="overall-opt ${state.overallRating===l?'selected':''}" ${ro?'':`onclick="setOverall('${l}')"`}>${l}</div>`).join('');
 }
 
@@ -1284,6 +1332,7 @@ function setStatus(msg, ok){ const s = document.getElementById('statusText'); s.
 function draftKey(){ return `mega_pa3::${state.me ? state.me.email : ''}::${state.quarter}::${state.year}::${state.phase}`; }
 function markUnsaved(){ if(state.phase !== 'targets' && state.phase !== 'rating') return; saveDraft(); setStatus('Draft kept in this browser — remember to submit.', null); }
 function saveDraft(){
+  if(state.mode === 'view') return;
   if(!state.me || (state.phase !== 'targets' && state.phase !== 'rating')) return;
   const d = state.phase === 'targets'
     ? { kras:state.kras, attributes:state.attributes }
