@@ -154,6 +154,53 @@
   .notice h3{font-size:18px; color:var(--navy); margin-bottom:8px;}
   .notice p{color:var(--muted); font-size:13px; margin:0 0 16px;}
   @media(max-width:760px){ .choice-grid{grid-template-columns:1fr;} }
+
+  /* ===== POLISH ===== */
+  body{background:linear-gradient(180deg,#E9EFF6 0,#F4F6F8 260px);}
+  .login-card{border-radius:10px; border-top-width:4px; box-shadow:0 10px 30px rgba(30,78,140,.12);}
+  .login-card input, .login-card button{border-radius:6px;}
+  .section,.titleblock,.choice-card,.step-banner,.score-tile,.who-bar{border-radius:8px;}
+  .kra-block{border-radius:8px; background:#FCFDFE;}
+  input,textarea,select{border-radius:5px; transition:border-color .15s, box-shadow .15s;}
+  input:focus,textarea:focus,select:focus{box-shadow:0 0 0 3px rgba(30,78,140,.12);}
+  button{border-radius:5px; transition:background .15s,color .15s;}
+  .score-tile.final .v{color:var(--green);}
+  .choice-card{border-radius:10px; position:relative;}
+  .choice-card .badge{position:absolute; top:14px; right:14px; font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 8px; border-radius:20px; background:#FDF3E1; color:var(--amber); border:1px solid var(--amber);}
+  .choice-card .badge.ok{background:#EAF7F0; color:var(--green); border-color:var(--green);}
+  .choice-card .badge.mute{background:#EEF1F4; color:var(--muted); border-color:var(--line);}
+  .quarter-btn{border-radius:6px;}
+  .quarter-btn.locked{background:#F1F3F5; color:#9AA6B5; border-style:dashed;}
+  .quarter-btn.locked.active{color:var(--navy); border-color:var(--navy); border-style:solid;}
+  .quarter-btn .lk{font-size:9px; margin-left:6px;}
+  .period-chip{border-radius:20px;}
+  .period-chip.done{background:#EAF7F0; border-color:#9ED3B7; color:#145C3B;}
+  .period-chip.done.active{border-color:var(--green);}
+
+  /* ===== RICH TEXT TASK EDITOR ===== */
+  .rte{border:1px solid var(--line); border-radius:6px; background:#fff; overflow:hidden;}
+  .rte:focus-within{border-color:var(--navy); box-shadow:0 0 0 3px rgba(30,78,140,.12);}
+  .rte-bar{display:flex; gap:4px; padding:5px 6px; background:#F3F6F9; border-bottom:1px solid var(--line); flex-wrap:wrap;}
+  .rte-bar button{padding:3px 9px; font-size:12px; text-transform:none; letter-spacing:0; border-color:var(--line); color:var(--text); background:#fff; min-width:30px; font-family:'Inter',sans-serif;}
+  .rte-bar button:hover{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .rte-area{min-height:70px; max-height:320px; overflow:auto; padding:9px 11px; font-size:13px; line-height:1.5; outline:none;}
+  .rte-area:empty:before{content:attr(data-ph); color:#9AA6B5;}
+  .rich{white-space:normal !important; line-height:1.5;}
+  .rich p,.rich div{margin:0;} .rte-area p{margin:0;}
+  .rich ol,.rich ul,.rte-area ol,.rte-area ul{margin:4px 0 4px 20px; padding:0;}
+
+  /* ===== SKELETON / OVERLAY / MODAL ===== */
+  .skel{background:linear-gradient(90deg,#EEF1F4 25%,#F7F9FB 50%,#EEF1F4 75%); background-size:400% 100%; animation:sk 1.2s ease-in-out infinite; border-radius:6px;}
+  @keyframes sk{0%{background-position:100% 0}100%{background-position:0 0}}
+  .skel.h{height:18px; width:40%; margin-bottom:16px;} .skel.r{height:44px; margin-bottom:10px;} .skel.b{height:90px; margin-bottom:12px;}
+  .overlay{position:fixed; inset:0; background:rgba(17,24,39,.45); z-index:50; display:flex; align-items:center; justify-content:center; padding:16px;}
+  .modal{background:#fff; border-radius:12px; max-width:460px; width:100%; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,.25);}
+  .modal h3{color:var(--navy); font-size:18px; margin-bottom:8px;}
+  .modal .mbody{font-size:13px; color:var(--text); line-height:1.55; margin-bottom:18px;}
+  .modal .mbtns{display:flex; gap:10px; justify-content:flex-end;}
+  .spinner{width:38px; height:38px; border:4px solid #DCE6F2; border-top-color:var(--navy); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 14px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .lock-note{display:flex; gap:10px; align-items:center; background:#EAF7F0; border:1px solid #9ED3B7; color:#145C3B; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:13px;}
 </style>
 </head>
 <body>
@@ -214,11 +261,13 @@
   <!-- CHOICE: New Appraisal / Self Rating -->
   <div class="choice-grid hidden" id="choiceView">
     <div class="choice-card" onclick="chooseNew()">
+      <span class="badge mute hidden" id="newBadge"></span>
       <div class="ic">📝</div>
       <h3>New Appraisal</h3>
       <p>Start a new quarter: choose the quarter and add your Targets (KRA), the tasks under each target and role attributes.</p>
     </div>
     <div class="choice-card rating" onclick="chooseRating()">
+      <span class="badge hidden" id="rateBadge"></span>
       <div class="ic">⭐</div>
       <h3>Self Rating</h3>
       <p>Open your last quarter's appraisal. Targets and tasks are locked — add your achievement and self rating, then submit and download the PDF.</p>
@@ -236,6 +285,7 @@
     <button class="solid" id="mainBtn" onclick="mainAction()">Submit</button>
   </div>
 </div>
+<div class="overlay hidden" id="overlay"></div>
 
 <script>
 "use strict";
@@ -381,7 +431,7 @@ function pdfTargetBlock(kra, i){
     const gw = pdfNum(g.weightage);
     html += `<tr class="pa-avoid">
       <td class="pa-tcell pa-task">
-        <div><span class="pa-tasktag">Task ${n}.${gi+1}${gw!==null?` · ${pdfFmt(gw,2)}%`:''}</span> ${pdfMultiline(g.name)}</div>
+        <div><span class="pa-tasktag">Task ${n}.${gi+1}${gw!==null?` · ${pdfFmt(gw,2)}%`:''}</span> ${g.html ? `<div class="pa-rich">${g.html}</div>` : pdfMultiline(g.name)}</div>
         <div class="pa-ach"><span class="pa-b">${achLabel}</span> ${pdfMultiline(g.achievement)}</div>
       </td>
       <td class="pa-rc">${pdfEsc(g.selfRating)}</td>
@@ -521,6 +571,7 @@ const PDF_CSS = `
 .pa-task{border-top:none !important;padding-left:14px !important}
 .pa-tasktag{font-weight:700;font-size:10.5px;background:#EEF1F4;padding:0 4px;margin-right:2px}
 .pa-ach{margin-top:3px}
+.pa-rich{display:inline}.pa-rich p,.pa-rich div{margin:0}.pa-rich ol,.pa-rich ul{margin:2px 0 2px 18px;padding:0}.pa-rich li{margin:0}
 .pa-desc{font-size:11px;font-style:italic;margin-top:2px}
 .pa-wt{font-weight:400;font-size:10px;color:#333}
 .pa-rc{text-align:center !important;vertical-align:middle !important}
@@ -667,22 +718,35 @@ function currentQuarter(){ const m = new Date().getMonth(); return m <= 2 ? 'Q4'
 
 /* ======================= API ======================= */
 function withTimeout(p, ms){ return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('The server took too long — please try again.')), ms))]); }
+function netErr(msg){ const e = new Error(msg); e.network = true; return e; }
+const READ_ACTIONS = { load:1, periods:1 };
 async function call(action, payload){
+  // read-only calls retry automatically (3 tries); saves never auto-repeat (they are verified instead)
+  const tries = READ_ACTIONS[action] ? 3 : 1;
+  let last;
+  for(let t = 1; t <= tries; t++){
+    try{ return await callOnce(action, payload); }
+    catch(e){ last = e; if(!e.network || t === tries) throw e; await new Promise(r => setTimeout(r, 900 * t)); }
+  }
+  throw last;
+}
+async function callOnce(action, payload){
   const body = Object.assign({ action }, payload || {});
   if(state.auth && action !== 'send_code' && action !== 'verify_code'){
     body.email = state.auth.email; body.session = state.auth.session; body.sexp = state.auth.sexp;
   }
+  if(typeof navigator !== 'undefined' && navigator.onLine === false) throw netErr('You are offline. Check your internet connection and try again.');
   const url = API.URL;
   let res;
   try{
     res = await withTimeout(fetch(url, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
                                           body:'req=' + encodeURIComponent(JSON.stringify(body)) }), API.TIMEOUT_MS);
   }catch(e){
-    throw new Error(e && e.message && /too long/.test(e.message) ? e.message : 'Cannot reach the server. Check your internet connection.');
+    throw netErr(e && e.message && /too long/.test(e.message) ? e.message : 'Cannot reach the server. Check your internet connection.');
   }
   let json;
-  try{ json = await res.json(); }catch(e){ throw new Error('Unexpected server response (HTTP ' + res.status + ').'); }
-  if(json && json.code && json.code !== 3000) throw new Error(json.message || ('Server code ' + json.code));
+  try{ json = await res.json(); }catch(e){ throw netErr('Unexpected server response (HTTP ' + res.status + ').'); }
+  if(json && json.code && json.code !== 3000) throw netErr(json.message || ('Server code ' + json.code));
   let r = (json && json.result !== undefined) ? json.result : json;
   if(typeof r === 'string'){ try{ r = JSON.parse(r); }catch(e){} }
   if(!r || r.status !== 'success'){
@@ -778,12 +842,47 @@ function showMenu(){
   document.getElementById('stepBanner').innerHTML = '';
   document.getElementById('pageBody').innerHTML = '';
   window.scrollTo(0,0);
+  renderMenuBadges();
+  refreshPeriods();                       // background — menu stays instant
+}
+/* ---- list of this employee's quarters (cached, refreshed in background) ---- */
+function normPeriods(list){
+  return (list || []).map(p => ({ quarter:String(p.quarter), year:String(p.year).replace(/\.0+$/,''), phase:p.phase }))
+    .sort((a,b) => (Number(b.year) - Number(a.year)) || (Q_ORDER[b.quarter] - Q_ORDER[a.quarter]));
+}
+let periodsPromise = null;
+function refreshPeriods(force){
+  if(periodsPromise && !force) return periodsPromise;
+  periodsPromise = call('periods', {}).then(r => {
+    state.periods = normPeriods(r.periods); state.periodsLoaded = true;
+    renderMenuBadges(); if(state.mode === 'new') renderQuarters(); if(state.mode === 'rating') renderPeriodChips();
+    return state.periods;
+  }).finally(() => { periodsPromise = null; });
+  periodsPromise.catch(() => {});
+  return periodsPromise;
+}
+function periodOf(q, y){ return state.periods.find(p => p.quarter === q && p.year === String(y)); }
+function renderMenuBadges(){
+  const nb = document.getElementById('newBadge'), rb = document.getElementById('rateBadge');
+  if(!nb || !rb) return;
+  if(!state.periodsLoaded){ nb.classList.add('hidden'); rb.classList.add('hidden'); return; }
+  const toRate = state.periods.filter(p => p.phase === 'rating');
+  const done = state.periods.filter(p => p.phase === 'done');
+  rb.classList.remove('hidden');
+  rb.className = 'badge' + (toRate.length ? '' : ' ok');
+  rb.textContent = toRate.length ? (toRate[0].quarter + ' ' + toRate[0].year + ' waiting') : (done.length ? '✓ All rated' : 'Nothing yet');
+  nb.classList.remove('hidden');
+  nb.textContent = state.periods.length ? (state.periods.length + ' quarter(s) saved') : 'Start here';
 }
 /* ---- New Appraisal: pick quarter, add targets ---- */
 function chooseNew(){
   state.mode = 'new'; state.justSaved = false;
   show('choiceView', false); show('menuBtn', true); show('footerBar', true);
   show('yearBox', true); show('quarterRow', true); show('periodChips', false);
+  if(periodOf(state.quarter, state.year)){
+    const cq = currentQuarter(), cy = String(new Date().getFullYear());
+    state.quarter = cq; state.year = cy;
+  }
   document.getElementById('yearSelect').value = state.year;
   renderQuarters();
   loadPeriod();
@@ -799,10 +898,8 @@ async function chooseRating(){
   setStatus('Finding your last appraisal…', null);
   const token = ++state.loadToken;
   try{
-    const r = await call('periods', {});
+    await refreshPeriods();
     if(token !== state.loadToken) return;
-    state.periods = (r.periods || []).map(p => ({ quarter:String(p.quarter), year:String(p.year).replace(/\.0+$/,''), phase:p.phase }))
-      .sort((a,b) => (Number(b.year) - Number(a.year)) || (Q_ORDER[b.quarter] - Q_ORDER[a.quarter]));
     const pending = state.periods.filter(p => p.phase === 'rating');
     const pick = pending[0] || null;
     if(!pick){
@@ -823,7 +920,7 @@ function renderPeriodChips(){
   const el = document.getElementById('periodChips');
   if(!state.periods.length){ el.innerHTML = ''; return; }
   el.innerHTML = '<label style="margin:0 6px 0 0;">Your appraisals:</label>' + state.periods.map(p =>
-    `<div class="period-chip ${p.quarter===state.quarter && p.year===state.year && state.phase!=='none' ? 'active' : ''}" onclick="pickPeriod('${p.quarter}','${p.year}')">${p.quarter} ${p.year}<span class="tag">${p.phase==='done'?'DONE':'TO RATE'}</span></div>`).join('');
+    `<div class="period-chip ${p.phase==='done'?'done':''} ${p.quarter===state.quarter && p.year===state.year && state.phase!=='none' ? 'active' : ''}" onclick="pickPeriod('${p.quarter}','${p.year}')">${p.quarter} ${p.year}<span class="tag">${p.phase==='done'?'🔒 SUBMITTED':'TO RATE'}</span></div>`).join('');
 }
 function pickPeriod(q, y){
   if(state.busy) return;
@@ -833,11 +930,13 @@ function pickPeriod(q, y){
   renderPeriodChips();
 }
 function renderQuarters(){
-  document.getElementById('quarterRow').innerHTML = QUARTERS.map(q =>
-    `<div class="quarter-btn ${state.quarter===q.id?'active':''}" onclick="setQuarter('${q.id}')">${q.label}</div>`).join('');
+  document.getElementById('quarterRow').innerHTML = QUARTERS.map(q => {
+    const p = periodOf(q.id, state.year), lk = p ? (p.phase === 'done' ? '🔒 Submitted' : '🔒 Targets saved') : '';
+    return `<div class="quarter-btn ${state.quarter===q.id?'active':''} ${p?'locked':''}" title="${p?'Already submitted — view only':''}" onclick="setQuarter('${q.id}')">${q.label}${lk?`<span class="lk">${lk}</span>`:''}</div>`;
+  }).join('');
 }
 function setQuarter(q){ if(state.busy || q === state.quarter) return; state.justSaved = false; saveDraft(); state.quarter = q; renderQuarters(); loadPeriod(); }
-function changeYear(){ if(state.busy){ document.getElementById('yearSelect').value = state.year; return; } state.justSaved = false; saveDraft(); state.year = document.getElementById('yearSelect').value; loadPeriod(); }
+function changeYear(){ if(state.busy){ document.getElementById('yearSelect').value = state.year; return; } state.justSaved = false; saveDraft(); state.year = document.getElementById('yearSelect').value; renderQuarters(); loadPeriod(); }
 
 async function loadPeriod(){
   const token = ++state.loadToken;
@@ -849,7 +948,7 @@ async function loadPeriod(){
     if(r.employee){ state.me = Object.assign(state.me || {}, r.employee); }
     state.phase = r.phase;
     state.kras = (r.kras || []).map(k => ({ id:nid('k'), recId:String(k.id), name:k.name, description:k.description, weightage:num(k.weightage),
-      goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, weightage:num(g.weightage), achievement:g.achievement || '',
+      goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, html:richFromServer(g.html, g.name), weightage:num(g.weightage), achievement:g.achievement || '',
         selfRating:g.self_rating || '', apprRating:g.appraiser_rating || '' })) }));
     state.attributes = (r.attributes || []).map(a => ({ id:nid('a'), recId:String(a.id), name:a.name, weightage:num(a.weightage), rating:a.rating || '' }));
     state.training = (r.training || []).map(t => ({ id:nid('t'), saved:true, need:t.need, benefit:t.benefit, fulfilled:t.fulfilled }));
@@ -918,6 +1017,89 @@ function setKra(id, f, v){ findKra(id)[f] = v; markUnsaved(); }
 function setGoal(kid, gid, f, v){ findGoal(kid, gid)[f] = v; if(f === 'selfRating') renderScores(); markUnsaved(); }
 function setAttr(id, f, v){ state.attributes.find(a => a.id === id)[f] = v; if(f === 'rating') renderScores(); markUnsaved(); }
 function setText(id, v){ state.texts[id] = v; markUnsaved(); }
+
+/* ======================= RICH TEXT (Task) ======================= */
+const RICH_TAGS = { B:'b', STRONG:'b', I:'i', EM:'i', U:'u', OL:'ol', UL:'ul', LI:'li', BR:'br', P:'div', DIV:'div' };
+function sanitizeRich(html){
+  const src = document.createElement('div'); src.innerHTML = String(html || '');
+  const out = document.createElement('div');
+  (function walk(from, to){
+    from.childNodes.forEach(n => {
+      if(n.nodeType === 3){ to.appendChild(document.createTextNode(n.nodeValue)); return; }
+      if(n.nodeType !== 1) return;
+      const tag = RICH_TAGS[n.tagName];
+      if(n.tagName === 'SCRIPT' || n.tagName === 'STYLE') return;
+      if(!tag){                                   // unknown tag → keep its text, honour bold/underline styles
+        const st = (n.getAttribute && n.getAttribute('style')) || '';
+        let target = to;
+        if(/font-weight\s*:\s*(bold|[6-9]00)/i.test(st)){ const b = document.createElement('b'); to.appendChild(b); target = b; }
+        if(/underline/i.test(st)){ const u = document.createElement('u'); target.appendChild(u); target = u; }
+        walk(n, target); return;
+      }
+      const el = document.createElement(tag); to.appendChild(el);
+      if(tag !== 'br') walk(n, el);
+    });
+  })(src, out);
+  return out.innerHTML.replace(/(<br>\s*)+$/,'').replace(/^(\s|&nbsp;|<br>)+$/,'').trim();
+}
+function plainFromRich(html){
+  const box = document.createElement('div'); box.innerHTML = sanitizeRich(html);
+  let txt = '';
+  (function walk(node, listType, idx){
+    node.childNodes.forEach(n => {
+      if(n.nodeType === 3){ txt += n.nodeValue.replace(/ /g,' '); return; }
+      if(n.nodeType !== 1) return;
+      const t = n.tagName;
+      if(t === 'BR'){ txt += '\n'; return; }
+      if(t === 'OL' || t === 'UL'){ let i = 0; if(txt && !txt.endsWith('\n')) txt += '\n';
+        n.childNodes.forEach(li => { if(li.nodeType === 1 && li.tagName === 'LI'){ i++; txt += (t === 'OL' ? i + '. ' : '• '); walk(li); if(!txt.endsWith('\n')) txt += '\n'; } }); return; }
+      if(t === 'DIV' && txt && !txt.endsWith('\n')) txt += '\n';
+      walk(n);
+      if(t === 'DIV' && !txt.endsWith('\n')) txt += '\n';
+    });
+  })(box);
+  return txt.replace(/\n{3,}/g, '\n\n').trim();
+}
+function richFromServer(html, name){
+  const h = String(html || '').trim();
+  if(h && /<[a-z][\s\S]*>/i.test(h)) return sanitizeRich(h);
+  return '';                                       // plain text → shown from name
+}
+function richOf(g){ return g.html && /<[a-z]/i.test(g.html) ? sanitizeRich(g.html) : (esc(g.name).replace(/\n/g,'<br>') || '—'); }
+function rteCmd(cmd){ try{ document.execCommand(cmd, false, null); }catch(e){} const a = document.activeElement; if(a && a.classList && a.classList.contains('rte-area')) rteInput(a); }
+function rtePaste(e){
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain') || '';
+  try{ document.execCommand('insertText', false, text); }catch(err){}
+  rteInput(e.target.closest('.rte-area'));
+}
+function rteInput(el, final){
+  if(!el) return;
+  const g = findGoal(el.dataset.k, el.dataset.g); if(!g) return;
+  g.html = sanitizeRich(el.innerHTML);
+  g.name = plainFromRich(g.html);
+  if(!g.name){ g.html = ''; if(final) el.innerHTML = ''; }
+  markUnsaved();
+}
+
+/* ======================= MODAL / OVERLAY ======================= */
+function confirmBox(title, html, okText){
+  return new Promise(resolve => {
+    const ov = document.getElementById('overlay');
+    ov.innerHTML = `<div class="modal"><h3>${title}</h3><div class="mbody">${html}</div>
+      <div class="mbtns"><button id="mNo">Cancel</button><button class="solid" id="mYes">${okText || 'Yes, submit'}</button></div></div>`;
+    ov.classList.remove('hidden');
+    const done = v => { ov.classList.add('hidden'); ov.innerHTML = ''; resolve(v); };
+    document.getElementById('mNo').onclick = () => done(false);
+    document.getElementById('mYes').onclick = () => done(true);
+  });
+}
+function busyOverlay(msg){
+  const ov = document.getElementById('overlay');
+  if(!msg){ ov.classList.add('hidden'); ov.innerHTML = ''; return; }
+  ov.innerHTML = `<div class="modal" style="text-align:center;"><div class="spinner"></div><h3>${msg}</h3><div class="mbody" style="margin:0;color:var(--muted)">Please do not close or refresh this page.</div></div>`;
+  ov.classList.remove('hidden');
+}
 function addTrainingRow(){ state.training.push({ id:nid('t'), saved:false, need:'', benefit:'', fulfilled:'' }); renderPage(); markUnsaved(); }
 function removeTrainingRow(id){ state.training = state.training.filter(t => t.id !== id); renderPage(); markUnsaved(); }
 function setTrain(id, f, v){ state.training.find(t => t.id === id)[f] = v; markUnsaved(); }
@@ -948,8 +1130,8 @@ function renderPage(){
   applyWeights();
   renderBanner();
   const body = document.getElementById('pageBody');
-  if(state.phase === 'loading'){ body.innerHTML = '<div class="section"><div class="loading-box">Loading…</div></div>'; return; }
-  if(state.phase === 'error'){ body.innerHTML = '<div class="section"><div class="loading-box">Could not load. <button class="small" onclick="showMenu()">Back to menu</button></div></div>'; return; }
+  if(state.phase === 'loading'){ body.innerHTML = '<div class="section"><div class="skel h"></div><div class="skel b"></div><div class="skel r"></div><div class="skel r"></div></div><div class="section"><div class="skel h"></div><div class="skel r"></div></div>'; return; }
+  if(state.phase === 'error'){ body.innerHTML = `<div class="section notice"><h3>Could not load</h3><p>Please check your internet connection. Nothing you typed is lost.</p><button class="solid" onclick="${state.mode==='rating'?'chooseRating()':'loadPeriod()'}">Try again</button> &nbsp; <button onclick="showMenu()">Back to menu</button></div>`; return; }
   if(state.phase === 'none'){
     body.innerHTML = `<div class="section notice"><h3>Nothing to rate</h3>
       <p>${state.periods.length ? 'All your saved appraisals are already self-rated. Pick one above to view it or download its PDF.' : 'You have not set any targets yet. Start a New Appraisal first.'}</p>
@@ -967,7 +1149,8 @@ function renderPage(){
           <button class="solid" onclick="showMenu();chooseRating()">Go to Self Rating</button></div>`;
     return;
   }
-  body.innerHTML = state.phase === 'targets' ? targetsHtml() : ratingHtml(state.phase === 'done');
+  body.innerHTML = state.phase === 'targets' ? targetsHtml()
+    : (state.phase === 'done' ? `<div class="lock-note">🔒 <div><b>${state.quarter} ${state.year} is submitted and locked.</b> Nothing can be changed — you can only view it and download the PDF.</div></div>` : '') + ratingHtml(state.phase === 'done');
   renderScores(); renderOverall();
 }
 function targetsHtml(){
@@ -989,7 +1172,19 @@ function targetsHtml(){
         ${k.goals.map((g, j) => `
           <div class="goal-row">
             <div class="goal-row-header"><span class="goal-tag">TASK ${i+1}.${j+1} · ${fmt(g.weightage)}%</span><button class="small danger" onclick="removeGoal('${k.id}','${g.id}')">Remove</button></div>
-            <div><label>Task <span class="req">*</span></label><textarea maxlength="1000" placeholder="Describe the task" onchange="setGoal('${k.id}','${g.id}','name',this.value)">${esc(g.name)}</textarea></div>
+            <div><label>Task <span class="req">*</span></label>
+              <div class="rte">
+                <div class="rte-bar">
+                  <button type="button" title="Bold" onmousedown="event.preventDefault();rteCmd('bold')"><b>B</b></button>
+                  <button type="button" title="Italic" onmousedown="event.preventDefault();rteCmd('italic')"><i>I</i></button>
+                  <button type="button" title="Underline" onmousedown="event.preventDefault();rteCmd('underline')"><u>U</u></button>
+                  <button type="button" title="Numbered list" onmousedown="event.preventDefault();rteCmd('insertOrderedList')">1. List</button>
+                  <button type="button" title="Bullet list" onmousedown="event.preventDefault();rteCmd('insertUnorderedList')">• List</button>
+                  <button type="button" title="Clear formatting" onmousedown="event.preventDefault();rteCmd('removeFormat')">Clear</button>
+                </div>
+                <div class="rte-area" contenteditable="true" data-ph="Describe the task — use the buttons for bold, underline, numbering" data-k="${k.id}" data-g="${g.id}"
+                     oninput="rteInput(this)" onblur="rteInput(this,true)" onpaste="rtePaste(event)">${g.html ? sanitizeRich(g.html) : esc(g.name).replace(/\n/g,'<br>')}</div>
+              </div></div>
           </div>`).join('')}
         <div style="margin-top:12px;"><button class="small" onclick="addGoal('${k.id}')">+ Add Task under Target ${i+1}</button></div>
       </div>`).join('') : '<div class="empty">No targets yet.</div>'}
@@ -1021,7 +1216,7 @@ function ratingHtml(ro){
         ${k.goals.map((g, j) => `
           <div class="goal-row">
             <div class="rate-grid">
-              <div><label>Task ${i+1}.${j+1} · ${fmt(g.weightage)}%</label><div class="ro">${esc(g.name)}</div></div>
+              <div><label>Task ${i+1}.${j+1} · ${fmt(g.weightage)}%</label><div class="ro rich">${richOf(g)}</div></div>
               <div><label>Achievement</label>${ro ? `<div class="ro">${esc(g.achievement) || '—'}</div>`
                  : `<textarea maxlength="2000" placeholder="What was achieved" onchange="setGoal('${k.id}','${g.id}','achievement',this.value)">${esc(g.achievement)}</textarea>`}</div>
               <div><label>Self Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(g.selfRating) || '—'}</div>` : ratingSelect(g.selfRating, `setGoal('${k.id}','${g.id}','selfRating',this.value)`)}</div>
@@ -1125,29 +1320,50 @@ function validateTargets(){
     const k = state.kras[i];
     if(!k.name.trim()) return `Target ${i+1}: enter the target name.`;
     if(!k.goals.length) return `Target ${i+1}: add at least one task.`;
-    for(let j = 0; j < k.goals.length; j++) if(!k.goals[j].name.trim()) return `Task ${i+1}.${j+1}: describe the task (or remove it).`;
+    for(let j = 0; j < k.goals.length; j++){
+      if(!k.goals[j].name.trim()) return `Task ${i+1}.${j+1}: describe the task (or remove it).`;
+      if(sanitizeRich(k.goals[j].html || '').length > 18000) return `Task ${i+1}.${j+1}: the text is too long — please shorten it.`;
+    }
   }
   for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].name.trim()) return `Role Attribute ${i+1}: enter the name (or remove it).`;
   return '';
 }
 async function submitTargets(){
   if(state.busy) return;
+  document.querySelectorAll('.rte-area').forEach(el => rteInput(el, true));
   applyWeights();
   const problem = validateTargets(); if(problem){ setStatus('❌ ' + problem, false); return; }
-  lock(true);
+  const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0);
+  const ok = await confirmBox('Submit targets for ' + state.quarter + ' ' + state.year + '?',
+    `You are submitting <b>${state.kras.length} target(s)</b>, <b>${tasks} task(s)</b> and <b>${state.attributes.length} role attribute(s)</b>.<br><br>
+     After submitting, the targets for this quarter are <b>locked</b> and cannot be changed. A quarter can be submitted only once.`, 'Yes, submit targets');
+  if(!ok) return;
+  const q = state.quarter, y = state.year;
+  lock(true); busyOverlay('Saving your targets…');
   setStatus('Saving your targets… please do not close this page.', null);
+  let saved = false, errMsg = '';
   try{
-    await call('save_targets', { quarter:state.quarter, year:state.year,
-      kras:state.kras.map(k => ({ name:k.name.trim(), description:(k.description||'').trim(), goals:k.goals.map(g => ({ name:g.name.trim() })) })),
+    await call('save_targets', { quarter:q, year:y,
+      kras:state.kras.map(k => ({ name:k.name.trim(), description:(k.description||'').trim(), goals:k.goals.map(g => ({ name:g.name.trim(), html:sanitizeRich(g.html || '') })) })),
       attributes:state.attributes.map(a => ({ name:a.name.trim() })) });
-    clearDraft();
-    lock(false);
-    state.justSaved = true;
-    await loadPeriod();
-    setStatus('✅ Targets saved. Open this link again later for Step 2 — Self Rating. You can download the PDF now.', true);
+    saved = true;
   }catch(err){
-    lock(false);
-    setStatus('❌ ' + err.message, false);
+    errMsg = err.message;
+    // connection broke or "already saved" → check what really reached the system
+    if(err.network || /already saved/i.test(err.message)){
+      busyOverlay('Checking that your targets reached the system…');
+      try{ const chk = await call('load', { quarter:q, year:y }); if(chk.phase && chk.phase !== 'targets') saved = true; }catch(e){}
+    }
+  }
+  busyOverlay(null); lock(false);
+  if(saved){
+    clearDraft();
+    state.justSaved = true;
+    refreshPeriods(true);
+    await loadPeriod();
+    setStatus('✅ Targets submitted for ' + q + ' ' + y + '. A confirmation email has been sent to you.', true);
+  } else {
+    setStatus('❌ ' + errMsg + ' Your entries are kept — please try Submit again.', false);
   }
 }
 function validateRating(){
@@ -1160,22 +1376,39 @@ function validateRating(){
 async function submitRating(){
   if(state.busy) return;
   const problem = validateRating(); if(problem){ setStatus('❌ ' + problem, false); return; }
-  lock(true);
+  const sc = computeScores();
+  const ok = await confirmBox('Submit self rating for ' + state.quarter + ' ' + state.year + '?',
+    `Your self score is <b>${fmt(sc.total)} / 100</b> (Targets ${fmt(sc.kra)} + Role ${fmt(sc.role)}).<br><br>
+     After submitting, this quarter is <b>fully locked</b> — nothing can be changed. You can still view it and download the PDF.`, 'Yes, submit rating');
+  if(!ok) return;
+  const q = state.quarter, y = state.year;
+  lock(true); busyOverlay('Saving your self rating…');
   setStatus('Saving your self rating… please do not close this page.', null);
+  let saved = false, errMsg = '', finalScore;
   try{
-    const r = await call('save_rating', { quarter:state.quarter, year:state.year,
+    const r = await call('save_rating', { quarter:q, year:y,
       goals:state.kras.flatMap(k => k.goals).map(g => ({ id:g.recId, achievement:g.achievement || '', self_rating:String(g.selfRating) })),
       attributes:state.attributes.map(a => ({ id:a.recId, rating:String(a.rating) })),
       training:state.training.filter(t => !t.saved && t.need.trim()).map(t => ({ need:t.need.trim(), benefit:t.benefit || '', fulfilled:t.fulfilled || '' })),
       facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
       comments:state.texts.comments, learnings:state.texts.learnings, overall:state.overallRating || '' });
-    clearDraft();
-    lock(false);
-    await loadPeriod();
-    setStatus('✅ Self rating submitted' + (r.final_score !== undefined ? ' (score ' + r.final_score + ' / 100)' : '') + '. Download your PDF anytime.', true);
+    saved = true; finalScore = r.final_score;
   }catch(err){
-    lock(false);
-    setStatus('❌ ' + err.message, false);
+    errMsg = err.message;
+    if(err.network || /already submitted/i.test(err.message)){
+      busyOverlay('Checking that your rating reached the system…');
+      try{ const chk = await call('load', { quarter:q, year:y }); if(chk.phase === 'done') saved = true; }catch(e){}
+    }
+  }
+  busyOverlay(null); lock(false);
+  if(saved){
+    clearDraft();
+    refreshPeriods(true);
+    await loadPeriod();
+    renderPeriodChips();
+    setStatus('✅ Self rating submitted' + (finalScore !== undefined ? ' (score ' + finalScore + ' / 100)' : '') + '. This quarter is now locked. A confirmation email has been sent to you.', true);
+  } else {
+    setStatus('❌ ' + errMsg + ' Your entries are kept — please try Submit again.', false);
   }
 }
 
@@ -1188,7 +1421,7 @@ function downloadPdf(){
     employeeName:me.name, department:me.department, appraiser:me.manager || '', year:state.year, quarter:state.quarter,
     kraSectionWeight:Math.round(kraTotal()*100)/100 || 100, roleSectionWeight:Math.round(roleTotal()*100)/100, ratingMap:RATING_PCT,
     kras:state.kras.map(k => ({ name:k.name, description:k.description, weightage:k.weightage,
-      goals:k.goals.filter(g => g.name || g.achievement).map(g => ({ name:g.name, achievement:g.achievement, weightage:g.weightage, selfRating:g.selfRating, apprRating:g.apprRating })) })),
+      goals:k.goals.filter(g => g.name || g.achievement).map(g => ({ name:g.name, html:(g.html && /<[a-z]/i.test(g.html)) ? sanitizeRich(g.html) : '', achievement:g.achievement, weightage:g.weightage, selfRating:g.selfRating, apprRating:g.apprRating })) })),
     attributes:state.attributes.map(a => ({ name:a.name, weightage:a.weightage, rating:a.rating })),
     facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
     comments:state.texts.comments, learnings:state.texts.learnings,
@@ -1202,7 +1435,7 @@ function esc(s){ return (s === null || s === undefined ? '' : String(s)).replace
 function fmt(n){ const x = Number(n) || 0; return (Math.round(x * 100) / 100).toString(); }
 
 /* ======================= INIT ======================= */
-window.addEventListener('beforeunload', () => saveDraft());
+window.addEventListener('beforeunload', e => { saveDraft(); if(state.busy){ e.preventDefault(); e.returnValue = 'Saving is in progress.'; } });
 (function init(){
   let s = null;
   try{ s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); }catch(e){}
