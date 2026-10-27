@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -306,7 +307,7 @@
     <div class="choice-card hod hidden" id="hodCard" onclick="chooseHod()">
       <div class="ic">🏢</div>
       <h3>HOD Review</h3>
-      <p>HOD: see your department's appraisals after the manager rating. Enter the company score — the weighted final score and suggested hike are calculated for you.</p>
+      <p>HOD: see every employee's appraisal after the manager rating. Enter the company score — the weighted final score and suggested hike are calculated for you.</p>
     </div>
     <div class="choice-card adm hidden" id="adminCard" onclick="chooseAdmin()">
       <span class="badge mute hidden" id="adminBadge"></span>
@@ -1613,7 +1614,7 @@ function openReview(i){
 function queueHtml(){
   const kind = state.mode;
   const first = FIRST_STAGE[kind];
-  const teamLine = kind !== 'admin' ? `<div class="note" style="margin:0 0 12px;">${kind === 'hod' ? 'Your department' : 'Your team'} (${state.team.length}): ${state.team.length ? '' : (kind === 'hod' ? 'no other employee in All Employees has the same Department as you (' + esc((state.me && state.me.department) || '—') + ').' : 'nobody has you as Reporting Manager in All Employees.')}</div>
+  const teamLine = kind === 'team' ? `<div class="note" style="margin:0 0 12px;">${kind === 'hod' ? 'Your department' : 'Your team'} (${state.team.length}): ${state.team.length ? '' : (kind === 'hod' ? 'no other employee in All Employees has the same Department as you (' + esc((state.me && state.me.department) || '—') + ').' : 'nobody has you as Reporting Manager in All Employees.')}</div>
     <div class="team-chips" style="margin:-6px 0 14px;">${state.team.map(t => `<span>${esc(t.name)}</span>`).join('')}</div>` : '';
   const rows = state.queue.map((q, i) => {
     const st = STAGE_TXT[q.stage] || ['—',''];
@@ -1630,7 +1631,7 @@ function queueHtml(){
     <div class="section-head"><h2>${kind === 'team' ? '👥 Team Ratings' : kind === 'hod' ? '🏢 HOD Review' : '🏆 Final Review'}</h2><span class="weight-badge">${state.queue.length} appraisal(s)</span></div>
     ${teamLine}
     ${state.queue.length ? `<div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Employee</th><th>Quarter</th><th>Self score</th><th>Manager score</th>${kind !== 'team' ? '<th>Weighted</th><th>HOD hike</th>' : ''}${kind === 'admin' ? '<th>Final</th>' : ''}<th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
-      : `<div class="empty">${kind === 'team' ? 'No self ratings from your team yet. They appear here after an employee submits the self rating.' : kind === 'hod' ? 'No appraisals from your department yet.' : 'No submitted appraisals yet.'}</div>`}
+      : `<div class="empty">${kind === 'team' ? 'No self ratings from your team yet. They appear here after an employee submits the self rating.' : kind === 'hod' ? 'No appraisals are waiting for HOD review yet. An employee appears here as soon as their manager submits the Manager Rating.' : 'No submitted appraisals yet.'}</div>`}
   </div>`;
 }
 function reviewHtml(){
@@ -1868,3 +1869,4 @@ window.addEventListener('beforeunload', e => { saveDraft(); if(state.busy){ e.pr
 </script>
 </body>
 </html>
+ 
