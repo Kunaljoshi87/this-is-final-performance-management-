@@ -1613,7 +1613,7 @@ function openReview(i){
 function queueHtml(){
   const kind = state.mode;
   const first = FIRST_STAGE[kind];
-  const teamLine = kind === 'team' ? `<div class="note" style="margin:0 0 12px;">Your team (${state.team.length}): ${state.team.length ? '' : 'nobody has you as Reporting Manager in All Employees.'}</div>
+  const teamLine = kind !== 'admin' ? `<div class="note" style="margin:0 0 12px;">${kind === 'hod' ? 'Your department' : 'Your team'} (${state.team.length}): ${state.team.length ? '' : (kind === 'hod' ? 'no other employee in All Employees has the same Department as you (' + esc((state.me && state.me.department) || '—') + ').' : 'nobody has you as Reporting Manager in All Employees.')}</div>
     <div class="team-chips" style="margin:-6px 0 14px;">${state.team.map(t => `<span>${esc(t.name)}</span>`).join('')}</div>` : '';
   const rows = state.queue.map((q, i) => {
     const st = STAGE_TXT[q.stage] || ['—',''];
@@ -1868,4 +1868,3 @@ window.addEventListener('beforeunload', e => { saveDraft(); if(state.busy){ e.pr
 </script>
 </body>
 </html>
- 
