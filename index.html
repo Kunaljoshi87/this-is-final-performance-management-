@@ -138,7 +138,20 @@
   .code-input{font-family:'IBM Plex Mono',monospace !important; font-size:22px !important; letter-spacing:8px; text-align:center;}
   .linkish{background:none; border:none; color:var(--navy); text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif; font-size:12px; padding:0; margin-top:12px; width:auto !important; text-decoration:underline;}
   .linkish:hover{background:none; color:var(--navy);}
-  .choice-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; margin-bottom:20px;}
+  .choice-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:18px; margin-bottom:20px;}
+  .choice-card.mgr{border-top-color:#6D28D9;} .choice-card.mgr h3{color:#6D28D9;}
+  .choice-card.adm{border-top-color:#B91C1C;} .choice-card.adm h3{color:#B91C1C;}
+  .q-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .q-table th{text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#fff; background:var(--navy); padding:9px 8px;}
+  .q-table td{padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  .q-table tr:hover td{background:#F7FAFD;}
+  .stage{font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 8px; border-radius:20px; border:1px solid; white-space:nowrap;}
+  .stage.s1{color:var(--amber); background:#FDF3E1;} .stage.s2{color:#6D28D9; background:#F1EBFD;} .stage.s3{color:var(--green); background:#EAF7F0;}
+  .rate-grid.mg{grid-template-columns:3fr 3fr 1fr 1.3fr;}
+  .mgr-box{border:2px solid #6D28D9; background:#FBF9FF;} .mgr-box .section-head h2{color:#6D28D9;}
+  .adm-box{border:2px solid #B91C1C; background:#FFFBFB;} .adm-box .section-head h2{color:#B91C1C;}
+  .cmp{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px;}
+  .team-chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;} .team-chips span{font-size:11px; padding:3px 9px; border:1px solid var(--line); border-radius:20px; background:#fff;}
   .choice-card.view{border-top-color:var(--green);} .choice-card.view h3{color:var(--green);}
   .choice-card{background:var(--panel); border:1px solid var(--line); border-top:4px solid var(--navy); padding:26px; cursor:pointer; transition:box-shadow .15s, transform .15s;}
   .choice-card:hover{box-shadow:0 6px 18px rgba(31,41,55,.12); transform:translateY(-2px);}
@@ -278,6 +291,18 @@
       <div class="ic">📂</div>
       <h3>My Appraisals</h3>
       <p>View any of your submitted quarters — targets, tasks, achievement and ratings. Locked, read-only. Download the PDF anytime.</p>
+    </div>
+    <div class="choice-card mgr hidden" id="teamCard" onclick="chooseTeam()">
+      <span class="badge mute hidden" id="teamBadge"></span>
+      <div class="ic">👥</div>
+      <h3>Team Ratings</h3>
+      <p>Manager: see your team's appraisals. Their self rating is locked — give your Manager Rating for every task and role attribute.</p>
+    </div>
+    <div class="choice-card adm hidden" id="adminCard" onclick="chooseAdmin()">
+      <span class="badge mute hidden" id="adminBadge"></span>
+      <div class="ic">🏆</div>
+      <h3>Final Review</h3>
+      <p>Super Admin: compare employee and manager ratings, decide the final rating and increment %, then approve.</p>
     </div>
   </div>
 
@@ -829,21 +854,28 @@ function openApp(){
   document.getElementById('footerBar').classList.remove('hidden');
   document.getElementById('whoName').textContent = me.name;
   document.getElementById('whoEmail').textContent = me.email;
-  document.getElementById('pName').textContent = me.name || '—';
-  document.getElementById('pId').textContent = me.employee_id || '—';
-  document.getElementById('pDept').textContent = me.department || '—';
-  document.getElementById('pMgr').textContent = me.manager || '—';
-  document.getElementById('pHr').textContent = me.hr || '—';
+  fillProfile(me);
   const y = new Date().getFullYear();
   document.getElementById('yearSelect').innerHTML = [y-1, y, y+1].map(v => `<option ${String(v)===state.year?'selected':''}>${v}</option>`).join('');
   showMenu();
 }
+function fillProfile(p){
+  p = p || {};
+  document.getElementById('pName').textContent = p.name || '—';
+  document.getElementById('pId').textContent = p.employee_id || '—';
+  document.getElementById('pDept').textContent = p.department || '—';
+  document.getElementById('pMgr').textContent = p.manager || '—';
+  document.getElementById('pHr').textContent = p.hr || '—';
+}
+function isOwnMode(){ return state.mode !== 'team' && state.mode !== 'admin'; }
 function show(id, on){ document.getElementById(id).classList.toggle('hidden', !on); }
 function showMenu(){
   if(state.busy) return;
   state.justSaved = false;
   saveDraft();
   state.mode = 'menu'; state.loadToken++; state.phase = 'menu'; resetData();
+  state.target = null; state.subject = null; fillProfile(state.me);
+  show('teamCard', !!(state.me && state.me.is_manager)); show('adminCard', !!(state.me && state.me.is_admin));
   show('choiceView', true); show('menuBtn', false); show('footerBar', false);
   show('yearBox', false); show('quarterRow', false); show('periodChips', false);
   document.getElementById('stepBanner').innerHTML = '';
@@ -974,22 +1006,35 @@ async function loadPeriod(){
   state.phase = 'loading'; resetData(); renderPage();
   setStatus('Loading your ' + state.quarter + ' ' + state.year + ' appraisal…', null);
   try{
-    const r = await call('load', { quarter:state.quarter, year:state.year });
+    const act = state.mode === 'team' ? 'mgr_load' : state.mode === 'admin' ? 'admin_load' : 'load';
+    const payload = { quarter:state.quarter, year:state.year };
+    if(!isOwnMode()) payload.target = state.target;
+    const r = await call(act, payload);
     if(token !== state.loadToken) return;
-    if(r.employee){ state.me = Object.assign(state.me || {}, r.employee); }
+    if(isOwnMode()){ if(r.employee){ const keep = { is_manager:state.me.is_manager, is_admin:state.me.is_admin }; state.me = Object.assign(state.me || {}, r.employee); if(r.employee.is_manager === undefined) Object.assign(state.me, keep); } }
+    else { state.subject = r.employee || {}; fillProfile(state.subject); }
+    state.mgrDone = !!r.mgr_done; state.finalDone = !!r.final_done;
     state.phase = r.phase;
     state.kras = (r.kras || []).map(k => ({ id:nid('k'), recId:String(k.id), name:k.name, description:k.description, weightage:num(k.weightage),
       goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, html:richFromServer(g.html, g.name), weightage:num(g.weightage), achievement:g.achievement || '',
         selfRating:g.self_rating || '', apprRating:g.appraiser_rating || '' })) }));
-    state.attributes = (r.attributes || []).map(a => ({ id:nid('a'), recId:String(a.id), name:a.name, weightage:num(a.weightage), rating:a.rating || '' }));
+    state.attributes = (r.attributes || []).map(a => ({ id:nid('a'), recId:String(a.id), name:a.name, weightage:num(a.weightage), rating:a.rating || '', apprRating:a.appraiser_rating || '' }));
     state.training = (r.training || []).map(t => ({ id:nid('t'), saved:true, need:t.need, benefit:t.benefit, fulfilled:t.fulfilled }));
     const rv = r.review || {};
     state.texts = { facilitating:rv.facilitating || '', constraining:rv.constraining || '', outstanding:rv.outstanding || '', comments:rv.comments || '', learnings:rv.learnings || '' };
     state.overallRating = rv.overall || '';
     state.reviewStatus = rv.status || '';
+    state.managerRemark = rv.manager_remark || ''; state.managerScore = rv.manager_score || ''; state.selfScoreSaved = rv.final_score || '';
+    state.final = { rating:rv.final_rating || '', increment:rv.increment || '', remark:rv.final_remark || '', by:rv.approved_by || '' };
     if(state.phase === 'targets'){ if(!restoreDraft()) addKRA(true); }
     else if(state.phase === 'rating' && state.mode !== 'view'){ restoreDraft(); }
     renderPage();
+    if(!isOwnMode()){
+      const canMgr = state.mode === 'team' && state.phase === 'done' && !state.mgrDone && !state.finalDone;
+      const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
+      setStatus(canMgr ? 'Give your Manager Rating for every task and role attribute, then click Submit Manager Rating.' : canAdm ? 'Choose the final rating and increment %, then click Approve & Finalize.' : 'View only.', true);
+      return;
+    }
     setStatus({ targets:'Step 1 — add your Targets (KRA) and tasks, then click Submit Targets.',
                 rating:'Step 2 — fill achievement and self rating for each task, then click Submit Self Rating.',
                 done:'This appraisal is complete. You can download the PDF.' }[state.phase] || 'Ready.', true);
@@ -1000,6 +1045,8 @@ async function loadPeriod(){
   }
 }
 function resetData(){
+  state.mgrDone = false; state.finalDone = false; state.managerRemark = ''; state.managerScore = ''; state.selfScoreSaved = '';
+  state.final = { rating:'', increment:'', remark:'', by:'' };
   state.kras = []; state.attributes = []; state.training = []; state.overallRating = ''; state.reviewStatus = '';
   state.texts = { facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'' };
 }
@@ -1045,8 +1092,8 @@ function addAttribute(){ state.attributes.push({ id:nid('a'), recId:'', name:'',
 function removeAttribute(id){ state.attributes = state.attributes.filter(a => a.id !== id); renderPage(); markUnsaved(); }
 /* text edits never re-render (keeps the click where the user put it) */
 function setKra(id, f, v){ findKra(id)[f] = v; markUnsaved(); }
-function setGoal(kid, gid, f, v){ findGoal(kid, gid)[f] = v; if(f === 'selfRating') renderScores(); markUnsaved(); }
-function setAttr(id, f, v){ state.attributes.find(a => a.id === id)[f] = v; if(f === 'rating') renderScores(); markUnsaved(); }
+function setGoal(kid, gid, f, v){ findGoal(kid, gid)[f] = v; if(f === 'selfRating' || f === 'apprRating') renderScores(); markUnsaved(); }
+function setAttr(id, f, v){ state.attributes.find(a => a.id === id)[f] = v; if(f === 'rating' || f === 'apprRating') renderScores(); markUnsaved(); }
 function setText(id, v){ state.texts[id] = v; markUnsaved(); }
 
 /* ======================= RICH TEXT (Task) ======================= */
@@ -1144,6 +1191,20 @@ function ratingSelect(value, onchange){
 function renderBanner(){
   const p = state.phase, el = document.getElementById('stepBanner'), btn = document.getElementById('mainBtn');
   const editable = (state.mode === 'new' && p === 'targets') || (state.mode === 'rating' && p === 'rating');
+  if(!isOwnMode()){
+    document.getElementById('pdfBtn').disabled = !(p === 'rating' || p === 'done');
+    if(!state.target){ btn.classList.add('hidden'); el.innerHTML = ''; return; }
+    const canMgr = state.mode === 'team' && p === 'done' && !state.mgrDone && !state.finalDone;
+    const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
+    btn.classList.toggle('hidden', !(canMgr || canAdm));
+    btn.textContent = canMgr ? 'Submit Manager Rating' : 'Approve & Finalize';
+    btn.disabled = state.busy;
+    const who = (state.subject && state.subject.name) || state.target;
+    const stTxt = state.finalDone ? 'FINAL — approved' + (state.final.rating ? ' · ' + state.final.rating : '') : state.mgrDone ? 'Manager rating done — waiting for Super Admin' : p === 'done' ? 'Self rating done — waiting for manager rating' : 'Employee has not submitted self rating yet';
+    el.innerHTML = `<div class="step-banner ${state.finalDone ? 'done' : 'rating'}"><span class="num">${state.mode === 'team' ? 'MANAGER' : 'SUPER ADMIN'}</span><div><div class="t">${esc(who)} — ${state.quarter} ${state.year}</div><div class="d">${esc(stTxt)}</div></div>
+      <div class="steps"><span class="on">1 · Self</span><span class="${state.mgrDone?'on':''}">2 · Manager</span><span class="${state.finalDone?'on':''}">3 · Final</span></div></div>`;
+    return;
+  }
   if(state.mode === 'view'){
     btn.classList.add('hidden');
     document.getElementById('pdfBtn').disabled = !(p === 'rating' || p === 'done');
@@ -1168,7 +1229,14 @@ function renderPage(){
   renderBanner();
   const body = document.getElementById('pageBody');
   if(state.phase === 'loading'){ body.innerHTML = '<div class="section"><div class="skel h"></div><div class="skel b"></div><div class="skel r"></div><div class="skel r"></div></div><div class="section"><div class="skel h"></div><div class="skel r"></div></div>'; return; }
-  if(state.phase === 'error'){ body.innerHTML = `<div class="section notice"><h3>Could not load</h3><p>Please check your internet connection. Nothing you typed is lost.</p><button class="solid" onclick="${state.mode==='rating'?'chooseRating()':'loadPeriod()'}">Try again</button> &nbsp; <button onclick="showMenu()">Back to menu</button></div>`; return; }
+  if(state.phase === 'error'){ body.innerHTML = `<div class="section notice"><h3>Could not load</h3><p>Please check your internet connection. Nothing you typed is lost.</p><button class="solid" onclick="${state.mode==='rating'?'chooseRating()':state.mode==='team'&&!state.target?'chooseTeam()':state.mode==='admin'&&!state.target?'chooseAdmin()':'loadPeriod()'}">Try again</button> &nbsp; <button onclick="showMenu()">Back to menu</button></div>`; return; }
+  if(!isOwnMode()){
+    if(!state.target){ body.innerHTML = queueHtml(); return; }
+    body.innerHTML = `<div style="margin-bottom:12px;"><button class="small" onclick="backToQueue()">← Back to list</button></div>` +
+      (state.phase === 'done' ? reviewHtml() : `<div class="section notice"><h3>Self rating not submitted yet</h3><p>This employee has not submitted the self rating for ${state.quarter} ${state.year}.</p></div>`);
+    renderScores(); renderOverall();
+    return;
+  }
   if(state.phase === 'none' && state.mode === 'view'){
     body.innerHTML = `<div class="section notice"><h3>No appraisals yet</h3><p>You have not submitted any targets yet. Start a New Appraisal first.</p><button class="solid" onclick="showMenu();chooseNew()">Start New Appraisal</button></div>`;
     return;
@@ -1281,15 +1349,18 @@ function ratingHtml(ro){
       <div class="attr-row" style="grid-template-columns:3fr 1fr 1.3fr;">
         <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
         <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
-        <div><label>Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
+        <div><label>Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}${a.apprRating ? ` · Manager: <b>${esc(a.apprRating)}</b>` : ''}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
       </div>`).join('')}
   </div>` : ''}
   <div class="section two-col">
     <div><label>Facilitating Factors</label>${ta('facilitating','Factors that helped achieve the targets (mention target number)')}</div>
     <div><label>Constraining Factors</label>${ta('constraining','Factors that were constraints (mention target number)')}</div>
     <div><label>Outstanding Achievement / Significant Contribution</label>${ta('outstanding','Quantified benefit to company')}</div>
-    <div><label>Comments of Appraiser</label>${ta('comments','Comments')}</div>
+    <div><label>Comments of Appraiser</label><div class="ro">${esc(state.texts.comments) || '— (filled by your manager)'}</div></div>
   </div>
+  ${state.managerRemark || state.final.rating ? `<div class="section mgr-box"><div class="section-head"><h2>Manager &amp; Final Review</h2></div>
+    ${state.managerRemark ? `<label>Appraiser's / HOD's Remark</label><div class="ro" style="margin-bottom:10px;">${esc(state.managerRemark)}</div>` : ''}
+    ${state.final.rating ? `<label>Final Overall Rating (approved)</label><div class="ro"><b>${esc(state.final.rating)}</b></div>` : ''}</div>` : ''}
   <div class="section">
     <div class="section-head"><h2>My Learnings</h2></div>
     ${ta('learnings','Visit outside organization / Customer Visit / Training / Reading / External Course')}
@@ -1312,8 +1383,24 @@ function ratingHtml(ro){
     <div class="overall-options" id="overallOptions"></div>
   </div>`;
 }
+function computeMgrScores(){
+  let kra = 0, role = 0;
+  state.kras.forEach(k => k.goals.forEach(g => { kra += (g.weightage || 0) * pct(g.apprRating) / 100; }));
+  state.attributes.forEach(a => { role += (a.weightage || 0) * pct(a.apprRating) / 100; });
+  kra = Math.round(kra*100)/100; role = Math.round(role*100)/100;
+  return { kra, role, total: Math.round((kra + role)*100)/100 };
+}
 function renderScores(){
   const el = document.getElementById('scoreBar'); if(!el) return;
+  if(!isOwnMode()){
+    const s = computeScores(), m = computeMgrScores();
+    const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0), mr = state.kras.reduce((n,k) => n + k.goals.filter(g => g.apprRating).length, 0);
+    el.innerHTML = `
+      <div class="score-tile"><div class="k">Employee self score</div><div class="v">${fmt(s.total)} / 100</div><div class="s">KRA ${fmt(s.kra)} · Role ${fmt(s.role)} · ≈ ${suggestedOverall(s.total)}</div></div>
+      <div class="score-tile final" style="border-color:#6D28D9;background:#F1EBFD;"><div class="k">Manager score</div><div class="v" style="color:#6D28D9;">${fmt(m.total)} / 100</div><div class="s">KRA ${fmt(m.kra)} · Role ${fmt(m.role)} · ${mr} of ${tasks} task(s) rated</div></div>
+      <div class="score-tile"><div class="k">Difference</div><div class="v">${fmt(m.total - s.total)}</div><div class="s">Manager − Employee</div></div>`;
+    return;
+  }
   const s = computeScores();
   const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0), rated = state.kras.reduce((n,k) => n + k.goals.filter(g => g.selfRating).length, 0);
   el.innerHTML = `
@@ -1323,16 +1410,16 @@ function renderScores(){
 }
 function renderOverall(){
   const el = document.getElementById('overallOptions'); if(!el) return;
-  const ro = state.phase !== 'rating' || state.mode === 'view';
+  const ro = state.phase !== 'rating' || state.mode === 'view' || !isOwnMode();
   el.innerHTML = OVERALL_LABELS.map(l => `<div class="overall-opt ${state.overallRating===l?'selected':''}" ${ro?'':`onclick="setOverall('${l}')"`}>${l}</div>`).join('');
 }
 
 /* ======================= STATUS / DRAFT ======================= */
 function setStatus(msg, ok){ const s = document.getElementById('statusText'); s.textContent = msg; s.classList.remove('ok','bad'); if(ok===true) s.classList.add('ok'); if(ok===false) s.classList.add('bad'); }
 function draftKey(){ return `mega_pa3::${state.me ? state.me.email : ''}::${state.quarter}::${state.year}::${state.phase}`; }
-function markUnsaved(){ if(state.phase !== 'targets' && state.phase !== 'rating') return; saveDraft(); setStatus('Draft kept in this browser — remember to submit.', null); }
+function markUnsaved(){ if(!isOwnMode()){ setStatus('Not submitted yet — click the Submit button when ready.', null); return; } if(state.phase !== 'targets' && state.phase !== 'rating') return; saveDraft(); setStatus('Draft kept in this browser — remember to submit.', null); }
 function saveDraft(){
-  if(state.mode === 'view') return;
+  if(state.mode === 'view' || !isOwnMode()) return;
   if(!state.me || (state.phase !== 'targets' && state.phase !== 'rating')) return;
   const d = state.phase === 'targets'
     ? { kras:state.kras, attributes:state.attributes }
@@ -1361,7 +1448,11 @@ function restoreDraft(){
 function clearDraft(){ try{ localStorage.removeItem(draftKey()); }catch(e){} }
 
 /* ======================= SUBMIT ======================= */
-function mainAction(){ if(state.phase === 'targets') submitTargets(); else if(state.phase === 'rating') submitRating(); }
+function mainAction(){
+  if(state.mode === 'team'){ submitManager(); return; }
+  if(state.mode === 'admin'){ submitFinal(); return; }
+  if(state.phase === 'targets') submitTargets(); else if(state.phase === 'rating') submitRating();
+}
 function lock(on){ state.busy = on; document.getElementById('mainBtn').disabled = on; }
 function validateTargets(){
   if(!state.kras.length) return 'Add at least one Target (KRA).';
@@ -1461,11 +1552,196 @@ async function submitRating(){
   }
 }
 
+/* ======================= MANAGER / SUPER ADMIN ======================= */
+const STAGE_TXT = { self_done:['Waiting for manager','s1'], manager_done:['Manager rated — waiting final','s2'], final:['Final ✓','s3'] };
+async function loadQueue(kind){
+  state.mode = kind; state.target = null; state.subject = null; fillProfile(state.me);
+  show('choiceView', false); show('menuBtn', true); show('footerBar', true);
+  show('yearBox', false); show('quarterRow', false); show('periodChips', false);
+  state.phase = 'loading'; resetData(); renderPage();
+  setStatus(kind === 'team' ? 'Loading your team…' : 'Loading appraisals for final review…', null);
+  const token = ++state.loadToken;
+  try{
+    const r = await call(kind === 'team' ? 'team' : 'admin_queue', {});
+    if(token !== state.loadToken) return;
+    const order = { self_done:0, manager_done:1, final:2 };
+    const first = kind === 'team' ? 'self_done' : 'manager_done';
+    state.queue = (r.queue || []).map(q => Object.assign(q, { year:String(q.year).replace(/\.0+$/,'') }))
+      .sort((a,b) => ((a.stage === first ? -1 : order[a.stage]) - (b.stage === first ? -1 : order[b.stage])) || (Number(b.year) - Number(a.year)) || (Q_ORDER[b.quarter] - Q_ORDER[a.quarter]));
+    state.team = r.team || [];
+    state.phase = 'queue'; renderPage();
+    const pend = state.queue.filter(q => q.stage === first).length;
+    setStatus(pend ? pend + ' appraisal(s) waiting for you.' : 'Nothing waiting for you right now.', true);
+  }catch(err){
+    if(token !== state.loadToken) return;
+    state.phase = 'error'; renderPage(); setStatus('❌ ' + err.message, false);
+  }
+}
+function chooseTeam(){ loadQueue('team'); }
+function chooseAdmin(){ loadQueue('admin'); }
+function backToQueue(){ if(state.busy) return; loadQueue(state.mode); }
+function openReview(i){
+  const q = state.queue[i]; if(!q || state.busy) return;
+  state.target = q.email; state.quarter = q.quarter; state.year = q.year;
+  window.scrollTo(0,0);
+  loadPeriod();
+}
+function queueHtml(){
+  const kind = state.mode;
+  const teamLine = kind === 'team' ? `<div class="note" style="margin:0 0 12px;">Your team (${state.team.length}): ${state.team.length ? '' : 'nobody has you as Reporting Manager in All Employees.'}</div>
+    <div class="team-chips" style="margin:-6px 0 14px;">${state.team.map(t => `<span>${esc(t.name)}</span>`).join('')}</div>` : '';
+  const rows = state.queue.map((q, i) => {
+    const st = STAGE_TXT[q.stage] || ['—',''];
+    return `<tr><td><b>${esc(q.name)}</b><div style="font-size:11px;color:var(--muted)">${esc(q.department || '')}</div></td>
+      <td class="mono">${esc(q.quarter)} ${esc(q.year)}</td>
+      <td>${q.self_score !== '' ? esc(q.self_score) : '—'}</td>
+      <td>${q.manager_score !== '' ? esc(q.manager_score) : '—'}</td>
+      ${kind === 'admin' ? `<td>${esc(q.manager || '—')}</td><td>${q.final_rating ? esc(q.final_rating) + (q.increment !== '' && q.increment !== undefined ? ' · ' + esc(q.increment) + '%' : '') : '—'}</td>` : ''}
+      <td><span class="stage ${st[1]}">${st[0]}</span></td>
+      <td><button class="small ${((kind === 'team' && q.stage === 'self_done') || (kind === 'admin' && q.stage === 'manager_done')) ? 'solid' : ''}" onclick="openReview(${i})">${((kind === 'team' && q.stage === 'self_done') || (kind === 'admin' && q.stage === 'manager_done')) ? 'Rate' : 'View'}</button></td></tr>`;
+  }).join('');
+  return `<div class="section">
+    <div class="section-head"><h2>${kind === 'team' ? '👥 Team Ratings' : '🏆 Final Review'}</h2><span class="weight-badge">${state.queue.length} appraisal(s)</span></div>
+    ${teamLine}
+    ${state.queue.length ? `<div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Employee</th><th>Quarter</th><th>Self score</th><th>Manager score</th>${kind === 'admin' ? '<th>Manager</th><th>Final</th>' : ''}<th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : `<div class="empty">${kind === 'team' ? 'No self ratings from your team yet. They appear here after an employee submits the self rating.' : 'No submitted appraisals yet.'}</div>`}
+  </div>`;
+}
+function reviewHtml(){
+  const canMgr = state.mode === 'team' && state.phase === 'done' && !state.mgrDone && !state.finalDone;
+  const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
+  const t = id => `<div class="ro">${esc(state.texts[id]) || '—'}</div>`;
+  const mgrSel = (v, on) => canMgr ? ratingSelect(v, on) : `<div class="ro"><b>${esc(v) || '—'}</b></div>`;
+  return `
+  ${state.finalDone ? `<div class="lock-note">🔒 <div><b>Final — approved.</b> This appraisal is locked for everyone.</div></div>` : (!canMgr && !canAdm ? `<div class="lock-note">🔒 <div><b>View only.</b> ${state.mgrDone ? 'Manager rating is submitted.' : 'Waiting for the manager rating.'}</div></div>` : '')}
+  <div class="score-bar" id="scoreBar"></div>
+  <div class="section">
+    <div class="section-head"><h2>Targets (KRA) &amp; Tasks</h2><span class="weight-badge">${fmt(kraTotal())}% · ${state.kras.length} target(s)</span></div>
+    ${state.kras.map((k, i) => `
+      <div class="kra-block">
+        <div><b>Target ${i+1}: ${esc(k.name)}</b> <span class="goal-tag">· ${fmt(k.weightage)}%</span></div>
+        ${k.description ? `<div style="font-size:12px;color:var(--muted);margin-top:3px;">${esc(k.description)}</div>` : ''}
+        ${k.goals.map((g, j) => `
+          <div class="goal-row">
+            <div class="rate-grid mg">
+              <div><label>Task ${i+1}.${j+1} · ${fmt(g.weightage)}%</label><div class="ro rich">${richOf(g)}</div></div>
+              <div><label>Achievement (employee)</label><div class="ro">${esc(g.achievement) || '—'}</div></div>
+              <div><label>Self Rating</label><div class="ro">${esc(g.selfRating) || '—'}</div></div>
+              <div><label style="color:#6D28D9;">Manager Rating ${canMgr ? '<span class="req">*</span>' : ''}</label>${mgrSel(g.apprRating, `setGoal('${k.id}','${g.id}','apprRating',this.value)`)}</div>
+            </div>
+          </div>`).join('')}
+      </div>`).join('')}
+  </div>
+  ${state.attributes.length ? `
+  <div class="section">
+    <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
+    <div class="note">Rating: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
+    ${state.attributes.map((a, i) => `
+      <div class="attr-row" style="grid-template-columns:3fr 1fr 1fr 1.3fr;">
+        <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
+        <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
+        <div><label>Self Rating</label><div class="ro">${esc(a.rating) || '—'}</div></div>
+        <div><label style="color:#6D28D9;">Manager Rating ${canMgr ? '<span class="req">*</span>' : ''}</label>${mgrSel(a.apprRating, `setAttr('${a.id}','apprRating',this.value)`)}</div>
+      </div>`).join('')}
+  </div>` : ''}
+  <div class="section two-col">
+    <div><label>Facilitating Factors (employee)</label>${t('facilitating')}</div>
+    <div><label>Constraining Factors (employee)</label>${t('constraining')}</div>
+    <div><label>Outstanding Achievement (employee)</label>${t('outstanding')}</div>
+    <div><label>My Learnings (employee)</label>${t('learnings')}</div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>Training Need Identification</h2></div>
+    <table class="train-table"><thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled</th></tr></thead>
+      <tbody>${state.training.length ? state.training.map(tr => `<tr><td>${esc(tr.need)}</td><td>${esc(tr.benefit)}</td><td>${esc(tr.fulfilled)}</td></tr>`).join('') : '<tr><td colspan="3" class="empty">None.</td></tr>'}</tbody></table>
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>Employee's Overall Rating (self)</h2></div>
+    <div class="overall-options" id="overallOptions"></div>
+  </div>
+  <div class="section mgr-box">
+    <div class="section-head"><h2>Manager Review</h2></div>
+    <div class="two-col">
+      <div><label>Comments of Appraiser</label>${canMgr ? `<textarea maxlength="3000" placeholder="How facilitating factors will be reinforced and constraining factors reduced" onchange="setText('comments',this.value)">${esc(state.texts.comments)}</textarea>` : `<div class="ro">${esc(state.texts.comments) || '—'}</div>`}</div>
+      <div><label>Appraiser's / HOD's Remark</label>${canMgr ? `<textarea maxlength="3000" placeholder="Overall remark on this appraisal" onchange="state.managerRemark=this.value;markUnsaved()">${esc(state.managerRemark)}</textarea>` : `<div class="ro">${esc(state.managerRemark) || '—'}</div>`}</div>
+    </div>
+  </div>
+  ${state.mode === 'admin' ? `
+  <div class="section adm-box">
+    <div class="section-head"><h2>Final Decision (Super Admin)</h2></div>
+    <label>Final Overall Rating ${canAdm ? '<span class="req">*</span>' : ''}</label>
+    <div class="overall-options" style="margin-bottom:14px;">${OVERALL_LABELS.map(l => `<div class="overall-opt ${state.final.rating===l?'selected':''}" ${canAdm ? `onclick="setFinal('rating','${l}')"` : ''}>${l}</div>`).join('')}</div>
+    <div class="two-col">
+      <div><label>Increment % ${canAdm ? '<span class="req">*</span>' : ''}</label>${canAdm ? `<input type="number" min="0" max="100" step="0.1" value="${esc(state.final.increment)}" placeholder="e.g. 8" onchange="setFinal('increment',this.value)">` : `<div class="ro"><b>${state.final.increment !== '' ? esc(state.final.increment) + '%' : '—'}</b></div>`}</div>
+      <div><label>Final Remark</label>${canAdm ? `<textarea maxlength="3000" placeholder="Reason for the decision" onchange="setFinal('remark',this.value)">${esc(state.final.remark)}</textarea>` : `<div class="ro">${esc(state.final.remark) || '—'}</div>`}</div>
+    </div>
+    ${state.final.by ? `<div class="note" style="margin:10px 0 0;">Approved by ${esc(state.final.by)}</div>` : ''}
+  </div>` : ''}`;
+}
+function setFinal(f, v){
+  state.final[f] = v;
+  if(f === 'rating'){ const keep = window.scrollY; renderPage(); window.scrollTo(0, keep); }
+  markUnsaved();
+}
+async function submitManager(){
+  if(state.busy) return;
+  for(let i = 0; i < state.kras.length; i++) for(let j = 0; j < state.kras[i].goals.length; j++)
+    if(!state.kras[i].goals[j].apprRating){ setStatus(`❌ Task ${i+1}.${j+1}: select the manager rating.`, false); return; }
+  for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].apprRating){ setStatus(`❌ Role Attribute ${i+1}: select the manager rating.`, false); return; }
+  const m = computeMgrScores(), who = (state.subject && state.subject.name) || state.target;
+  const ok = await confirmBox('Submit manager rating?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Manager score: <b>${fmt(m.total)} / 100</b><br><br>After submitting, your rating is <b>locked</b> and goes to the Super Admin for the final decision.`, 'Yes, submit rating');
+  if(!ok) return;
+  const tg = state.target, q = state.quarter, y = state.year;
+  lock(true); busyOverlay('Saving manager rating…');
+  let saved = false, errMsg = '';
+  try{
+    await call('mgr_save', { target:tg, quarter:q, year:y,
+      goals:state.kras.flatMap(k => k.goals).map(g => ({ id:g.recId, appraiser_rating:String(g.apprRating) })),
+      attributes:state.attributes.map(a => ({ id:a.recId, appraiser_rating:String(a.apprRating) })),
+      manager_remark:state.managerRemark || '', comments:state.texts.comments || '' });
+    saved = true;
+  }catch(err){
+    errMsg = err.message;
+    if(err.network || /already submitted/i.test(err.message)){
+      busyOverlay('Checking that your rating reached the system…');
+      try{ const chk = await call('mgr_load', { target:tg, quarter:q, year:y }); if(chk.mgr_done) saved = true; }catch(e){}
+    }
+  }
+  busyOverlay(null); lock(false);
+  if(saved){ await loadPeriod(); setStatus('✅ Manager rating submitted and locked. The Super Admin has been notified.', true); }
+  else setStatus('❌ ' + errMsg + ' Your ratings are kept on screen — please try Submit again.', false);
+}
+async function submitFinal(){
+  if(state.busy) return;
+  if(!state.final.rating){ setStatus('❌ Choose the Final Overall Rating.', false); return; }
+  const inc = parseFloat(state.final.increment);
+  if(state.final.increment === '' || isNaN(inc) || inc < 0 || inc > 100){ setStatus('❌ Enter the increment % (0 to 100).', false); return; }
+  const who = (state.subject && state.subject.name) || state.target;
+  const ok = await confirmBox('Approve & finalize?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Final rating: <b>${esc(state.final.rating)}</b><br>Increment: <b>${fmt(inc)}%</b><br><br>After approval, this appraisal is <b>final and locked</b> for everyone.`, 'Yes, approve');
+  if(!ok) return;
+  const tg = state.target, q = state.quarter, y = state.year;
+  lock(true); busyOverlay('Saving final decision…');
+  let saved = false, errMsg = '';
+  try{
+    await call('admin_save', { target:tg, quarter:q, year:y, final_rating:state.final.rating, increment:String(inc), final_remark:state.final.remark || '' });
+    saved = true;
+  }catch(err){
+    errMsg = err.message;
+    if(err.network || /already final/i.test(err.message)){
+      busyOverlay('Checking that the decision reached the system…');
+      try{ const chk = await call('admin_load', { target:tg, quarter:q, year:y }); if(chk.final_done) saved = true; }catch(e){}
+    }
+  }
+  busyOverlay(null); lock(false);
+  if(saved){ await loadPeriod(); setStatus('✅ Appraisal approved and final. The employee has been emailed.', true); }
+  else setStatus('❌ ' + errMsg, false);
+}
+
 /* ======================= PDF ======================= */
 function downloadPdf(){
   if(!(state.phase === 'targets' || state.phase === 'rating' || state.phase === 'done')){ setStatus('Please wait — still loading.', null); return; }
   applyWeights();
-  const me = state.me || {};
+  const me = (isOwnMode() ? state.me : state.subject) || {};
   downloadAppraisalPdf({
     employeeName:me.name, department:me.department, appraiser:me.manager || '', year:state.year, quarter:state.quarter,
     kraSectionWeight:Math.round(kraTotal()*100)/100 || 100, roleSectionWeight:Math.round(roleTotal()*100)/100, ratingMap:RATING_PCT,
@@ -1473,7 +1749,7 @@ function downloadPdf(){
       goals:k.goals.filter(g => g.name || g.achievement).map(g => ({ name:g.name, html:(g.html && /<[a-z]/i.test(g.html)) ? sanitizeRich(g.html) : '', achievement:g.achievement, weightage:g.weightage, selfRating:g.selfRating, apprRating:g.apprRating })) })),
     attributes:state.attributes.map(a => ({ name:a.name, weightage:a.weightage, rating:a.rating })),
     facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
-    comments:state.texts.comments, learnings:state.texts.learnings,
+    comments:state.texts.comments, learnings:state.texts.learnings, hodRemark:state.managerRemark || '',
     training:state.training.map(t => ({ need:t.need, benefit:t.benefit, fulfilled:t.fulfilled })),
     overallRating:state.overallRating || ''
   }, setStatus);
