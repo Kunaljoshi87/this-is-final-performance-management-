@@ -1027,7 +1027,7 @@ async function loadPeriod(){
     if(token !== state.loadToken) return;
     if(isOwnMode()){ if(r.employee){ const keep = { is_manager:state.me.is_manager, is_admin:state.me.is_admin, is_hod:state.me.is_hod }; state.me = Object.assign(state.me || {}, r.employee); if(r.employee.is_manager === undefined) Object.assign(state.me, keep); } }
     else { state.subject = r.employee || {}; fillProfile(state.subject); }
-    state.mgrDone = !!r.mgr_done; state.finalDone = !!r.final_done; state.hodDone = !!r.hod_done;
+    state.mgrDone = !!r.mgr_done; state.finalDone = !!r.final_done; state.hodDone = !!r.hod_done; state.serverVersion = r.version || '';
     state.phase = r.phase;
     state.kras = (r.kras || []).map(k => ({ id:nid('k'), recId:String(k.id), name:k.name, description:k.description, weightage:num(k.weightage),
       goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, html:richFromServer(g.html, g.name), weightage:num(g.weightage), achievement:g.achievement || '',
@@ -1052,7 +1052,7 @@ async function loadPeriod(){
     if(!isOwnMode()){
       const canMgr = state.mode === 'team' && state.phase === 'done' && !state.mgrDone && !state.finalDone;
       const canAdm = state.mode === 'admin' && state.mgrDone && state.hodDone && !state.finalDone;
-      const canHod = state.mode === 'hod' && state.mgrDone && !state.hodDone && !state.finalDone && varSetupOk();
+      const canHod = canHodNow();
       setStatus(canMgr ? 'Give your Manager Rating for every task and role attribute, then click Submit Manager Rating.' : canHod ? 'Enter the company score, check the variable pay, then click Submit HOD Review.' : canAdm ? 'Choose the final rating, check the final payout, then click Approve & Finalize.' : 'View only.', true);
       return;
     }
@@ -1218,7 +1218,7 @@ function renderBanner(){
     if(!state.target){ btn.classList.add('hidden'); el.innerHTML = ''; return; }
     const canMgr = state.mode === 'team' && p === 'done' && !state.mgrDone && !state.finalDone;
     const canAdm = state.mode === 'admin' && state.mgrDone && state.hodDone && !state.finalDone;
-    const canHod = state.mode === 'hod' && state.mgrDone && !state.hodDone && !state.finalDone && varSetupOk();
+    const canHod = canHodNow();
     btn.classList.toggle('hidden', !(canMgr || canAdm || canHod));
     btn.textContent = canMgr ? 'Submit Manager Rating' : canHod ? 'Submit HOD Review' : 'Approve & Finalize';
     btn.disabled = state.busy;
@@ -1473,7 +1473,7 @@ function clearDraft(){ try{ localStorage.removeItem(draftKey()); }catch(e){} }
 /* ======================= SUBMIT ======================= */
 function mainAction(){
   if(state.mode === 'team'){ submitManager(); return; }
-  if(state.mode === 'admin'){ submitFinal(); return; }
+  if(state.mode === 'admin'){ if(canHodNow()) submitHod(); else submitFinal(); return; }
   if(state.mode === 'hod'){ submitHod(); return; }
   if(state.phase === 'targets') submitTargets(); else if(state.phase === 'rating') submitRating();
 }
@@ -1673,7 +1673,7 @@ function periodHtml(){
 function reviewHtml(){
   const canMgr = state.mode === 'team' && state.phase === 'done' && !state.mgrDone && !state.finalDone;
   const canAdm = state.mode === 'admin' && state.mgrDone && state.hodDone && !state.finalDone;
-  const canHod = state.mode === 'hod' && state.mgrDone && !state.hodDone && !state.finalDone && varSetupOk();
+  const canHod = canHodNow();
   const t = id => `<div class="ro">${esc(state.texts[id]) || '—'}</div>`;
   const mgrSel = (v, on) => canMgr ? ratingSelect(v, on) : `<div class="ro"><b>${esc(v) || '—'}</b></div>`;
   return `
@@ -1731,7 +1731,7 @@ function reviewHtml(){
     </div>
   </div>
   ${(state.mode === 'hod' || state.mode === 'admin' || state.hodDone) && state.mgrDone ? hodBoxHtml(canHod) : ''}
-  ${state.mode === 'admin' && !state.hodDone && !state.finalDone ? `<div class="lock-note" style="background:#FDF3E1;border-color:#E9C46A;color:#7A5200;">⚠️ <div>The HOD has not calculated the variable pay yet. You can approve after the HOD review.</div></div>` : ''}
+  ${state.mode === 'admin' && !state.hodDone && !state.finalDone ? `<div class="lock-note" style="background:#FDF3E1;border-color:#E9C46A;color:#7A5200;">⚠️ <div>The HOD review is not done yet. As Super Admin you can do it here: enter the company score in the HOD box above and click <b>Submit HOD Review</b>, then approve.</div></div>` : ''}
   ${state.mode === 'admin' ? `
   <div class="section adm-box">
     <div class="section-head"><h2>Final Decision (Super Admin)</h2></div>
@@ -1749,6 +1749,7 @@ function setFinal(f, v){
   if(f === 'rating'){ const keep = window.scrollY; renderPage(); window.scrollTo(0, keep); }
   markUnsaved();
 }
+function canHodNow(){ return (state.mode === 'hod' || state.mode === 'admin') && state.mgrDone && !state.hodDone && !state.finalDone && varSetupOk(); }
 function varSetupOk(){
   const yv = Number(state.hod.yv), ep = Number(state.hod.ep), cp = Number(state.hod.cp);
   return state.hod.yv !== '' && state.hod.ep !== '' && state.hod.cp !== '' && yv > 0 && Math.abs(ep + cp - 100) < 0.001;
@@ -1769,7 +1770,7 @@ function hodBoxHtml(canHod){
   const v = (live, stored) => saved && stored !== '' ? money(stored) : money(live);
   return `<div class="section hod-box" id="hodBox">
     <div class="section-head"><h2>HOD Review — Variable pay for ${state.quarter} ${state.year}</h2><span class="weight-badge" style="border-color:#0E7490;color:#0E7490;background:#E6F6FA;">Split ${fmt(c.ep)} / ${fmt(c.cp)}</span></div>
-    ${ok ? '' : `<div class="lock-note" style="background:#FDECEC;border-color:#F5B5B5;color:#9B1C1C;">⛔ <div><b>Variable pay is not set up for this employee.</b> In All Employees fill <b>Yearly_Variable</b> (more than 0), <b>Employee_Performance_Percent</b> and <b>Company_Performance_Percent</b> (together = 100). Now: ${esc(state.hod.yv || '—')} · ${esc(state.hod.ep || '—')}% · ${esc(state.hod.cp || '—')}%</div></div>`}
+    ${ok ? '' : `<div class="lock-note" style="background:#FDECEC;border-color:#F5B5B5;color:#9B1C1C;">⛔ <div><b>Variable pay is not set up for this employee.</b> In All Employees fill <b>Yearly_Variable</b> (more than 0), <b>Employee_Performance_Percent</b> and <b>Company_Performance_Percent</b> (together = 100). Now: ${esc(state.hod.yv || '—')} · ${esc(state.hod.ep || '—')}% · ${esc(state.hod.cp || '—')}%.<br><b>Server version: ${state.serverVersion ? 'v' + esc(state.serverVersion) : 'OLD (before v16)'}</b>${Number(state.serverVersion) >= 16 ? ' — the fields are empty for this employee in All Employees.' : ' — the Zoho function is NOT updated. Paste the VERSION 16 code into appraisal_api and Save.'}</div></div>`}
     <table class="calc">
       <tr><td>Yearly variable (from All Employees)</td><td>${money(c.yv)}</td></tr>
       <tr><td>Quarter eligible amount (yearly ÷ 4)</td><td>${money(c.eligible)}</td></tr>
@@ -1814,7 +1815,7 @@ async function submitHod(){
     errMsg = err.message;
     if(err.network || /already submitted/i.test(err.message)){
       busyOverlay('Checking that your review reached the system…');
-      try{ const chk = await call('hod_load', { target:tg, quarter:q, year:y }); if(chk.hod_done) saved = true; }catch(e){}
+      try{ const chk = await call(state.mode === 'admin' ? 'admin_load' : 'hod_load', { target:tg, quarter:q, year:y }); if(chk.hod_done) saved = true; }catch(e){}
     }
   }
   busyOverlay(null); lock(false);
