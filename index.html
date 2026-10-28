@@ -308,6 +308,11 @@
       <h3>HOD Review</h3>
       <p>HOD: see every employee's appraisal after the manager rating. Enter the company score — the quarter's variable pay is calculated for you.</p>
     </div>
+    <div class="choice-card adm hidden" id="diagCard" onclick="chooseDiag()" style="border-top-color:#475569;">
+      <div class="ic">🔧</div>
+      <h3 style="color:#475569;">Diagnostics</h3>
+      <p>Super Admin: check one employee's data — which fields Zoho returns, their values, and what is missing.</p>
+    </div>
     <div class="choice-card adm hidden" id="adminCard" onclick="chooseAdmin()">
       <span class="badge mute hidden" id="adminBadge"></span>
       <div class="ic">🏆</div>
@@ -889,7 +894,7 @@ function showMenu(){
   saveDraft();
   state.mode = 'menu'; state.loadToken++; state.phase = 'menu'; resetData();
   state.target = null; state.subject = null; fillProfile(state.me);
-  show('teamCard', !!(state.me && state.me.is_manager)); show('adminCard', !!(state.me && state.me.is_admin)); show('hodCard', !!(state.me && state.me.is_hod));
+  show('teamCard', !!(state.me && state.me.is_manager)); show('adminCard', !!(state.me && state.me.is_admin)); show('hodCard', !!(state.me && state.me.is_hod)); show('diagCard', !!(state.me && state.me.is_admin));
   show('choiceView', true); show('menuBtn', false); show('footerBar', false);
   show('yearBox', false); show('quarterRow', false); show('periodChips', false);
   document.getElementById('stepBanner').innerHTML = '';
@@ -1874,6 +1879,70 @@ async function submitFinal(){
   busyOverlay(null); lock(false);
   if(saved){ await loadPeriod(); setStatus('✅ Appraisal approved and final. The employee has been emailed.', true); }
   else setStatus('❌ ' + errMsg, false);
+}
+
+/* ======================= DIAGNOSTICS (super admin) ======================= */
+const DIAG_REQUIRED = {
+  review:['Quarter','Year_field','Employee_Email','Employee_Lookup','Status','Final_Score','Manager_KRA_Score','Manager_Role_Score','Manager_Final_Score','Manager_Remark','Appraiser_Comments','Company_Score','Weighted_Score','Eligible_Variable','Employee_Variable','Company_Variable','Variable_Payout','HOD_Remark','HOD_By','Final_Rating','Final_Payout','Final_Remark','Approved_By','Facilitating_Factors1','Constraining_Factors','Outstanding_Achievement','My_Learnings','Overall_Rating'],
+  goal:['Goal_Name','Description','KRA','Weightage','Achievement','Self_Rating','Appraiser_Rating'],
+  competency:['Attribute_Name','Weightage','Rating','Appraiser_Rating','Employee_Name1','Quarter','Year_field1']
+};
+function chooseDiag(){
+  state.mode = 'diag'; state.loadToken++;
+  show('choiceView', false); show('menuBtn', true); show('footerBar', true);
+  show('yearBox', false); show('quarterRow', false); show('periodChips', false);
+  document.getElementById('stepBanner').innerHTML = '';
+  document.getElementById('mainBtn').classList.add('hidden');
+  const d = state.diag || { email:'', quarter:currentQuarter(), year:String(new Date().getFullYear()) };
+  state.diag = d;
+  const emails = [...new Set((state.queue || []).map(q => q.email))];
+  document.getElementById('pageBody').innerHTML = `<div class="section">
+    <div class="section-head"><h2>🔧 Diagnostics</h2></div>
+    <div class="note">Pick an employee and quarter, then Run. You will see exactly what Zoho returns, and ✅ / ❌ for every field the system needs.</div>
+    <div class="tb-grid">
+      <div><label>Employee email</label><input id="dgMail" list="dgList" value="${esc(d.email)}" placeholder="balaji.kadam@megaepc.com"><datalist id="dgList">${emails.map(e => `<option value="${esc(e)}">`).join('')}</datalist></div>
+      <div><label>Quarter</label><select id="dgQ">${['Q1','Q2','Q3','Q4'].map(q => `<option ${q===d.quarter?'selected':''}>${q}</option>`).join('')}</select></div>
+      <div><label>Year</label><input id="dgY" value="${esc(d.year)}"></div>
+    </div>
+    <div style="margin-top:12px;"><button class="solid" onclick="runDiag()">Run diagnostics</button></div>
+  </div><div id="dgOut"></div>`;
+  setStatus('Diagnostics ready.', null);
+}
+function dgTable(title, obj, required){
+  const keys = Object.keys(obj || {});
+  const lowerKeys = keys.map(k => k.toLowerCase());
+  let html = `<div class="section"><div class="section-head"><h2>${title}</h2><span class="weight-badge">${keys.length} field(s) returned</span></div>`;
+  if(required){
+    const rows = required.map(f => { const ok = lowerKeys.includes(f.toLowerCase()); const v = ok ? obj[keys[lowerKeys.indexOf(f.toLowerCase())]] : '';
+      return `<tr><td class="mono">${f}</td><td>${ok ? '✅' : '❌'}</td><td>${ok ? (esc(v) || '<span style="color:var(--muted)">(empty)</span>') : '<span style="color:var(--red)">Not returned — add this field to the form AND show it in the report (link name must match)</span>'}</td></tr>`; }).join('');
+    html += `<table class="q-table"><thead><tr><th>Needed field (link name)</th><th>Found</th><th>Value</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  html += `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;color:var(--navy)">Show all ${keys.length} raw fields returned</summary>
+    <table class="q-table" style="margin-top:8px;"><tbody>${keys.map(k => `<tr><td class="mono">${esc(k)}</td><td>${esc(obj[k])}</td></tr>`).join('') || '<tr><td>Nothing returned.</td></tr>'}</tbody></table></details></div>`;
+  return html;
+}
+async function runDiag(){
+  const d = state.diag;
+  d.email = (document.getElementById('dgMail').value || '').trim().toLowerCase();
+  d.quarter = document.getElementById('dgQ').value; d.year = (document.getElementById('dgY').value || '').trim();
+  const out = document.getElementById('dgOut');
+  if(!d.email){ setStatus('❌ Enter the employee email.', false); return; }
+  out.innerHTML = '<div class="section"><div class="skel h"></div><div class="skel b"></div></div>';
+  setStatus('Running diagnostics…', null);
+  try{
+    const r = await call('diagnose', { target:d.email, quarter:d.quarter, year:d.year });
+    const kv = o => `<table class="q-table"><tbody>${Object.keys(o || {}).map(k => `<tr><td><b>${esc(k)}</b></td><td>${esc(String(o[k]))}</td></tr>`).join('')}</tbody></table>`;
+    out.innerHTML = `<div class="section adm-box"><div class="section-head"><h2>Result — ${esc(d.email)} · ${d.quarter} ${esc(d.year)}</h2><span class="weight-badge">server v${esc(r.version || '?')}</span></div>${kv(r.state)}</div>
+      <div class="section"><div class="section-head"><h2>All Employees — fields detected</h2></div>${kv(r.detected)}</div>
+      ${dgTable('Review record (Review_Report)', r.review_fields, DIAG_REQUIRED.review)}
+      ${dgTable('First task record (Goal_Report)', r.goal_fields, DIAG_REQUIRED.goal)}
+      ${dgTable('First role attribute record (Competency_Report)', r.competency_fields, DIAG_REQUIRED.competency)}
+      ${dgTable('Employee record (All_Employees)', r.employee_fields, null)}`;
+    setStatus('✅ Diagnostics done (server v' + (r.version || '?') + '). Send a screenshot of any ❌ rows.', true);
+  }catch(err){
+    out.innerHTML = `<div class="section notice"><h3>Diagnostics failed</h3><p>${esc(err.message)}</p></div>`;
+    setStatus('❌ ' + err.message, false);
+  }
 }
 
 /* ======================= PDF ======================= */
