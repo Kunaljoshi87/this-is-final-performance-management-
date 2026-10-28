@@ -360,7 +360,7 @@ const API = {
   TIMEOUT_MS: 90000
 };
 const KRA_SHARE = 80, ROLE_SHARE = 20;                       // total 100; no role attributes → targets 100
-const RATING_PCT = { 5:100, 4:90, 3:75, 2:50, 1:25 };        // must match the Creator function
+const RATING_PCT = { 5:100, 4:80, 3:60, 2:40, 1:20 };        // linear: rating ÷ 5 × 100 (= rating/25 policy) — must match the Creator function
 const RATING_LABELS = { 5:'5 - Outstanding', 4:'4 - Very Good', 3:'3 - Good', 2:'2 - Fair', 1:'1 - Poor' };
 const QUARTERS = [{id:'Q1',label:'Q1: Apr–Jun'},{id:'Q2',label:'Q2: Jul–Sep'},{id:'Q3',label:'Q3: Oct–Dec'},{id:'Q4',label:'Q4: Jan–Mar'}];
 const OVERALL_LABELS = ['Outstanding','Exceeds Expectations','Meets Expectations','Needs Improvement','Unacceptable'];
@@ -885,7 +885,8 @@ function fillProfile(p){
 }
 function isOwnMode(){ return state.mode !== 'team' && state.mode !== 'admin' && state.mode !== 'hod'; }
 /* money formatter (Indian style) */
-function money(n){ const x = Math.round(Number(n) || 0); return '₹ ' + x.toLocaleString('en-IN'); }
+function r2(n){ return Math.round((Number(n) || 0) * 100) / 100; }
+function money(n){ return '₹ ' + r2(n).toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
 function companyKey(){ return 'mega_pa_company::' + state.quarter + '::' + state.year; }
 function show(id, on){ document.getElementById(id).classList.toggle('hidden', !on); }
 function showMenu(){
@@ -894,7 +895,7 @@ function showMenu(){
   saveDraft();
   state.mode = 'menu'; state.loadToken++; state.phase = 'menu'; resetData();
   state.target = null; state.subject = null; fillProfile(state.me);
-  show('teamCard', !!(state.me && state.me.is_manager)); show('adminCard', !!(state.me && state.me.is_admin)); show('hodCard', !!(state.me && state.me.is_hod)); show('diagCard', !!(state.me && state.me.is_admin));
+  show('teamCard', !!(state.me && state.me.is_manager)); show('adminCard', !!(state.me && state.me.is_admin)); show('hodCard', false); show('diagCard', !!(state.me && state.me.is_admin));
   show('choiceView', true); show('menuBtn', false); show('footerBar', false);
   show('yearBox', false); show('quarterRow', false); show('periodChips', false);
   document.getElementById('stepBanner').innerHTML = '';
@@ -1047,18 +1048,19 @@ async function loadPeriod(){
     state.final = { rating:rv.final_rating || '', payout:rv.final_payout || '', remark:rv.final_remark || '', by:rv.approved_by || '' };
     let savedCo = ''; try{ savedCo = localStorage.getItem(companyKey()) || ''; }catch(e){}
     const emp = r.employee || {};
-    state.hod = { company:rv.company_score || (state.mode === 'hod' && !r.hod_done ? savedCo : ''), weighted:rv.weighted_score || '', remark:rv.hod_remark || '', by:rv.hod_by || '',
+    state.hod = { company:rv.company_score || ((state.mode === 'hod' || state.mode === 'admin') && !r.final_done ? savedCo : ''), ips:(r.final_done && rv.weighted_score) ? rv.weighted_score : '', weighted:rv.weighted_score || '', remark:rv.hod_remark || '', by:rv.hod_by || '',
                   yv:emp.yearly_variable || '', ep:emp.emp_pct || '', cp:emp.comp_pct || '',
                   eligible:rv.eligible || '', empVar:rv.emp_var || '', compVar:rv.comp_var || '', payout:rv.payout || '' };
-    if(state.mode === 'admin' && state.final.payout === '' && state.hod.payout !== '') state.final.payout = state.hod.payout;
+    state.final.payoutEdited = false;
+    if(state.mode === 'admin' && !r.final_done && state.final.payout === '' && r.mgr_done){ const c0 = hodCalc(); if(varSetupOk()) state.final.payout = String(c0.payout); }
     if(state.phase === 'targets'){ if(!restoreDraft()) addKRA(true); }
     else if(state.phase === 'rating' && state.mode !== 'view'){ restoreDraft(); }
     renderPage();
     if(!isOwnMode()){
       const canMgr = state.mode === 'team' && state.phase === 'done' && !state.mgrDone && !state.finalDone;
-      const canAdm = state.mode === 'admin' && state.mgrDone && state.hodDone && !state.finalDone;
+      const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
       const canHod = canHodNow();
-      setStatus(canMgr ? 'Give your Manager Rating for every task and role attribute, then click Submit Manager Rating.' : canHod ? 'Enter the company score, check the variable pay, then click Submit HOD Review.' : canAdm ? 'Choose the final rating, check the final payout, then click Approve & Finalize.' : 'View only.', true);
+      setStatus(canMgr ? 'Give your Manager Rating for every task and role attribute, then click Submit Manager Rating.' : canHod ? 'Enter the company score, check the variable pay, then click Submit HOD Review.' : canAdm ? 'Check / change the % values and Company performance %, choose the final rating, then click Approve & Finalize.' : 'View only.', true);
       return;
     }
     setStatus({ targets:'Step 1 — add your Targets (KRA) and tasks, then click Submit Targets.',
@@ -1071,7 +1073,7 @@ async function loadPeriod(){
   }
 }
 function resetData(){
-  state.hodDone = false; state.hod = { company:'', weighted:'', remark:'', by:'', yv:'', ep:'', cp:'', eligible:'', empVar:'', compVar:'', payout:'' };
+  state.hodDone = false; state.hod = { company:'', ips:'', weighted:'', remark:'', by:'', yv:'', ep:'', cp:'', eligible:'', empVar:'', compVar:'', payout:'' };
   state.mgrDone = false; state.finalDone = false; state.managerRemark = ''; state.managerScore = ''; state.selfScoreSaved = '';
   state.final = { rating:'', payout:'', remark:'', by:'' };
   state.kras = []; state.attributes = []; state.training = []; state.overallRating = ''; state.reviewStatus = '';
@@ -1222,15 +1224,15 @@ function renderBanner(){
     document.getElementById('pdfBtn').disabled = !(p === 'rating' || p === 'done');
     if(!state.target){ btn.classList.add('hidden'); el.innerHTML = ''; return; }
     const canMgr = state.mode === 'team' && p === 'done' && !state.mgrDone && !state.finalDone;
-    const canAdm = state.mode === 'admin' && state.mgrDone && state.hodDone && !state.finalDone;
+    const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
     const canHod = canHodNow();
     btn.classList.toggle('hidden', !(canMgr || canAdm || canHod));
     btn.textContent = canMgr ? 'Submit Manager Rating' : canHod ? 'Submit HOD Review' : 'Approve & Finalize';
     btn.disabled = state.busy;
     const who = (state.subject && state.subject.name) || state.target;
-    const stTxt = state.finalDone ? 'FINAL — approved' + (state.final.rating ? ' · ' + state.final.rating : '') : state.hodDone ? 'HOD review done — waiting for Super Admin' : state.mgrDone ? 'Manager rating done — waiting for HOD review' : p === 'done' ? 'Self rating done — waiting for manager rating' : 'Employee has not submitted self rating yet';
+    const stTxt = state.finalDone ? 'FINAL — approved' + (state.final.rating ? ' · ' + state.final.rating : '') : state.mgrDone ? 'Manager rating done — waiting for Super Admin' : p === 'done' ? 'Self rating done — waiting for manager rating' : 'Employee has not submitted self rating yet';
     el.innerHTML = `<div class="step-banner ${state.finalDone ? 'done' : 'rating'}"><span class="num">${state.mode === 'team' ? 'MANAGER' : state.mode === 'hod' ? 'HOD' : 'SUPER ADMIN'}</span><div><div class="t">${esc(who)} — ${state.quarter} ${state.year}</div><div class="d">${esc(stTxt)}</div></div>
-      <div class="steps"><span class="on">1 · Self</span><span class="${state.mgrDone?'on':''}">2 · Manager</span><span class="${state.hodDone?'on':''}">3 · HOD</span><span class="${state.finalDone?'on':''}">4 · Final</span></div></div>`;
+      <div class="steps"><span class="on">1 · Self</span><span class="${state.mgrDone?'on':''}">2 · Manager</span><span class="${state.finalDone?'on':''}">3 · Super Admin</span></div></div>`;
     return;
   }
   if(state.mode === 'view'){
@@ -1426,7 +1428,7 @@ function renderScores(){
     el.innerHTML = `
       <div class="score-tile"><div class="k">Employee self score</div><div class="v">${fmt(s.total)} / 100</div><div class="s">KRA ${fmt(s.kra)} · Role ${fmt(s.role)} · ≈ ${suggestedOverall(s.total)}</div></div>
       <div class="score-tile final" style="border-color:#6D28D9;background:#F1EBFD;"><div class="k">Manager score</div><div class="v" style="color:#6D28D9;">${fmt(m.total)} / 100</div><div class="s">KRA ${fmt(m.kra)} · Role ${fmt(m.role)} · ${mr} of ${tasks} task(s) rated</div></div>
-      <div class="score-tile"><div class="k">Difference</div><div class="v">${fmt(m.total - s.total)}</div><div class="s">Manager − Employee</div></div>`;
+      <div class="score-tile"><div class="k">Manager: Task / Role achievement</div><div class="v">${fmt(kraTotal() ? m.kra * 100 / kraTotal() : 0)}% / ${roleTotal() ? fmt(m.role * 100 / roleTotal()) + '%' : '—'}</div><div class="s">Difference vs self: ${fmt(m.total - s.total)}</div></div>`;
     return;
   }
   const s = computeScores();
@@ -1478,7 +1480,7 @@ function clearDraft(){ try{ localStorage.removeItem(draftKey()); }catch(e){} }
 /* ======================= SUBMIT ======================= */
 function mainAction(){
   if(state.mode === 'team'){ submitManager(); return; }
-  if(state.mode === 'admin'){ if(canHodNow()) submitHod(); else submitFinal(); return; }
+  if(state.mode === 'admin'){ submitFinal(); return; }
   if(state.mode === 'hod'){ submitHod(); return; }
   if(state.phase === 'targets') submitTargets(); else if(state.phase === 'rating') submitRating();
 }
@@ -1582,8 +1584,9 @@ async function submitRating(){
 }
 
 /* ======================= MANAGER / SUPER ADMIN ======================= */
-const STAGE_TXT = { self_done:['Waiting for manager','s1'], manager_done:['Manager rated — waiting HOD','s2'], hod_done:['HOD reviewed — waiting final','s4'], final:['Final ✓','s3'] };
-const FIRST_STAGE = { team:'self_done', hod:'manager_done', admin:'hod_done' };
+const STAGE_TXT = { self_done:['Waiting for manager','s1'], manager_done:['Manager rated — waiting Super Admin','s2'], hod_done:['Waiting Super Admin','s2'], final:['Final ✓','s3'] };
+const FIRST_STAGE = { team:'self_done', hod:'manager_done', admin:'manager_done' };
+function isFirst(kind, st){ return st === FIRST_STAGE[kind] || (kind === 'admin' && st === 'hod_done'); }
 async function loadQueue(kind){
   state.mode = kind; state.target = null; state.subject = null; fillProfile(state.me);
   show('choiceView', false); show('menuBtn', true); show('footerBar', true);
@@ -1597,10 +1600,10 @@ async function loadQueue(kind){
     const order = { self_done:0, manager_done:1, hod_done:2, final:3 };
     const first = FIRST_STAGE[kind];
     state.queue = (r.queue || []).map(q => Object.assign(q, { year:String(q.year).replace(/\.0+$/,'') }))
-      .sort((a,b) => ((a.stage === first ? -1 : order[a.stage]) - (b.stage === first ? -1 : order[b.stage])) || (Number(b.year) - Number(a.year)) || (Q_ORDER[b.quarter] - Q_ORDER[a.quarter]));
+      .sort((a,b) => ((isFirst(kind, a.stage) ? -1 : order[a.stage]) - (isFirst(kind, b.stage) ? -1 : order[b.stage])) || (Number(b.year) - Number(a.year)) || (Q_ORDER[b.quarter] - Q_ORDER[a.quarter]));
     state.team = r.team || [];
     state.phase = 'queue'; renderPage();
-    const pend = state.queue.filter(q => q.stage === first).length;
+    const pend = state.queue.filter(q => isFirst(kind, q.stage)).length;
     setStatus((pend ? pend + ' appraisal(s) waiting for you.' : 'Nothing waiting for you right now.') + ' · ' + state.queue.length + ' total · server v' + (r.version || 'old — update the Zoho function'), true);
   }catch(err){
     if(token !== state.loadToken) return;
@@ -1631,12 +1634,12 @@ function queueHtml(){
       ${kind !== 'team' ? `<td>${q.eligible ? money(q.eligible) : '—'}</td><td>${q.payout ? '<b>' + money(q.payout) + '</b>' : '—'}</td>` : ''}
       ${kind === 'admin' ? `<td>${q.final_rating ? esc(q.final_rating) + (q.final_payout ? ' · ' + money(q.final_payout) : '') : '—'}</td>` : ''}
       <td><span class="stage ${st[1]}">${st[0]}</span></td>
-      <td><button class="small ${(q.stage === first || false) ? 'solid' : ''}" onclick="openReview(${i})">${(q.stage === first) ? 'Review' : 'View'}</button></td></tr>`;
+      <td><button class="small ${isFirst(kind, q.stage) ? 'solid' : ''}" onclick="openReview(${i})">${isFirst(kind, q.stage) ? 'Review' : 'View'}</button></td></tr>`;
   }).join('');
   return (kind === 'admin' ? periodHtml() : '') + `<div class="section">
     <div class="section-head"><h2>${kind === 'team' ? '👥 Team Ratings' : kind === 'hod' ? '🏢 HOD Review' : '🏆 Final Review'}</h2><span class="weight-badge">${state.queue.length} appraisal(s)</span></div>
     ${teamLine}
-    ${state.queue.length ? `<div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Employee</th><th>Quarter</th><th>Self score</th><th>Manager score</th>${kind !== 'team' ? '<th>Eligible</th><th>Payout (HOD)</th>' : ''}${kind === 'admin' ? '<th>Final</th>' : ''}<th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+    ${state.queue.length ? `<div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Employee</th><th>Quarter</th><th>Self score</th><th>Manager score</th>${kind !== 'team' ? '<th>Eligible</th><th>Calculated payout</th>' : ''}${kind === 'admin' ? '<th>Final</th>' : ''}<th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
       : `<div class="empty">${kind === 'team' ? 'No self ratings from your team yet. They appear here after an employee submits the self rating.' : kind === 'hod' ? 'No appraisals are waiting for HOD review yet. An employee appears here as soon as their manager submits the Manager Rating.' : 'No submitted appraisals yet.'}</div>`}
   </div>`;
 }
@@ -1649,35 +1652,40 @@ function periodHtml(){
   state.period = state.period || { year:years[0], p:'FY' };
   if(!years.includes(state.period.year)) state.period.year = years[0];
   const qs = PERIODS[state.period.p];
+  const num = v => (v === '' || v === undefined || v === null || isNaN(Number(v))) ? null : Number(v);
   const byEmp = {};
   state.queue.filter(q => q.year === state.period.year && qs.includes(q.quarter)).forEach(q => {
-    const e = byEmp[q.email] = byEmp[q.email] || { name:q.name, dept:q.department, eligible:0, paid:0, done:0, quarters:[] };
-    const pay = q.final_payout !== '' && q.final_payout !== undefined ? Number(q.final_payout) : (q.payout !== '' && q.payout !== undefined ? Number(q.payout) : null);
-    if(q.eligible !== '' && q.eligible !== undefined && pay !== null){ e.eligible += Number(q.eligible) || 0; e.paid += pay || 0; e.done++; }
-    e.quarters.push(q.quarter + (pay !== null ? '' : ' (pending)'));
+    const e = byEmp[q.email] = byEmp[q.email] || { name:q.name, dept:q.department, target:0, ind:0, comp:0, paid:0, done:0, quarters:[] };
+    const el = num(q.eligible), ind = num(q.emp_var), cmp = num(q.comp_var), calc = num(q.payout), fin = num(q.final_payout);
+    if(el !== null && calc !== null){
+      e.done++; e.target += el; e.ind += ind || 0; e.comp += cmp || 0;
+      e.paid += fin !== null ? fin : calc;
+      e.quarters.push(q.quarter + ': ' + money(fin !== null ? fin : calc) + (fin !== null ? ' ✓' : ''));
+    } else e.quarters.push(q.quarter + ': pending');
   });
-  const rows = Object.values(byEmp).sort((a,b) => a.name.localeCompare(b.name)).map(e => `<tr>
+  const list = Object.values(byEmp).sort((a,b) => a.name.localeCompare(b.name));
+  const rows = list.map(e => `<tr>
     <td><b>${esc(e.name)}</b><div style="font-size:11px;color:var(--muted)">${esc(e.dept || '')}</div></td>
-    <td class="mono">${esc(e.quarters.join(', '))}</td>
+    <td style="font-size:12px;">${e.quarters.map(esc).join('<br>')}</td>
     <td>${e.done} of ${qs.length}</td>
-    <td>${money(e.eligible)}</td><td><b>${money(e.paid)}</b></td>
-    <td>${e.eligible ? fmt(e.paid * 100 / e.eligible) + '%' : '—'}</td></tr>`).join('');
-  const tot = Object.values(byEmp).reduce((t,e) => ({ el:t.el + e.eligible, pd:t.pd + e.paid }), { el:0, pd:0 });
+    <td>${money(e.target)}</td><td>${money(e.ind)}</td><td>${money(e.comp)}</td><td><b>${money(e.paid)}</b></td>
+    <td>${e.target ? fmt(e.paid * 100 / e.target) + '%' : '—'}</td><td>${money(e.target - e.paid)}</td></tr>`).join('');
+  const t = list.reduce((a,e) => ({ tg:a.tg + e.target, i:a.i + e.ind, c:a.c + e.comp, p:a.p + e.paid }), { tg:0, i:0, c:0, p:0 });
   return `<div class="section adm-box">
-    <div class="section-head"><h2>💰 Variable pay summary</h2>
+    <div class="section-head"><h2>💰 Variable pay settlement</h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <select style="width:auto" onchange="state.period.year=this.value;renderPage()">${years.map(y => `<option ${y===state.period.year?'selected':''}>${y}</option>`).join('')}</select>
         <select style="width:auto" onchange="state.period.p=this.value;renderPage()">${Object.keys(PERIODS).map(k => `<option value="${k}" ${k===state.period.p?'selected':''}>${PERIOD_LABEL[k]}</option>`).join('')}</select>
       </div></div>
-    <div class="note">Each quarter's eligible amount = Yearly variable ÷ 4. Payout = final payout if approved, otherwise the HOD calculation. Only quarters reviewed by the HOD are counted.</div>
-    ${rows ? `<div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Employee</th><th>Quarters</th><th>Reviewed</th><th>Eligible</th><th>Payout</th><th>Earned</th></tr></thead><tbody>${rows}
-      <tr><td colspan="3"><b>Total</b></td><td><b>${money(tot.el)}</b></td><td><b>${money(tot.pd)}</b></td><td>${tot.el ? fmt(tot.pd * 100 / tot.el) + '%' : '—'}</td></tr></tbody></table></div>`
+    <div class="note">H1 = Q1 + Q2, H2 = Q3 + Q4, Year = H1 + H2. Each quarter is calculated separately (quarterly target = annual ÷ 4) and the earned amounts are added — never averaged. Payout = approved final payout (✓) or else the calculated amount. Target counts only quarters already calculated.</div>
+    ${rows ? `<div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Employee</th><th>Quarters</th><th>Calculated</th><th>Target</th><th>Individual earned</th><th>Company earned</th><th>Total earned</th><th>Achievement</th><th>Not earned</th></tr></thead><tbody>${rows}
+      <tr><td colspan="3"><b>Total</b></td><td><b>${money(t.tg)}</b></td><td><b>${money(t.i)}</b></td><td><b>${money(t.c)}</b></td><td><b>${money(t.p)}</b></td><td>${t.tg ? fmt(t.p * 100 / t.tg) + '%' : '—'}</td><td><b>${money(t.tg - t.p)}</b></td></tr></tbody></table></div>`
       : '<div class="empty">No appraisals in this period.</div>'}
   </div>`;
 }
 function reviewHtml(){
   const canMgr = state.mode === 'team' && state.phase === 'done' && !state.mgrDone && !state.finalDone;
-  const canAdm = state.mode === 'admin' && state.mgrDone && state.hodDone && !state.finalDone;
+  const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
   const canHod = canHodNow();
   const t = id => `<div class="ro">${esc(state.texts[id]) || '—'}</div>`;
   const mgrSel = (v, on) => canMgr ? ratingSelect(v, on) : `<div class="ro"><b>${esc(v) || '—'}</b></div>`;
@@ -1735,15 +1743,14 @@ function reviewHtml(){
       <div><label>Appraiser's / HOD's Remark</label>${canMgr ? `<textarea maxlength="3000" placeholder="Overall remark on this appraisal" onchange="state.managerRemark=this.value;markUnsaved()">${esc(state.managerRemark)}</textarea>` : `<div class="ro">${esc(state.managerRemark) || '—'}</div>`}</div>
     </div>
   </div>
-  ${(state.mode === 'hod' || state.mode === 'admin' || state.hodDone) && state.mgrDone ? hodBoxHtml(canHod) : ''}
-  ${state.mode === 'admin' && !state.hodDone && !state.finalDone ? `<div class="lock-note" style="background:#FDF3E1;border-color:#E9C46A;color:#7A5200;">⚠️ <div>The HOD review is not done yet. As Super Admin you can do it here: enter the company score in the HOD box above and click <b>Submit HOD Review</b>, then approve.</div></div>` : ''}
+  ${state.mode === 'admin' && state.mgrDone ? hodBoxHtml(canAdm) : ''}
   ${state.mode === 'admin' ? `
   <div class="section adm-box">
     <div class="section-head"><h2>Final Decision (Super Admin)</h2></div>
     <label>Final Overall Rating ${canAdm ? '<span class="req">*</span>' : ''}</label>
     <div class="overall-options" style="margin-bottom:14px;">${OVERALL_LABELS.map(l => `<div class="overall-opt ${state.final.rating===l?'selected':''}" ${canAdm ? `onclick="setFinal('rating','${l}')"` : ''}>${l}</div>`).join('')}</div>
     <div class="two-col">
-      <div><label>Final variable payout for this quarter (₹) ${canAdm ? '<span class="req">*</span>' : ''}</label>${canAdm ? `<input type="number" min="0" step="1" value="${esc(state.final.payout)}" placeholder="HOD calculated: ${esc(state.hod.payout)}" onchange="setFinal('payout',this.value)"><div class="note" style="margin:4px 0 0;">Pre-filled with the HOD calculation (${money(state.hod.payout)}). Change only if needed.</div>` : `<div class="ro"><b>${state.final.payout !== '' ? money(state.final.payout) : '—'}</b></div>`}</div>
+      <div><label>Final variable payout for this quarter (₹) ${canAdm ? '<span class="req">*</span>' : ''}</label>${canAdm ? `<input id="finPay" type="number" min="0" step="0.01" value="${esc(state.final.payout)}" oninput="setFinal('payout',this.value)"><div class="note" style="margin:4px 0 0;">Auto-filled from the calculation above (<span id="finCalc">${money(hodCalc().payout)}</span>). You can type a different amount.</div>` : `<div class="ro"><b>${state.final.payout !== '' ? money(state.final.payout) : '—'}</b></div>`}</div>
       <div><label>Final Remark</label>${canAdm ? `<textarea maxlength="3000" placeholder="Reason for the decision" onchange="setFinal('remark',this.value)">${esc(state.final.remark)}</textarea>` : `<div class="ro">${esc(state.final.remark) || '—'}</div>`}</div>
     </div>
     ${state.final.by ? `<div class="note" style="margin:10px 0 0;">Approved by ${esc(state.final.by)}</div>` : ''}
@@ -1751,56 +1758,87 @@ function reviewHtml(){
 }
 function setFinal(f, v){
   state.final[f] = v;
+  if(f === 'payout') state.final.payoutEdited = true;
   if(f === 'rating'){ const keep = window.scrollY; renderPage(); window.scrollTo(0, keep); }
   markUnsaved();
 }
-function canHodNow(){ return (state.mode === 'hod' || state.mode === 'admin') && state.mgrDone && !state.hodDone && !state.finalDone && varSetupOk(); }
+function canHodNow(){ return false; /* HOD step removed — Super Admin decides */ }
 function varSetupOk(){
   const yv = Number(state.hod.yv), ep = Number(state.hod.ep), cp = Number(state.hod.cp);
   return state.hod.yv !== '' && state.hod.ep !== '' && state.hod.cp !== '' && yv > 0 && Math.abs(ep + cp - 100) < 0.001;
 }
 function hodCalc(){
-  const mgr = Number(state.managerScore !== '' ? state.managerScore : computeMgrScores().total) || 0;
+  /* Layer 1 — appraisal (Task 80 : Role 20) from MANAGER ratings */
+  const m = computeMgrScores();
+  const kt = kraTotal() || 0, rt = roleTotal() || 0;
+  const taskAch = kt ? m.kra * 100 / kt : 0;            // Task achievement %  (= task rating / 25)
+  const roleAch = rt ? m.role * 100 / rt : 0;           // Role achievement %  (= role rating / 25)
+  const mgrAuto = state.managerScore !== '' && !isNaN(Number(state.managerScore)) ? Number(state.managerScore) : m.total;  // from manager ratings
+  const mgr = state.hod.ips !== '' && !isNaN(Number(state.hod.ips)) ? Number(state.hod.ips) : mgrAuto;  // Individual Performance % used for pay (Super Admin can change)
+  /* Layer 2 — variable pay (Individual : Company from All Employees) */
   const yv = Number(state.hod.yv) || 0, ep = Number(state.hod.ep) || 0, cp = Number(state.hod.cp) || 0;
   const co = Number(state.hod.company) || 0;
-  const eligible = yv / 4, empPart = eligible * ep / 100, compPart = eligible * cp / 100;
-  const empVar = Math.round(empPart * mgr / 100), compVar = Math.round(compPart * co / 100);
-  return { mgr, yv, ep, cp, co, eligible: Math.round(eligible), empPart, compPart, empVar, compVar, payout: empVar + compVar,
-           weighted: Math.round((mgr * ep / 100 + co * cp / 100) * 100) / 100 };
+  const qvp = r2(yv / 4), ict = r2(qvp * ep / 100), cct = r2(qvp * cp / 100);
+  const aic = r2(ict * mgr / 100), acc = r2(cct * co / 100), qep = r2(aic + acc);
+  return { mgrAuto, m, kt, rt, taskAch, roleAch, taskRating25: taskAch / 4, roleRating25: roleAch / 4, mgr, yv, ep, cp, co,
+           eligible:qvp, empPart:ict, compPart:cct, empVar:aic, compVar:acc, payout:qep,
+           pct: qvp ? qep * 100 / qvp : 0, notEarned: r2(qvp - qep) };
 }
-function hodBoxHtml(canHod){
+function hodBoxHtml(canEdit){
   const c = hodCalc();
-  const saved = state.hodDone && state.hod.payout !== '';
-  const ok = varSetupOk();
-  const v = (live, stored) => saved && stored !== '' ? money(stored) : money(live);
+  const saved = state.finalDone && state.hod.payout !== '';
+  const shown = saved ? { empVar:Number(state.hod.empVar), compVar:Number(state.hod.compVar), payout:Number(state.hod.payout) } : c;
+  const pctShown = c.eligible ? shown.payout * 100 / c.eligible : 0;
+  const inp = (f, val, ph, extra) => `<input id="in_${f}" type="number" step="0.01" min="0" ${extra || ''} style="max-width:170px" value="${esc(val)}" placeholder="${ph}" oninput="setHod('${f}',this.value)">`;
+  const ro = (id, t) => `<span id="${id}">${t}</span>`;
   return `<div class="section hod-box" id="hodBox">
-    <div class="section-head"><h2>HOD Review — Variable pay for ${state.quarter} ${state.year}</h2><span class="weight-badge" style="border-color:#0E7490;color:#0E7490;background:#E6F6FA;">Split ${fmt(c.ep)} / ${fmt(c.cp)}</span></div>
-    ${ok ? '' : `<div class="lock-note" style="background:#FDECEC;border-color:#F5B5B5;color:#9B1C1C;">⛔ <div><b>Variable pay is not set up for this employee.</b> In All Employees fill <b>Yearly_Variable</b> (more than 0), <b>Employee_Performance_Percent</b> and <b>Company_Performance_Percent</b> (together = 100). Now: ${esc(state.hod.yv || '—')} · ${esc(state.hod.ep || '—')}% · ${esc(state.hod.cp || '—')}%.<br><b>Server version: ${state.serverVersion ? 'v' + esc(state.serverVersion) : 'OLD (before v16)'}</b>${Number(state.serverVersion) >= 16 ? ' — the fields are empty for this employee in All Employees.' : ' — the Zoho function is NOT updated. Paste the VERSION 16 code into appraisal_api and Save.'}</div></div>`}
+    <div class="section-head"><h2>Variable pay — ${state.quarter} ${state.year} (Super Admin)</h2><span class="weight-badge" style="border-color:#0E7490;color:#0E7490;background:#E6F6FA;">Individual ${ro('vEp', fmt(c.ep))}% · Company ${ro('vCp', fmt(c.cp))}%</span></div>
+    ${canEdit ? `<div class="note" style="margin:0 0 12px;">All white boxes are pre-filled (All Employees + manager rating). <b>You can change any of them</b> — the pay is re-calculated instantly.</div>` : ''}
+    <h3 style="font-size:14px;color:#0E7490;margin:4px 0 8px;">A. Individual Performance (manager ratings · Task ${fmt(c.kt)} : Role ${fmt(c.rt)})</h3>
     <table class="calc">
-      <tr><td>Yearly variable (from All Employees)</td><td>${money(c.yv)}</td></tr>
-      <tr><td>Quarter eligible amount (yearly ÷ 4)</td><td>${money(c.eligible)}</td></tr>
-      <tr><td>Employee part (${fmt(c.ep)}%) · Company part (${fmt(c.cp)}%)</td><td>${money(c.empPart)} · ${money(c.compPart)}</td></tr>
-      <tr><td>Employee performance = Manager score (KRA + role attributes)</td><td>${fmt(c.mgr)}%</td></tr>
-      <tr><td>Company performance score ${canHod ? '<span class="req">*</span>' : ''}</td><td>${canHod ? `<input type="number" min="0" max="100" step="0.1" style="max-width:160px" value="${esc(state.hod.company)}" placeholder="e.g. 80" oninput="setHod('company',this.value)"> %` : (state.hod.company !== '' ? esc(state.hod.company) + '%' : '—')}</td></tr>
-      <tr><td>Employee variable = ${money(c.empPart)} × ${fmt(c.mgr)}%</td><td id="hodEmpVar">${v(c.empVar, state.hod.empVar)}</td></tr>
-      <tr><td>Company variable = ${money(c.compPart)} × <span id="hodCoTxt">${fmt(c.co)}</span>%</td><td id="hodCompVar">${v(c.compVar, state.hod.compVar)}</td></tr>
-      <tr class="big"><td>Variable payout for ${state.quarter} ${state.year}</td><td id="hodPayout">${v(c.payout, state.hod.payout)}</td></tr>
-      <tr><td>Earned % of eligible</td><td id="hodPct">${c.eligible ? fmt((saved ? Number(state.hod.payout) : c.payout) * 100 / c.eligible) : '0'}%</td></tr>
+      <tr><td>Task rating (manager) — out of 25</td><td>${fmt(c.taskRating25)} / 25 &nbsp;·&nbsp; ${fmt(c.taskAch)}% → ${fmt(c.m.kra)} points</td></tr>
+      <tr><td>Role rating (manager) — out of 25</td><td>${c.rt ? fmt(c.roleRating25) + ' / 25 &nbsp;·&nbsp; ' + fmt(c.roleAch) + '% → ' + fmt(c.m.role) + ' points' : '— (no role attributes)'}</td></tr>
+      <tr><td>Individual Performance Score from manager rating</td><td>${fmt(c.mgrAuto)}%</td></tr>
+      <tr class="big"><td>Individual Performance % used for pay ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('ips', state.hod.ips !== '' ? state.hod.ips : String(r2(c.mgrAuto)), 'e.g. 77.6', 'max="100"') + ' %' : fmt(c.mgr) + '%'}</td></tr>
     </table>
-    <div><label>HOD Remark</label>${canHod ? `<textarea maxlength="3000" placeholder="Remark on this quarter's variable pay" onchange="setHod('remark',this.value)">${esc(state.hod.remark)}</textarea>` : `<div class="ro">${esc(state.hod.remark) || '—'}</div>`}</div>
-    <div class="note" style="margin:10px 0 0;">Rating → %: 5 = 100, 4 = 90, 3 = 75, 2 = 50, 1 = 25. Score = KRA (80) + Role attributes (20).${state.hod.by ? ' · Reviewed by ' + esc(state.hod.by) : ''}</div>
+    <h3 style="font-size:14px;color:#0E7490;margin:14px 0 8px;">B. Quarterly variable pay</h3>
+    <table class="calc">
+      <tr><td>Annual variable pay ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('yv', state.hod.yv, 'e.g. 100000') : money(c.yv)}</td></tr>
+      <tr><td>Quarterly target = annual ÷ 4</td><td>${ro('vQ', money(c.eligible))}</td></tr>
+      <tr><td>Individual % ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('ep', state.hod.ep, 'e.g. 70', 'max="100"') + ' %' : fmt(c.ep) + '%'}</td></tr>
+      <tr><td>Company % (Individual + Company = 100)</td><td>${canEdit ? inp('cp', state.hod.cp, 'e.g. 30', 'max="100"') + ' %' : fmt(c.cp) + '%'}</td></tr>
+      <tr><td>Individual component target = quarterly target × Individual %</td><td>${ro('vIT', money(c.empPart))}</td></tr>
+      <tr><td>Company component target = quarterly target × Company %</td><td>${ro('vCT', money(c.compPart))}</td></tr>
+      <tr><td>Company performance % ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('company', state.hod.company, 'e.g. 90', 'max="100"') + ' %' : (state.hod.company !== '' ? esc(state.hod.company) + '%' : '—')}</td></tr>
+      <tr><td>Individual variable = individual target × Individual Performance %</td><td>${ro('hodEmpVar', money(shown.empVar))}</td></tr>
+      <tr><td>Company variable = company target × Company performance %</td><td>${ro('hodCompVar', money(shown.compVar))}</td></tr>
+      <tr class="big"><td>Total quarterly variable pay</td><td>${ro('hodPayout', money(shown.payout))}</td></tr>
+      <tr><td>Quarterly payout achievement</td><td>${ro('hodPct', fmt(pctShown) + '%')}</td></tr>
+      <tr><td>Quarterly target not earned</td><td>${ro('hodNot', money(c.eligible - shown.payout))}</td></tr>
+    </table>
+    <div id="hodWarn" class="note" style="margin:8px 0 0;color:#9B1C1C;font-weight:600;">${canEdit && !varSetupOk() ? '⛔ Annual variable must be more than 0 and Individual % + Company % must be 100.' : ''}</div>
+    ${!canEdit && state.hod.remark ? `<div class="note" style="margin:8px 0 0;">${esc(state.hod.remark)}</div>` : ''}
+    <div class="note" style="margin:10px 0 0;">Rating 1–5 → 5 = 100%, 4 = 80%, 3 = 60%, 2 = 40%, 1 = 20% (= rating ÷ 25). Only manager ratings are used. Amounts rounded to 2 decimals.</div>
   </div>`;
 }
 function setHod(f, v){
   state.hod[f] = v;
-  if(f === 'company'){
-    try{ localStorage.setItem(companyKey(), v); }catch(e){}
-    const c = hodCalc();
-    const set = (id, t) => { const el = document.getElementById(id); if(el) el.textContent = t; };
-    set('hodCoTxt', fmt(c.co)); set('hodCompVar', money(c.compVar)); set('hodEmpVar', money(c.empVar));
-    set('hodPayout', money(c.payout)); set('hodPct', (c.eligible ? fmt(c.payout * 100 / c.eligible) : '0') + '%');
-  }
+  const setVal = (id, t) => { const el = document.getElementById(id); if(el) el.value = t; };
+  if(f === 'ep' && v !== '' && !isNaN(Number(v))){ state.hod.cp = String(r2(100 - Number(v))); setVal('in_cp', state.hod.cp); }
+  if(f === 'cp' && v !== '' && !isNaN(Number(v))){ state.hod.ep = String(r2(100 - Number(v))); setVal('in_ep', state.hod.ep); }
+  if(f === 'company'){ try{ localStorage.setItem(companyKey(), v); }catch(e){} }
+  refreshHod();
   markUnsaved();
+}
+function refreshHod(){
+  const c = hodCalc();
+  const set = (id, t) => { const el = document.getElementById(id); if(el) el.textContent = t; };
+  set('vEp', fmt(c.ep)); set('vCp', fmt(c.cp)); set('vQ', money(c.eligible)); set('vIT', money(c.empPart)); set('vCT', money(c.compPart));
+  set('hodCompVar', money(c.compVar)); set('hodEmpVar', money(c.empVar));
+  set('hodPayout', money(c.payout)); set('hodPct', fmt(c.pct) + '%'); set('hodNot', money(c.notEarned));
+  set('finCalc', money(c.payout));
+  set('hodWarn', varSetupOk() ? '' : '⛔ Annual variable must be more than 0 and Individual % + Company % must be 100.');
+  if(!state.final.payoutEdited){ state.final.payout = String(c.payout); const el = document.getElementById('finPay'); if(el) el.value = state.final.payout; }
 }
 async function submitHod(){
   if(state.busy) return;
@@ -1833,7 +1871,7 @@ async function submitManager(){
     if(!state.kras[i].goals[j].apprRating){ setStatus(`❌ Task ${i+1}.${j+1}: select the manager rating.`, false); return; }
   for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].apprRating){ setStatus(`❌ Role Attribute ${i+1}: select the manager rating.`, false); return; }
   const m = computeMgrScores(), who = (state.subject && state.subject.name) || state.target;
-  const ok = await confirmBox('Submit manager rating?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Manager score: <b>${fmt(m.total)} / 100</b><br><br>After submitting, your rating is <b>locked</b> and goes to the HOD for review.`, 'Yes, submit rating');
+  const ok = await confirmBox('Submit manager rating?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Manager score: <b>${fmt(m.total)} / 100</b><br><br>After submitting, your rating is <b>locked</b> and goes to the Super Admin.`, 'Yes, submit rating');
   if(!ok) return;
   const tg = state.target, q = state.quarter, y = state.year;
   lock(true); busyOverlay('Saving manager rating…');
@@ -1852,22 +1890,26 @@ async function submitManager(){
     }
   }
   busyOverlay(null); lock(false);
-  if(saved){ await loadPeriod(); setStatus('✅ Manager rating submitted and locked. It now goes to the HOD.', true); }
+  if(saved){ await loadPeriod(); setStatus('✅ Manager rating submitted and locked. It now goes to the Super Admin.', true); }
   else setStatus('❌ ' + errMsg + ' Your ratings are kept on screen — please try Submit again.', false);
 }
 async function submitFinal(){
   if(state.busy) return;
+  if(!varSetupOk()){ setStatus('❌ Annual variable must be more than 0 and Individual % + Company % must be 100.', false); return; }
+  const cF = hodCalc();
+  if(state.hod.company === '' || isNaN(cF.co) || cF.co < 0 || cF.co > 100){ setStatus('❌ Enter the Company performance % (0 to 100).', false); return; }
+  if(isNaN(cF.mgr) || cF.mgr < 0 || cF.mgr > 100){ setStatus('❌ Individual Performance % must be 0 to 100.', false); return; }
   if(!state.final.rating){ setStatus('❌ Choose the Final Overall Rating.', false); return; }
   const pay = parseFloat(state.final.payout);
   if(state.final.payout === '' || isNaN(pay) || pay < 0){ setStatus('❌ Enter the final variable payout (₹).', false); return; }
   const who = (state.subject && state.subject.name) || state.target;
-  const ok = await confirmBox('Approve & finalize?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Final rating: <b>${esc(state.final.rating)}</b><br>Final payout: <b>${money(pay)}</b> (HOD calculated ${money(state.hod.payout)})<br><br>After approval, this appraisal is <b>final and locked</b> for everyone.`, 'Yes, approve');
+  const ok = await confirmBox('Approve & finalize?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Final rating: <b>${esc(state.final.rating)}</b><br>Individual Performance: <b>${fmt(cF.mgr)}%</b> · Split <b>${fmt(cF.ep)} / ${fmt(cF.cp)}</b> · Company performance <b>${fmt(cF.co)}%</b><br>Calculated: <b>${money(cF.payout)}</b><br>Final payout: <b>${money(pay)}</b><br><br>After approval, this appraisal is <b>final and locked</b> for everyone.`, 'Yes, approve');
   if(!ok) return;
   const tg = state.target, q = state.quarter, y = state.year;
   lock(true); busyOverlay('Saving final decision…');
   let saved = false, errMsg = '';
   try{
-    await call('admin_save', { target:tg, quarter:q, year:y, final_rating:state.final.rating, final_payout:String(Math.round(pay)), final_remark:state.final.remark || '' });
+    await call('admin_save', { target:tg, quarter:q, year:y, final_rating:state.final.rating, final_payout:String(r2(pay)), final_remark:state.final.remark || '', yearly_variable:String(cF.yv), emp_pct:String(cF.ep), comp_pct:String(cF.cp), ips:String(r2(cF.mgr)), company_score:String(cF.co) });
     saved = true;
   }catch(err){
     errMsg = err.message;
