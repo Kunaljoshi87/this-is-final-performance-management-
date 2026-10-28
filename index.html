@@ -814,7 +814,8 @@ async function sendCode(resend){
     document.getElementById('stepCode').classList.remove('hidden');
     document.getElementById('loginCode').value = '';
     document.getElementById('loginCode').focus();
-    loginMsg(resend ? 'A new code was sent. Check your inbox (and spam folder).' : 'Code sent. Check your inbox (and spam folder).', true);
+    if(r.test_mode) loginMsg('🧪 Test login: no email is sent — enter your TEST PIN.', true);
+    else loginMsg(resend ? 'A new code was sent. Check your inbox (and spam folder).' : 'Code sent. Check your inbox (and spam folder).', true);
   }catch(err){ loginMsg(err.message, false); }
   finally{ btn.disabled = false; }
 }
