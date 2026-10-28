@@ -1596,7 +1596,7 @@ async function loadQueue(kind){
     state.team = r.team || [];
     state.phase = 'queue'; renderPage();
     const pend = state.queue.filter(q => q.stage === first).length;
-    setStatus(pend ? pend + ' appraisal(s) waiting for you.' : 'Nothing waiting for you right now.', true);
+    setStatus((pend ? pend + ' appraisal(s) waiting for you.' : 'Nothing waiting for you right now.') + ' · ' + state.queue.length + ' total · server v' + (r.version || 'old — update the Zoho function'), true);
   }catch(err){
     if(token !== state.loadToken) return;
     state.phase = 'error'; renderPage(); setStatus('❌ ' + err.message, false);
