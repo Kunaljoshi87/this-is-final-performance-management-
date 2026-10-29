@@ -219,10 +219,40 @@
   .modal .mbtns{display:flex; gap:10px; justify-content:flex-end;}
   .spinner{width:38px; height:38px; border:4px solid #DCE6F2; border-top-color:var(--navy); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 14px;}
   @keyframes spin{to{transform:rotate(360deg)}}
+  /* ===== SPLASH / LOADING GRAPHICS ===== */
+  #splash{position:fixed; inset:0; z-index:100; background:linear-gradient(135deg,#0F2D57 0%,#1E4E8C 55%,#2C6CB8 100%); display:flex; align-items:center; justify-content:center; transition:opacity .45s ease, visibility .45s;}
+  #splash.gone{opacity:0; visibility:hidden;}
+  .sp-box{text-align:center; color:#fff;}
+  .sp-orb{position:relative; width:120px; height:120px; margin:0 auto 22px;}
+  .sp-orb .ring{position:absolute; inset:0; border-radius:50%; border:3px solid rgba(255,255,255,.15); border-top-color:#fff; animation:spin 1.1s linear infinite;}
+  .sp-orb .ring.r2{inset:14px; border-top-color:#F6C35B; animation-duration:1.6s; animation-direction:reverse;}
+  .sp-orb .ring.r3{inset:28px; border-top-color:#7FD1AE; animation-duration:2.2s;}
+  .sp-orb img{position:absolute; inset:40px; width:40px; height:40px; object-fit:contain; background:#fff; border-radius:50%; padding:5px; animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+  .sp-title{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; letter-spacing:.02em;}
+  .sp-sub{font-size:12px; opacity:.8; margin-top:4px; letter-spacing:.12em; text-transform:uppercase;}
+  .sp-bar{width:220px; height:4px; background:rgba(255,255,255,.18); border-radius:4px; margin:20px auto 0; overflow:hidden;}
+  .sp-bar span{display:block; height:100%; width:40%; background:linear-gradient(90deg,#F6C35B,#7FD1AE); border-radius:4px; animation:slide 1.2s ease-in-out infinite;}
+  @keyframes slide{0%{transform:translateX(-110%)}100%{transform:translateX(280%)}}
+  .load-art{display:flex; flex-direction:column; align-items:center; padding:30px 10px 10px;}
+  .load-art .bars{display:flex; gap:7px; align-items:flex-end; height:56px; margin-bottom:14px;}
+  .load-art .bars i{display:block; width:12px; border-radius:3px 3px 0 0; background:var(--navy); animation:grow 1s ease-in-out infinite;}
+  .load-art .bars i:nth-child(2){background:#6D28D9; animation-delay:.12s;} .load-art .bars i:nth-child(3){background:var(--amber); animation-delay:.24s;}
+  .load-art .bars i:nth-child(4){background:var(--green); animation-delay:.36s;} .load-art .bars i:nth-child(5){background:#0E7490; animation-delay:.48s;}
+  @keyframes grow{0%,100%{height:12px}50%{height:56px}}
+  .load-art .t{font-size:13px; color:var(--muted); font-family:'IBM Plex Mono',monospace;}
+  .busy-bar{width:100%; height:4px; background:#E5ECF5; border-radius:4px; overflow:hidden; margin:14px 0 4px;}
+  .busy-bar span{display:block; height:100%; width:35%; background:linear-gradient(90deg,var(--navy),#6D28D9); animation:slide 1.1s ease-in-out infinite;}
+  .attr-chip{display:inline-block; font-size:10px; padding:2px 8px; border-radius:20px; background:#F1EBFD; color:#6D28D9; border:1px solid #D9C8FA; margin-left:6px;}
   .lock-note{display:flex; gap:10px; align-items:center; background:#EAF7F0; border:1px solid #9ED3B7; color:#145C3B; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:13px;}
 </style>
 </head>
 <body>
+<div id="splash"><div class="sp-box">
+  <div class="sp-orb"><div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><img class="mega-logo" alt=""></div>
+  <div class="sp-title">Performance Appraisal</div><div class="sp-sub">Mega Engineering</div>
+  <div class="sp-bar"><span></span></div>
+</div></div>
 
 <!-- =================== SIGN IN (email → 6-digit code) =================== -->
 <div class="login-wrap" id="loginView">
@@ -233,7 +263,7 @@
       <h2>Sign in</h2>
       <p>Enter your official email address. We will send a 6-digit code to it.</p>
       <label>Email address</label>
-      <input id="loginEmail" type="email" autocomplete="email" placeholder="name@megaepc.com" onkeydown="if(event.key==='Enter')sendCode()">
+      <input id="loginEmail" type="email" autocomplete="email" placeholder="name@megaepc.com" onfocus="warmUp()" oninput="warmUp()" onkeydown="if(event.key==='Enter')sendCode()">
       <button class="solid" id="sendBtn" onclick="sendCode()">Send code</button>
     </div>
 
@@ -244,7 +274,7 @@
       <input id="loginCode" class="code-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••" onkeydown="if(event.key==='Enter')verifyCode()">
       <button class="solid" id="verifyBtn" onclick="verifyCode()">Sign in</button>
       <button class="linkish" onclick="backToEmail()">Use a different email</button> &nbsp;
-      <button class="linkish" onclick="sendCode(true)">Send a new code</button>
+      <button class="linkish" id="resendBtn" onclick="sendCode(true)">Send a new code</button>
     </div>
 
     <div class="login-msg" id="loginMsg"></div>
@@ -806,28 +836,46 @@ async function callOnce(action, payload){
 /* ======================= SIGN IN ======================= */
 function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 function loginMsg(msg, ok){ const el = document.getElementById('loginMsg'); el.textContent = msg || ''; el.className = 'login-msg' + (ok===true?' ok':ok===false?' bad':''); }
+function warmUp(){ if(state.warmed) return; state.warmed = true; call('ping', {}).catch(() => {}); }
+let resendTimer = null;
+function startResendTimer(){
+  const btn = document.getElementById('resendBtn'); if(!btn) return;
+  let left = 30; clearInterval(resendTimer); btn.disabled = true; btn.textContent = 'Send a new code (' + left + 's)';
+  resendTimer = setInterval(() => { left--; if(left <= 0){ clearInterval(resendTimer); btn.disabled = false; btn.textContent = 'Send a new code'; } else btn.textContent = 'Send a new code (' + left + 's)'; }, 1000);
+}
 async function sendCode(resend){
   const email = resend && state.pending ? state.pending.email : (document.getElementById('loginEmail').value || '').trim().toLowerCase();
   if(!isEmail(email)){ loginMsg('Please enter a valid email address.', false); return; }
   const btn = document.getElementById('sendBtn'); btn.disabled = true;
-  loginMsg('Checking your email and sending the code…', null);
+  /* show the code box at once — the user can watch the inbox while the server sends */
+  state.pending = { email, challenge:'', exp:'' };
+  document.getElementById('codeMail').textContent = email;
+  document.getElementById('stepEmail').classList.add('hidden');
+  document.getElementById('stepCode').classList.remove('hidden');
+  document.getElementById('loginCode').value = '';
+  document.getElementById('loginCode').focus();
+  document.getElementById('verifyBtn').disabled = true;
+  loginMsg('⏳ Sending the code to your email…', null);
+  const reqId = (state.sendReq = (state.sendReq || 0) + 1);
   try{
     const r = await call('send_code', { email });
+    if(reqId !== state.sendReq || !state.pending) return;
     state.pending = { email, challenge:r.challenge, exp:String(r.exp) };
-    document.getElementById('codeMail').textContent = email;
-    document.getElementById('stepEmail').classList.add('hidden');
-    document.getElementById('stepCode').classList.remove('hidden');
-    document.getElementById('loginCode').value = '';
-    document.getElementById('loginCode').focus();
+    document.getElementById('verifyBtn').disabled = false;
+    startResendTimer();
     if(r.test_mode) loginMsg('🧪 Test login: no email is sent — enter your TEST PIN.', true);
-    else loginMsg(resend ? 'A new code was sent. Check your inbox (and spam folder).' : 'Code sent. Check your inbox (and spam folder).', true);
-  }catch(err){ loginMsg(err.message, false); }
+    else loginMsg((resend ? 'A new code was sent.' : 'Code sent.') + ' Check your inbox (and spam) — it comes from hr@mega.tc.', true);
+  }catch(err){
+    if(reqId !== state.sendReq) return;
+    backToEmail(); loginMsg(err.message, false);
+  }
   finally{ btn.disabled = false; }
 }
 async function verifyCode(){
   const code = (document.getElementById('loginCode').value || '').replace(/\D/g, '');
   if(code.length !== 6){ loginMsg('Enter the 6-digit code from the email.', false); return; }
   if(!state.pending){ backToEmail(); return; }
+  if(!state.pending.challenge){ loginMsg('⏳ The code is still being sent — one moment…', null); return; }
   const btn = document.getElementById('verifyBtn'); btn.disabled = true;
   loginMsg('Signing in…', null);
   try{
@@ -1053,7 +1101,7 @@ async function loadPeriod(){
                   eligible:rv.eligible || '', empVar:rv.emp_var || '', compVar:rv.comp_var || '', payout:rv.payout || '' };
     state.final.payoutEdited = false;
     if(state.mode === 'admin' && !r.final_done && state.final.payout === '' && r.mgr_done){ const c0 = hodCalc(); if(varSetupOk()) state.final.payout = String(c0.payout); }
-    if(state.phase === 'targets'){ if(!restoreDraft()) addKRA(true); }
+    if(state.phase === 'targets'){ if(!restoreDraft()) addKRA(true); if(!state.attributes.length) addDefaultAttrs(); }
     else if(state.phase === 'rating' && state.mode !== 'view'){ restoreDraft(); }
     renderPage();
     if(!isOwnMode()){
@@ -1118,7 +1166,9 @@ function findGoal(kid, gid){ return findKra(kid).goals.find(g => g.id === gid); 
 function addGoal(kid){ findKra(kid).goals.push(newGoal()); renderPage(); markUnsaved(); }
 function removeGoal(kid, gid){ const k = findKra(kid); k.goals = k.goals.filter(g => g.id !== gid); renderPage(); markUnsaved(); }
 function addAttribute(){ state.attributes.push({ id:nid('a'), recId:'', name:'', weightage:0, rating:'' }); renderPage(); markUnsaved(); }
-function removeAttribute(id){ state.attributes = state.attributes.filter(a => a.id !== id); renderPage(); markUnsaved(); }
+function removeAttribute(id){ if(state.attributes.length <= 1){ setStatus('❌ At least one Role Attribute is required (20% of the score).', false); return; } state.attributes = state.attributes.filter(a => a.id !== id); renderPage(); markUnsaved(); }
+const DEFAULT_ATTRS = ['Teamwork & Collaboration', 'Communication', 'Ownership & Accountability', 'Discipline & Punctuality', 'Learning & Initiative'];
+function addDefaultAttrs(){ DEFAULT_ATTRS.forEach(n => state.attributes.push({ id:nid('a'), recId:'', name:n, weightage:0, rating:'' })); }
 /* text edits never re-render (keeps the click where the user put it) */
 function setKra(id, f, v){ findKra(id)[f] = v; markUnsaved(); }
 function setGoal(kid, gid, f, v){ findGoal(kid, gid)[f] = v; if(f === 'selfRating' || f === 'apprRating') renderScores(); markUnsaved(); }
@@ -1204,7 +1254,7 @@ function confirmBox(title, html, okText){
 function busyOverlay(msg){
   const ov = document.getElementById('overlay');
   if(!msg){ ov.classList.add('hidden'); ov.innerHTML = ''; return; }
-  ov.innerHTML = `<div class="modal" style="text-align:center;"><div class="spinner"></div><h3>${msg}</h3><div class="mbody" style="margin:0;color:var(--muted)">Please do not close or refresh this page.</div></div>`;
+  ov.innerHTML = `<div class="modal" style="text-align:center;"><div class="load-art" style="padding:4px 0 0;"><div class="bars"><i></i><i></i><i></i><i></i><i></i></div></div><h3>${msg}</h3><div class="busy-bar"><span></span></div><div class="mbody" style="margin:0;color:var(--muted)">Please do not close or refresh this page.</div></div>`;
   ov.classList.remove('hidden');
 }
 function addTrainingRow(){ state.training.push({ id:nid('t'), saved:false, need:'', benefit:'', fulfilled:'' }); renderPage(); markUnsaved(); }
@@ -1258,7 +1308,7 @@ function renderPage(){
   applyWeights();
   renderBanner();
   const body = document.getElementById('pageBody');
-  if(state.phase === 'loading'){ body.innerHTML = '<div class="section"><div class="skel h"></div><div class="skel b"></div><div class="skel r"></div><div class="skel r"></div></div><div class="section"><div class="skel h"></div><div class="skel r"></div></div>'; return; }
+  if(state.phase === 'loading'){ body.innerHTML = '<div class="section"><div class="load-art"><div class="bars"><i></i><i></i><i></i><i></i><i></i></div><div class="t">Loading appraisal data…</div></div></div><div class="section"><div class="skel h"></div><div class="skel b"></div><div class="skel r"></div><div class="skel r"></div></div><div class="section"><div class="skel h"></div><div class="skel r"></div></div>'; return; }
   if(state.phase === 'error'){ body.innerHTML = `<div class="section notice"><h3>Could not load</h3><p>Please check your internet connection. Nothing you typed is lost.</p><button class="solid" onclick="${state.mode==='rating'?'chooseRating()':state.mode==='team'&&!state.target?'chooseTeam()':state.mode==='admin'&&!state.target?'chooseAdmin()':state.mode==='hod'&&!state.target?'chooseHod()':'loadPeriod()'}">Try again</button> &nbsp; <button onclick="showMenu()">Back to menu</button></div>`; return; }
   if(!isOwnMode()){
     if(!state.target){ body.innerHTML = queueHtml(); return; }
@@ -1338,13 +1388,13 @@ function targetsHtml(){
   </div>
   <div class="section">
     <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(sh.role)}% · ${state.attributes.length} attribute(s)</span></div>
-    <div class="note">Optional. If you add role attributes they share 20% and Targets get 80%. You rate them in Step 2.</div>
+    <div class="note"><b>Required.</b> Role attributes = <b>20%</b>, Targets = <b>80%</b>. You rate them in Self Rating and your manager rates them in Manager Rating — both count in the score. You can rename, add or remove (minimum 1).</div>
     ${state.attributes.length ? state.attributes.map((a, i) => `
       <div class="attr-row" style="grid-template-columns:3fr 1fr auto;">
         <div><label>Attribute ${i+1} <span class="req">*</span></label><input value="${esc(a.name)}" maxlength="200" placeholder="e.g. Leadership" onchange="setAttr('${a.id}','name',this.value)"></div>
         <div><label>Weightage (auto)</label><input value="${fmt(a.weightage)}%" disabled></div>
         <div><button class="small danger" onclick="removeAttribute('${a.id}')">✕</button></div>
-      </div>`).join('') : '<div class="empty">No role attributes — Targets carry the full 100%.</div>'}
+      </div>`).join('') : '<div class="empty" style="color:var(--red)">Add at least one role attribute.</div>'}
     <div style="margin-top:10px;"><button class="small" onclick="addAttribute()">+ Add Role Attribute</button></div>
   </div>`;
 }
@@ -1496,6 +1546,7 @@ function validateTargets(){
       if(sanitizeRich(k.goals[j].html || '').length > 18000) return `Task ${i+1}.${j+1}: the text is too long — please shorten it.`;
     }
   }
+  if(!state.attributes.length) return 'Add at least one Role Attribute (Role attributes = 20%, Targets = 80%).';
   for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].name.trim()) return `Role Attribute ${i+1}: enter the name (or remove it).`;
   return '';
 }
@@ -2012,6 +2063,11 @@ function fmt(n){ const x = Number(n) || 0; return (Math.round(x * 100) / 100).to
 /* ======================= INIT ======================= */
 window.addEventListener('beforeunload', e => { saveDraft(); if(state.busy){ e.preventDefault(); e.returnValue = 'Saving is in progress.'; } });
 (function init(){
+  const t0 = Date.now();
+  const hideSplash = () => { const sp = document.getElementById('splash'); if(sp){ setTimeout(() => sp.classList.add('gone'), Math.max(0, 900 - (Date.now() - t0))); setTimeout(() => sp.remove(), 1600); } };
+  if(document.readyState === 'complete') hideSplash(); else window.addEventListener('load', hideSplash);
+  setTimeout(hideSplash, 4000);
+  try{ warmUp(); }catch(e){}
   let s = null;
   try{ s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); }catch(e){}
   if(s && s.auth && s.me && Number(s.auth.sexp) > Date.now()){
