@@ -271,7 +271,7 @@
       <h2>Enter the code</h2>
       <p>We sent a 6-digit code to <b id="codeMail"></b>. It is valid for 10 minutes.</p>
       <label>6-digit code</label>
-      <input id="loginCode" class="code-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••" onkeydown="if(event.key==='Enter')verifyCode()">
+      <input id="loginCode" class="code-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••" oninput="if(this.value.replace(/\D/g,'').length===6 && state.pending && state.pending.challenge && !document.getElementById('verifyBtn').disabled)verifyCode()" onkeydown="if(event.key==='Enter')verifyCode()">
       <button class="solid" id="verifyBtn" onclick="verifyCode()">Sign in</button>
       <button class="linkish" onclick="backToEmail()">Use a different email</button> &nbsp;
       <button class="linkish" id="resendBtn" onclick="sendCode(true)">Send a new code</button>
@@ -466,10 +466,11 @@ function pdfKraScore(model, key){
   });
   return any ? total : null;
 }
-function pdfAttrScore(model){
+function pdfAttrScore(model, key){
+  key = key || 'rating';
   let total = 0, any = false;
   (model.attributes||[]).forEach(a => {
-    const pct = pdfRatingPct(model, a.rating); if(pct===null) return;
+    const pct = pdfRatingPct(model, a[key]); if(pct===null) return;
     total += (pdfNum(a.weightage)||0) * pct / 100; any = true;
   });
   return any ? total : null;
@@ -530,6 +531,7 @@ function buildAppraisalPdfHtml(model){
   const selfScore = pdfKraScore(m, 'selfRating');
   const apprScore = pdfKraScore(m, 'apprRating');
   const attrScore = pdfAttrScore(m);
+  const attrApprScore = pdfAttrScore(m, 'apprRating');
 
   const quarterCells = PDF_QUARTERS.map(q => {
     const sel = q.id === m.quarter;
@@ -541,7 +543,7 @@ function buildAppraisalPdfHtml(model){
   let attrHtml = '';
   for(let i = 0; i < attrRows; i++){
     const a = attrs[i];
-    attrHtml += `<tr><td class="pa-b pa-sno">${i+1}</td><td>${a?pdfEsc(a.name)+(pdfNum(a.weightage)!==null?` <span class="pa-wt">(${pdfFmt(a.weightage,2)}%)</span>`:''):''}</td><td class="pa-rc">${a?pdfEsc(a.rating):''}</td></tr>`;
+    attrHtml += `<tr><td class="pa-b pa-sno">${i+1}</td><td>${a?pdfEsc(a.name)+(pdfNum(a.weightage)!==null?` <span class="pa-wt">(${pdfFmt(a.weightage,2)}%)</span>`:''):''}</td><td class="pa-rc">${a?pdfEsc(a.rating):''}</td><td class="pa-rc">${a?pdfEsc(a.apprRating||''):''}</td></tr>`;
   }
 
   const train = (m.training||[]).filter(t => t && (t.need||t.benefit||t.fulfilled));
@@ -594,9 +596,9 @@ function buildAppraisalPdfHtml(model){
     <div class="pa-attr-head pa-b"><span>Appraisal on Role Attributes:</span><span>${pdfFmt(roleW===null?20:roleW,2)}%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; weightage</span></div>
     <div class="pa-p">Rating: 5 = Outstanding,&nbsp; 4= Very Good,&nbsp; 3= Good, 2 = Fair,&nbsp; 1= Poor</div>
     <table class="pa-grid pa-attr">
-      <tr><th class="pa-sno">S.No</th><th>Role Attribute</th><th class="pa-th-r">Rating</th></tr>
+      <tr><th class="pa-sno">S.No</th><th>Role Attribute</th><th class="pa-th-r">Self Rating</th><th class="pa-th-r">Appraiser’s rating</th></tr>
       ${attrHtml}
-      <tr><td></td><td class="pa-center pa-b">Total <span class="pa-wt">(Role score out of ${pdfFmt(roleW===null?20:roleW,2)})</span></td><td class="pa-rc pa-b">${attrScore!==null?pdfFmt(attrScore,2):''}</td></tr>
+      <tr><td></td><td class="pa-center pa-b">Total <span class="pa-wt">(Role score out of ${pdfFmt(roleW===null?20:roleW,2)})</span></td><td class="pa-rc pa-b">${attrScore!==null?pdfFmt(attrScore,2):''}</td><td class="pa-rc pa-b">${attrApprScore!==null?pdfFmt(attrApprScore,2):''}</td></tr>
     </table>
     <div class="pa-center pa-b pa-sub">My Learnings</div>
     <table class="pa-grid">
@@ -840,7 +842,7 @@ function warmUp(){ if(state.warmed) return; state.warmed = true; call('ping', {}
 let resendTimer = null;
 function startResendTimer(){
   const btn = document.getElementById('resendBtn'); if(!btn) return;
-  let left = 30; clearInterval(resendTimer); btn.disabled = true; btn.textContent = 'Send a new code (' + left + 's)';
+  let left = 15; clearInterval(resendTimer); btn.disabled = true; btn.textContent = 'Send a new code (' + left + 's)';
   resendTimer = setInterval(() => { left--; if(left <= 0){ clearInterval(resendTimer); btn.disabled = false; btn.textContent = 'Send a new code'; } else btn.textContent = 'Send a new code (' + left + 's)'; }, 1000);
 }
 async function sendCode(resend){
@@ -862,9 +864,10 @@ async function sendCode(resend){
     if(reqId !== state.sendReq || !state.pending) return;
     state.pending = { email, challenge:r.challenge, exp:String(r.exp) };
     document.getElementById('verifyBtn').disabled = false;
+    if((document.getElementById('loginCode').value || '').replace(/\D/g, '').length === 6) verifyCode();
     startResendTimer();
     if(r.test_mode) loginMsg('🧪 Test login: no email is sent — enter your TEST PIN.', true);
-    else loginMsg((resend ? 'A new code was sent.' : 'Code sent.') + ' Check your inbox (and spam) — it comes from hr@mega.tc.', true);
+    else loginMsg((resend ? 'A new code was sent.' : 'Code sent.') + ' Check your inbox (and spam folder).', true);
   }catch(err){
     if(reqId !== state.sendReq) return;
     backToEmail(); loginMsg(err.message, false);
@@ -1426,10 +1429,11 @@ function ratingHtml(ro){
     <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
     <div class="note">Rating: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
     ${state.attributes.map((a, i) => `
-      <div class="attr-row" style="grid-template-columns:3fr 1fr 1.3fr;">
+      <div class="attr-row" style="grid-template-columns:3fr 1fr 1.3fr ${ro ? '1.3fr' : ''};">
         <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
         <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
-        <div><label>Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}${a.apprRating ? ` · Manager: <b>${esc(a.apprRating)}</b>` : ''}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
+        <div><label>Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
+        ${ro ? `<div><label style="color:#6D28D9;">Manager Rating</label><div class="ro"><b>${esc(a.apprRating) || (state.mgrDone ? '—' : 'Waiting')}</b></div></div>` : ''}
       </div>`).join('')}
   </div>` : ''}
   <div class="section two-col">
@@ -2048,7 +2052,7 @@ function downloadPdf(){
     kraSectionWeight:Math.round(kraTotal()*100)/100 || 100, roleSectionWeight:Math.round(roleTotal()*100)/100, ratingMap:RATING_PCT,
     kras:state.kras.map(k => ({ name:k.name, description:k.description, weightage:k.weightage,
       goals:k.goals.filter(g => g.name || g.achievement).map(g => ({ name:g.name, html:(g.html && /<[a-z]/i.test(g.html)) ? sanitizeRich(g.html) : '', achievement:g.achievement, weightage:g.weightage, selfRating:g.selfRating, apprRating:g.apprRating })) })),
-    attributes:state.attributes.map(a => ({ name:a.name, weightage:a.weightage, rating:a.rating })),
+    attributes:state.attributes.map(a => ({ name:a.name, weightage:a.weightage, rating:a.rating, apprRating:a.apprRating || '' })),
     facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
     comments:state.texts.comments, learnings:state.texts.learnings, hodRemark:state.managerRemark || '',
     training:state.training.map(t => ({ need:t.need, benefit:t.benefit, fulfilled:t.fulfilled })),
