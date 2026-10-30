@@ -1462,7 +1462,7 @@ function ratingHtml(ro){
         <div><label>Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
         ${ro ? `<div><label style="color:#6D28D9;">Manager Rating</label><div class="ro"><b>${esc(a.apprRating) || (state.mgrDone ? '—' : 'Waiting')}</b></div></div>` : ''}
       </div>`).join('')}
-  </div>` : `<div class="section"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note" style="color:var(--red)">No Role Attributes were found in Role_Attribute_Details or legacy Competency records for this quarter. Check All_Role_Attribute_Details.</div></div>`}
+  </div>` : `<div class="section"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note" style="color:var(--red)">No Role Attributes were found in Role_Attribute_Details or legacy Competency records for this quarter. Check Role_Attribute_Details_Report.</div></div>`}
   <div class="section two-col">
     <div><label>Facilitating Factors</label>${ta('facilitating','Factors that helped achieve the targets (mention target number)')}</div>
     <div><label>Constraining Factors</label>${ta('constraining','Factors that were constraints (mention target number)')}</div>
