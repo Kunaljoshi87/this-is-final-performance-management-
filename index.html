@@ -1090,6 +1090,11 @@ async function loadPeriod(){
       goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, html:richFromServer(g.html, g.name), weightage:num(g.weightage), achievement:g.achievement || '',
         selfRating:g.self_rating || '', apprRating:g.appraiser_rating || '' })) }));
     state.attributes = (r.attributes || []).map(a => ({ id:nid('a'), recId:String(a.id), name:a.name, weightage:num(a.weightage), rating:a.rating || '', apprRating:a.appraiser_rating || '' }));
+    // Legacy records with zero/missing Weightage1 must not lose the 20% role share.
+    if(state.attributes.length && state.attributes.every(a => !(Number(a.weightage) > 0))){
+      const fixed = splitEven(ROLE_SHARE, state.attributes.length);
+      state.attributes.forEach((a,i) => a.weightage = fixed[i]);
+    }
     state.training = (r.training || []).map(t => ({ id:nid('t'), saved:true, need:t.need, benefit:t.benefit, fulfilled:t.fulfilled }));
     const rv = r.review || {};
     state.texts = { facilitating:rv.facilitating || '', constraining:rv.constraining || '', outstanding:rv.outstanding || '', comments:rv.comments || '', learnings:rv.learnings || '' };
