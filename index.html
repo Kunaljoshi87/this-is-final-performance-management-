@@ -1,573 +1,2126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performance Appraisal — Mega Engineering</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root{
+    --bg:#F4F6F8; --panel:#FFFFFF; --line:#D7DEE5;
+    --navy:#1E4E8C; --amber:#B7791F; --red:#C0392B; --green:#1E8E5A;
+    --text:#1F2937; --muted:#6B7A8F;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
+  body{padding:24px 28px 100px; min-height:100vh;}
+  .wrap{max-width:1150px; margin:0 auto;}
+  h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif; margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .hidden{display:none !important;}
+  input,textarea,select{
+    background:#F9FAFB; border:1px solid var(--line); color:var(--text);
+    font-family:'Inter',sans-serif; font-size:13px; padding:8px 10px; width:100%; outline:none;
+  }
+  input:focus,textarea:focus,select:focus{border-color:var(--navy);}
+  input:disabled,select:disabled{background:#EEF1F4; color:var(--muted); cursor:not-allowed;}
+  textarea{resize:vertical; min-height:60px;}
+  label{font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); display:block; margin-bottom:4px;}
+  .req{color:var(--red);}
+  button{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em; text-transform:uppercase;
+    background:transparent; border:1px solid var(--navy); color:var(--navy); padding:8px 14px; cursor:pointer;
+  }
+  button:hover{background:var(--navy); color:#FFFFFF;}
+  button.danger{border-color:var(--red); color:var(--red);}
+  button.danger:hover{background:var(--red); color:#FFFFFF;}
+  button.solid{background:var(--navy); color:#FFFFFF;}
+  button.small{padding:5px 10px; font-size:10px;}
+  button:disabled{opacity:.4; cursor:not-allowed;}
+  button:disabled:hover{background:transparent; color:var(--navy);}
+  button.solid:disabled:hover{background:var(--navy); color:#fff;}
 
-/* ================================================================
-   MEGA ENGINEERING
-   PERFORMANCE APPRAISAL - ROLE ATTRIBUTES FINAL UPDATE
+  /* ===== LOGIN ===== */
+  .login-wrap{max-width:440px; margin:50px auto 0;}
+  .login-card{background:var(--panel); border:1px solid var(--line); border-top:3px solid var(--navy); padding:28px; box-shadow:0 1px 3px rgba(31,41,55,.06);}
+  .login-card h2{font-size:20px; color:var(--navy); margin-bottom:6px;}
+  .login-card p{font-size:13px; color:var(--muted); margin:0 0 18px; line-height:1.5;}
+  .login-card input{font-size:15px; padding:11px 12px;}
+  .login-card button{width:100%; margin-top:14px; padding:12px; font-size:12px;}
+  .login-msg{font-size:12px; margin-top:12px; min-height:16px; line-height:1.45;}
+  .login-msg.bad{color:var(--red);} .login-msg.ok{color:var(--green);}
+  .logo-row{display:flex; align-items:center; gap:12px; margin-bottom:18px;}
+  .logo-row img{height:34px;}
 
-   Applies to:
-   index_MANAGER_QUARTERLY_RATING_FINAL.html
+  .who-bar{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; background:#EAF1FA; border:1px solid var(--navy); padding:10px 14px; margin-bottom:16px; font-size:13px;}
 
-   - No default Role Attribute names
-   - Five blank fields initially
-   - Employee-defined Role Attributes
-   - Employee Self Rating 1-5
-   - Manager Rating 1-5
-   - Role Attributes displayed at end of rating forms
-   - Combined Quarterly Appraisal 80% KRA + 20% Role
-   - Existing backend calculation preserved
-   ================================================================ */
+  .titleblock{border:1px solid var(--line); background:var(--panel); padding:20px 24px; margin-bottom:20px; box-shadow:0 1px 3px rgba(31,41,55,.06); border-top:3px solid var(--navy);}
+  .tb-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+  .quarter-row{display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;}
+  .quarter-btn{padding:8px 16px; border:1px solid var(--line); color:var(--muted); cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:11px; background:#fff;}
+  .quarter-btn.active{border-color:var(--navy); color:var(--navy); font-weight:600; background:#EAF1FA;}
+  .readonly-box{background:#EEF1F4; padding:8px 10px; font-size:13px; border:1px solid var(--line); min-height:35px;}
 
+  /* ===== AUTO SCORE BAR ===== */
+  .score-bar{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:20px;}
+  .score-tile{background:var(--panel); border:1px solid var(--line); padding:12px 14px;}
+  .score-tile .k{font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);}
+  .score-tile .v{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; margin-top:4px; color:var(--navy);}
+  .score-tile .s{font-size:11px; color:var(--muted); margin-top:2px;}
+  .score-tile.final{border-color:var(--navy); background:#EAF1FA;}
 
-/* ================================================================
-   1. FIVE BLANK ROLE ATTRIBUTES
-   ================================================================ */
+  .section{border:1px solid var(--line); background:var(--panel); padding:22px; margin-bottom:20px; box-shadow:0 1px 3px rgba(31,41,55,.05);}
+  .section-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px; border-bottom:1px solid var(--line); padding-bottom:12px;}
+  .section-head h2{font-size:17px; color:var(--navy);}
+  .weight-badge{font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 9px; border:1px solid var(--green); color:var(--green); background:#EAF7F0;}
+  .note{font-size:11px; color:var(--muted); margin:-6px 0 14px;}
 
-addDefaultAttrs = function() {
+  .kra-block{border:1px dashed var(--line); padding:16px; margin-bottom:16px;}
+  .kra-top{display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;}
+  .kra-top .fields{flex:1; min-width:260px; display:grid; grid-template-columns:2fr 2fr 1fr; gap:10px;}
+  .kra-actions{display:flex; gap:6px; flex-shrink:0; margin-top:16px;}
+  .goal-row{border-top:1px solid var(--line); padding-top:12px; margin-top:12px; display:grid; grid-template-columns:1fr; gap:10px; padding-left:14px; border-left:3px solid #EAF1FA;}
+  .goal-row-header{display:flex; justify-content:space-between; align-items:center;}
+  .goal-tag{font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted);}
+  .achievement-grid{display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:10px;}
+  .attr-row{display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:10px; align-items:end; margin-bottom:10px;}
+  .empty{color:var(--muted); font-size:13px;}
 
-    if (state.attributes.length > 0) {
-        return;
-    }
+  .train-table{width:100%; border-collapse:collapse;}
+  .train-table th{text-align:left; font-size:10px; text-transform:uppercase; color:var(--muted); padding:8px 6px; border-bottom:1px solid var(--line);}
+  .train-table td{padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top;}
 
-    for (let i = 0; i < 5; i++) {
+  .overall-options{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-top:8px;}
+  .overall-opt{border:1px solid var(--line); padding:10px 12px; cursor:pointer; font-size:13px; text-align:center;}
+  .overall-opt.selected{border-color:var(--navy); color:var(--navy); background:#EAF1FA; font-weight:600;}
 
-        state.attributes.push({
-            id: nid('a'),
-            recId: '',
-            name: '',
-            weightage: 0,
-            rating: '',
-            apprRating: ''
-        });
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
 
-    }
+  .footer-bar{position:fixed; bottom:0; left:0; right:0; background:var(--panel); border-top:1px solid var(--line);
+    padding:14px 28px; display:flex; justify-content:space-between; align-items:center; z-index:10;
+    box-shadow:0 -2px 6px rgba(31,41,55,.06); gap:12px; flex-wrap:wrap;}
+  .status{font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace;}
+  .status.ok{color:var(--green);} .status.bad{color:var(--red);}
 
+  .done-banner{border:1px solid var(--green); background:#EAF7F0; color:#145C3B; padding:14px 18px; margin-bottom:20px; font-size:14px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
+
+  /* ===== TABS / APPROVALS ===== */
+  .tab-row{display:flex; gap:8px; margin-bottom:16px;}
+  .tab-btn{padding:10px 18px; border:1px solid var(--line); background:var(--panel); color:var(--muted); cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:12px;}
+  .tab-btn.active{border-color:var(--navy); color:var(--navy); font-weight:600; background:#EAF1FA;}
+  .tab-badge{background:var(--red); color:#fff; font-size:10px; padding:1px 6px; border-radius:10px; margin-left:6px;}
+  .approval-card{border:1px solid var(--line); background:var(--panel); padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;}
+  .approval-card .meta{font-size:12px; color:var(--muted);}
+  .role-tag{font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 8px; border:1px solid var(--amber); color:var(--amber);}
+  .approval-detail-block{border:1px dashed var(--line); padding:14px; margin-bottom:12px;}
+  .approval-goal-row{display:grid; grid-template-columns:2fr 2fr 1fr 1fr; gap:10px; align-items:end; margin-top:10px; padding-top:10px; border-top:1px solid var(--line);}
+
+  @media(max-width:760px){
+    body{padding:16px 16px 150px;}
+    .two-col, .kra-top .fields, .achievement-grid, .attr-row, .approval-goal-row{grid-template-columns:1fr;}
+    .footer-bar{padding:12px 16px;}
+  }
+  /* ===== STEP BANNER ===== */
+  .step-banner{display:flex; gap:14px; align-items:center; background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--navy); padding:14px 18px; margin-bottom:20px; flex-wrap:wrap;}
+  .step-banner .num{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px; color:#fff; background:var(--navy); padding:4px 10px;}
+  .step-banner.rating{border-left-color:var(--amber);} .step-banner.rating .num{background:var(--amber);}
+  .step-banner.done{border-left-color:var(--green);} .step-banner.done .num{background:var(--green);}
+  .step-banner .t{font-weight:600; font-size:15px;} .step-banner .d{font-size:12px; color:var(--muted); margin-top:2px;}
+  .steps{display:flex; gap:6px; margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10px;}
+  .steps span{padding:3px 8px; border:1px solid var(--line); color:var(--muted);}
+  .steps span.on{border-color:var(--navy); color:var(--navy); font-weight:600;}
+  .ro{background:#EEF1F4; padding:8px 10px; font-size:13px; border:1px solid var(--line); min-height:35px; white-space:pre-wrap;}
+  .rate-grid{display:grid; grid-template-columns:3fr 3fr 1fr 1.3fr; gap:10px; align-items:start;}
+  .loading-box{padding:40px; text-align:center; color:var(--muted); font-size:13px;}
+  @media(max-width:760px){ .rate-grid{grid-template-columns:1fr;} .steps{margin-left:0;} }
+  .code-input{font-family:'IBM Plex Mono',monospace !important; font-size:22px !important; letter-spacing:8px; text-align:center;}
+  .linkish{background:none; border:none; color:var(--navy); text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif; font-size:12px; padding:0; margin-top:12px; width:auto !important; text-decoration:underline;}
+  .linkish:hover{background:none; color:var(--navy);}
+  .choice-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:18px; margin-bottom:20px;}
+  .choice-card.mgr{border-top-color:#6D28D9;} .choice-card.mgr h3{color:#6D28D9;}
+  .choice-card.hod{border-top-color:#0E7490;} .choice-card.hod h3{color:#0E7490;}
+  .hod-box{border:2px solid #0E7490; background:#F5FCFE;} .hod-box .section-head h2{color:#0E7490;}
+  .calc{width:100%; border-collapse:collapse; font-size:13px; margin-bottom:14px;} .calc td{padding:8px 10px; border:1px solid var(--line);} .calc td:first-child{background:#F3F6F9; font-weight:600; width:45%;}
+  .calc tr.big td{font-size:16px; font-weight:700; color:#0E7490; background:#E6F6FA;}
+  .stage.s4{color:#0E7490; background:#E6F6FA;}
+  .choice-card.adm{border-top-color:#B91C1C;} .choice-card.adm h3{color:#B91C1C;}
+  .q-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .q-table th{text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#fff; background:var(--navy); padding:9px 8px;}
+  .q-table td{padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  .q-table tr:hover td{background:#F7FAFD;}
+  .stage{font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 8px; border-radius:20px; border:1px solid; white-space:nowrap;}
+  .stage.s1{color:var(--amber); background:#FDF3E1;} .stage.s2{color:#6D28D9; background:#F1EBFD;} .stage.s3{color:var(--green); background:#EAF7F0;}
+  .rate-grid.mg{grid-template-columns:3fr 3fr 1fr 1.3fr;}
+  .mgr-box{border:2px solid #6D28D9; background:#FBF9FF;} .mgr-box .section-head h2{color:#6D28D9;}
+  .adm-box{border:2px solid #B91C1C; background:#FFFBFB;} .adm-box .section-head h2{color:#B91C1C;}
+  .cmp{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px;}
+  .team-chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;} .team-chips span{font-size:11px; padding:3px 9px; border:1px solid var(--line); border-radius:20px; background:#fff;}
+  .choice-card.view{border-top-color:var(--green);} .choice-card.view h3{color:var(--green);}
+  .choice-card{background:var(--panel); border:1px solid var(--line); border-top:4px solid var(--navy); padding:26px; cursor:pointer; transition:box-shadow .15s, transform .15s;}
+  .choice-card:hover{box-shadow:0 6px 18px rgba(31,41,55,.12); transform:translateY(-2px);}
+  .choice-card.rating{border-top-color:var(--amber);}
+  .choice-card .ic{font-size:30px; margin-bottom:10px;}
+  .choice-card h3{font-size:19px; color:var(--navy); margin-bottom:6px;}
+  .choice-card.rating h3{color:var(--amber);}
+  .choice-card p{font-size:13px; color:var(--muted); margin:0; line-height:1.5;}
+  .period-chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; align-items:center;}
+  .period-chip{padding:7px 12px; border:1px solid var(--line); font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; background:#fff;}
+  .period-chip.active{border-color:var(--navy); color:var(--navy); background:#EAF1FA; font-weight:600;}
+  .period-chip .tag{font-size:9px; margin-left:6px; padding:1px 5px; border:1px solid currentColor;}
+  .notice{padding:28px; text-align:center;}
+  .notice h3{font-size:18px; color:var(--navy); margin-bottom:8px;}
+  .notice p{color:var(--muted); font-size:13px; margin:0 0 16px;}
+  @media(max-width:760px){ .choice-grid{grid-template-columns:1fr;} }
+
+  /* ===== POLISH ===== */
+  body{background:linear-gradient(180deg,#E9EFF6 0,#F4F6F8 260px);}
+  .login-card{border-radius:10px; border-top-width:4px; box-shadow:0 10px 30px rgba(30,78,140,.12);}
+  .login-card input, .login-card button{border-radius:6px;}
+  .section,.titleblock,.choice-card,.step-banner,.score-tile,.who-bar{border-radius:8px;}
+  .kra-block{border-radius:8px; background:#FCFDFE;}
+  input,textarea,select{border-radius:5px; transition:border-color .15s, box-shadow .15s;}
+  input:focus,textarea:focus,select:focus{box-shadow:0 0 0 3px rgba(30,78,140,.12);}
+  button{border-radius:5px; transition:background .15s,color .15s;}
+  .score-tile.final .v{color:var(--green);}
+  .choice-card{border-radius:10px; position:relative;}
+  .choice-card .badge{position:absolute; top:14px; right:14px; font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 8px; border-radius:20px; background:#FDF3E1; color:var(--amber); border:1px solid var(--amber);}
+  .choice-card .badge.ok{background:#EAF7F0; color:var(--green); border-color:var(--green);}
+  .choice-card .badge.mute{background:#EEF1F4; color:var(--muted); border-color:var(--line);}
+  .quarter-btn{border-radius:6px;}
+  .quarter-btn.locked{background:#F1F3F5; color:#9AA6B5; border-style:dashed;}
+  .quarter-btn.locked.active{color:var(--navy); border-color:var(--navy); border-style:solid;}
+  .quarter-btn .lk{font-size:9px; margin-left:6px;}
+  .period-chip{border-radius:20px;}
+  .period-chip.done{background:#EAF7F0; border-color:#9ED3B7; color:#145C3B;}
+  .period-chip.done.active{border-color:var(--green);}
+
+  /* ===== RICH TEXT TASK EDITOR ===== */
+  .rte{border:1px solid var(--line); border-radius:6px; background:#fff; overflow:hidden;}
+  .rte:focus-within{border-color:var(--navy); box-shadow:0 0 0 3px rgba(30,78,140,.12);}
+  .rte-bar{display:flex; gap:4px; padding:5px 6px; background:#F3F6F9; border-bottom:1px solid var(--line); flex-wrap:wrap;}
+  .rte-bar button{padding:3px 9px; font-size:12px; text-transform:none; letter-spacing:0; border-color:var(--line); color:var(--text); background:#fff; min-width:30px; font-family:'Inter',sans-serif;}
+  .rte-bar button:hover{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .rte-area{min-height:70px; max-height:320px; overflow:auto; padding:9px 11px; font-size:13px; line-height:1.5; outline:none;}
+  .rte-area:empty:before{content:attr(data-ph); color:#9AA6B5;}
+  .rich{white-space:normal !important; line-height:1.5;}
+  .rich p,.rich div{margin:0;} .rte-area p{margin:0;}
+  .rich ol,.rich ul,.rte-area ol,.rte-area ul{margin:4px 0 4px 20px; padding:0;}
+
+  /* ===== SKELETON / OVERLAY / MODAL ===== */
+  .skel{background:linear-gradient(90deg,#EEF1F4 25%,#F7F9FB 50%,#EEF1F4 75%); background-size:400% 100%; animation:sk 1.2s ease-in-out infinite; border-radius:6px;}
+  @keyframes sk{0%{background-position:100% 0}100%{background-position:0 0}}
+  .skel.h{height:18px; width:40%; margin-bottom:16px;} .skel.r{height:44px; margin-bottom:10px;} .skel.b{height:90px; margin-bottom:12px;}
+  .overlay{position:fixed; inset:0; background:rgba(17,24,39,.45); z-index:50; display:flex; align-items:center; justify-content:center; padding:16px;}
+  .modal{background:#fff; border-radius:12px; max-width:460px; width:100%; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,.25);}
+  .modal h3{color:var(--navy); font-size:18px; margin-bottom:8px;}
+  .modal .mbody{font-size:13px; color:var(--text); line-height:1.55; margin-bottom:18px;}
+  .modal .mbtns{display:flex; gap:10px; justify-content:flex-end;}
+  .spinner{width:38px; height:38px; border:4px solid #DCE6F2; border-top-color:var(--navy); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 14px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* ===== SPLASH / LOADING GRAPHICS ===== */
+  #splash{position:fixed; inset:0; z-index:100; background:linear-gradient(135deg,#0F2D57 0%,#1E4E8C 55%,#2C6CB8 100%); display:flex; align-items:center; justify-content:center; transition:opacity .45s ease, visibility .45s;}
+  #splash.gone{opacity:0; visibility:hidden;}
+  .sp-box{text-align:center; color:#fff;}
+  .sp-orb{position:relative; width:120px; height:120px; margin:0 auto 22px;}
+  .sp-orb .ring{position:absolute; inset:0; border-radius:50%; border:3px solid rgba(255,255,255,.15); border-top-color:#fff; animation:spin 1.1s linear infinite;}
+  .sp-orb .ring.r2{inset:14px; border-top-color:#F6C35B; animation-duration:1.6s; animation-direction:reverse;}
+  .sp-orb .ring.r3{inset:28px; border-top-color:#7FD1AE; animation-duration:2.2s;}
+  .sp-orb img{position:absolute; inset:40px; width:40px; height:40px; object-fit:contain; background:#fff; border-radius:50%; padding:5px; animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+  .sp-title{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; letter-spacing:.02em;}
+  .sp-sub{font-size:12px; opacity:.8; margin-top:4px; letter-spacing:.12em; text-transform:uppercase;}
+  .sp-bar{width:220px; height:4px; background:rgba(255,255,255,.18); border-radius:4px; margin:20px auto 0; overflow:hidden;}
+  .sp-bar span{display:block; height:100%; width:40%; background:linear-gradient(90deg,#F6C35B,#7FD1AE); border-radius:4px; animation:slide 1.2s ease-in-out infinite;}
+  @keyframes slide{0%{transform:translateX(-110%)}100%{transform:translateX(280%)}}
+  .load-art{display:flex; flex-direction:column; align-items:center; padding:30px 10px 10px;}
+  .load-art .bars{display:flex; gap:7px; align-items:flex-end; height:56px; margin-bottom:14px;}
+  .load-art .bars i{display:block; width:12px; border-radius:3px 3px 0 0; background:var(--navy); animation:grow 1s ease-in-out infinite;}
+  .load-art .bars i:nth-child(2){background:#6D28D9; animation-delay:.12s;} .load-art .bars i:nth-child(3){background:var(--amber); animation-delay:.24s;}
+  .load-art .bars i:nth-child(4){background:var(--green); animation-delay:.36s;} .load-art .bars i:nth-child(5){background:#0E7490; animation-delay:.48s;}
+  @keyframes grow{0%,100%{height:12px}50%{height:56px}}
+  .load-art .t{font-size:13px; color:var(--muted); font-family:'IBM Plex Mono',monospace;}
+  .busy-bar{width:100%; height:4px; background:#E5ECF5; border-radius:4px; overflow:hidden; margin:14px 0 4px;}
+  .busy-bar span{display:block; height:100%; width:35%; background:linear-gradient(90deg,var(--navy),#6D28D9); animation:slide 1.1s ease-in-out infinite;}
+  .attr-chip{display:inline-block; font-size:10px; padding:2px 8px; border-radius:20px; background:#F1EBFD; color:#6D28D9; border:1px solid #D9C8FA; margin-left:6px;}
+  .lock-note{display:flex; gap:10px; align-items:center; background:#EAF7F0; border:1px solid #9ED3B7; color:#145C3B; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:13px;}
+</style>
+</head>
+<body>
+<div id="splash"><div class="sp-box">
+  <div class="sp-orb"><div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><img class="mega-logo" alt=""></div>
+  <div class="sp-title">Performance Appraisal</div><div class="sp-sub">Mega Engineering</div>
+  <div class="sp-bar"><span></span></div>
+</div></div>
+
+<!-- =================== SIGN IN (email → 6-digit code) =================== -->
+<div class="login-wrap" id="loginView">
+  <div class="login-card">
+    <div class="logo-row"><img class="mega-logo" alt="MEGA"><div><b>Performance Appraisal</b><div style="font-size:11px;color:var(--muted)">Mega Engineering</div></div></div>
+
+    <div id="stepEmail">
+      <h2>Sign in</h2>
+      <p>Enter your official email address. We will send a 6-digit code to it.</p>
+      <label>Email address</label>
+      <input id="loginEmail" type="email" autocomplete="email" placeholder="name@megaepc.com" onfocus="warmUp()" oninput="warmUp()" onkeydown="if(event.key==='Enter')sendCode()">
+      <button class="solid" id="sendBtn" onclick="sendCode()">Send code</button>
+    </div>
+
+    <div id="stepCode" class="hidden">
+      <h2>Enter the code</h2>
+      <p>We sent a 6-digit code to <b id="codeMail"></b>. It is valid for 10 minutes.</p>
+      <label>6-digit code</label>
+      <input id="loginCode" class="code-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••" oninput="if(this.value.replace(/\D/g,'').length===6 && state.pending && state.pending.challenge && !document.getElementById('verifyBtn').disabled)verifyCode()" onkeydown="if(event.key==='Enter')verifyCode()">
+      <button class="solid" id="verifyBtn" onclick="verifyCode()">Sign in</button>
+      <button class="linkish" onclick="backToEmail()">Use a different email</button> &nbsp;
+      <button class="linkish" id="resendBtn" onclick="sendCode(true)">Send a new code</button>
+    </div>
+
+    <div class="login-msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<!-- =================== APPRAISAL PAGE =================== -->
+<div class="wrap hidden" id="appView">
+  <div class="who-bar">
+    <div>Signed in as <b id="whoName">—</b> · <span id="whoEmail" class="mono"></span></div>
+    <div style="display:flex; gap:8px;">
+      <button class="small hidden" id="menuBtn" onclick="showMenu()">← Menu</button>
+      <button class="small" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="titleblock">
+    <div class="logo-row" style="margin-bottom:14px;"><img class="mega-logo" alt="MEGA"><h2 style="font-size:18px;">Performance Appraisal Form</h2></div>
+    <div class="tb-grid">
+      <div><label>Employee</label><div class="readonly-box" id="pName">—</div></div>
+      <div><label>Employee ID</label><div class="readonly-box" id="pId">—</div></div>
+      <div><label>Department</label><div class="readonly-box" id="pDept">—</div></div>
+    </div>
+    <div class="tb-grid" style="margin-top:16px;">
+      <div><label>Reporting Manager (Appraiser)</label><div class="readonly-box" id="pMgr">—</div></div>
+      <div><label>HR</label><div class="readonly-box" id="pHr">—</div></div>
+      <div id="yearBox" class="hidden"><label>Year</label><select id="yearSelect" onchange="changeYear()"></select></div>
+    </div>
+    <div class="quarter-row hidden" id="quarterRow"></div>
+    <div class="period-chips hidden" id="periodChips"></div>
+  </div>
+
+  <!-- CHOICE: New Appraisal / Self Rating -->
+  <div class="choice-grid hidden" id="choiceView">
+    <div class="choice-card" onclick="chooseNew()">
+      <span class="badge mute hidden" id="newBadge"></span>
+      <div class="ic">📝</div>
+      <h3>New Appraisal</h3>
+      <p>Start a new quarter: choose the quarter and add your Targets (KRA), the tasks under each target and role attributes.</p>
+    </div>
+    <div class="choice-card rating" onclick="chooseRating()">
+      <span class="badge hidden" id="rateBadge"></span>
+      <div class="ic">⭐</div>
+      <h3>Self Rating</h3>
+      <p>Open your last quarter's appraisal. Targets and tasks are locked — add your achievement and self rating, then submit and download the PDF.</p>
+    </div>
+    <div class="choice-card view" onclick="chooseView()">
+      <span class="badge mute hidden" id="viewBadge"></span>
+      <div class="ic">📂</div>
+      <h3>My Appraisals</h3>
+      <p>View any of your submitted quarters — targets, tasks, achievement and ratings. Locked, read-only. Download the PDF anytime.</p>
+    </div>
+    <div class="choice-card mgr hidden" id="teamCard" onclick="chooseTeam()">
+      <span class="badge mute hidden" id="teamBadge"></span>
+      <div class="ic">👥</div>
+      <h3>Team Ratings</h3>
+      <p>Manager: see your team's appraisals. Their self rating is locked — give your Manager Rating for every task and role attribute.</p>
+    </div>
+    <div class="choice-card hod hidden" id="hodCard" onclick="chooseHod()">
+      <div class="ic">🏢</div>
+      <h3>HOD Review</h3>
+      <p>HOD: see every employee's appraisal after the manager rating. Enter the company score — the quarter's variable pay is calculated for you.</p>
+    </div>
+    <div class="choice-card adm hidden" id="diagCard" onclick="chooseDiag()" style="border-top-color:#475569;">
+      <div class="ic">🔧</div>
+      <h3 style="color:#475569;">Diagnostics</h3>
+      <p>Super Admin: check one employee's data — which fields Zoho returns, their values, and what is missing.</p>
+    </div>
+    <div class="choice-card adm hidden" id="adminCard" onclick="chooseAdmin()">
+      <span class="badge mute hidden" id="adminBadge"></span>
+      <div class="ic">🏆</div>
+      <h3>Final Review</h3>
+      <p>Super Admin: compare employee and manager ratings, check the variable pay for a quarter, 6 months or the year, then approve.</p>
+    </div>
+  </div>
+
+  <div id="stepBanner"></div>
+  <div id="pageBody"></div>
+</div>
+
+<div class="footer-bar hidden" id="footerBar">
+  <span class="status" id="statusText">—</span>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button id="pdfBtn" onclick="downloadPdf()">Download PDF</button>
+    <button class="solid" id="mainBtn" onclick="mainAction()">Submit</button>
+  </div>
+</div>
+<div class="overlay hidden" id="overlay"></div>
+
+<script>
+"use strict";
+/* ======================================================================
+   MEGA ENGINEERING — PERFORMANCE APPRAISAL  (public page, one file)
+   ----------------------------------------------------------------------
+   Anyone in Asset Management → All Employees can use this link — no
+   Creator login needed:
+     1. Sign in: email → 6-digit code mailed to that address → session
+     2. Name, Employee ID, Department, Reporting Manager, HR fill in automatically
+     3. Pick year + quarter
+          first time   → STEP 1  Targets (KRA) + tasks + role attributes
+          next time    → STEP 2  Self Rating only (targets locked)
+          after that   → DONE    read-only
+     4. Download PDF at any step (Word-form layout)
+   All reading / saving goes through ONE Creator Custom API (appraisal_api),
+   which checks the signed session on every call → a person can only ever
+   see and change HIS OWN appraisal.
+   ====================================================================== */
+
+/* ============================ CONFIG ============================ */
+const API = {
+  // Your Cloudflare Worker link (it forwards to the Zoho Custom API — Zoho blocks direct browser calls)
+  URL: "https://mega-appraisal.kunaljoshi8793.workers.dev",
+  TIMEOUT_MS: 90000
 };
+const KRA_SHARE = 80, ROLE_SHARE = 20;                       // total 100; no role attributes → targets 100
+const RATING_PCT = { 5:100, 4:80, 3:60, 2:40, 1:20 };        // linear: rating ÷ 5 × 100 (= rating/25 policy) — must match the Creator function
+const RATING_LABELS = { 5:'5 - Outstanding', 4:'4 - Very Good', 3:'3 - Good', 2:'2 - Fair', 1:'1 - Poor' };
+const QUARTERS = [{id:'Q1',label:'Q1: Apr–Jun'},{id:'Q2',label:'Q2: Jul–Sep'},{id:'Q3',label:'Q3: Oct–Dec'},{id:'Q4',label:'Q4: Jan–Mar'}];
+const OVERALL_LABELS = ['Outstanding','Exceeds Expectations','Meets Expectations','Needs Improvement','Unacceptable'];
+const SESSION_KEY = 'mega_pa_session_v3';
 
+/* ============================================================
+   PDF TEMPLATE ENGINE — exact replica of
+   "Performance Appraisal Form - Revised 3.1.2" (Word)
+   Page 1: Logo · Quarter strip · Name/Dept/Appraiser · Rating legend
+           Target-1..5 + Additional Target (tasks listed under each KRA)
+           Total · Appraiser's/HOD's Remark · Signatures
+   Page 2: Logo · Facilitating / Constraining / Outstanding / Comments
+           Role Attributes (5 rows + Total) · My Learnings
+           Training Need · Overall Performance Rating · Signatures
+   ============================================================ */
+const PDF_LOGO = "data:image/png;base64,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";
+const PDF_DEV_DIGITS = ['०','१','२','३','४','५','६','७','८','९'];
+const PDF_QUARTERS = [
+  {id:'Q1', label:'Q1: April to June'},
+  {id:'Q2', label:'Q2 : July to September'},
+  {id:'Q3', label:'Q3 :October- December'},
+  {id:'Q4', label:'Q4: January to March'}
+];
+const PDF_OVERALL = ['Outstanding','Exceeds Expectations','Meets Expectations','Needs Improvement','Unacceptable'];
+const PDF_FIXED_TARGETS = 5;      // "Five Targets are must"
+const PDF_MIN_ATTR_ROWS = 5;      // Role attribute table always shows 5 rows
+const PDF_MIN_TRAIN_ROWS = 1;
 
-/* ================================================================
-   2. ROLE ATTRIBUTES RATING CALCULATION
-   ================================================================ */
+function pdfEsc(s){ return (s===null||s===undefined?'':String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function pdfMultiline(s){ return pdfEsc(s).replace(/\n/g,'<br>'); }
+function pdfDev(n){ return String(n).split('').map(d => /\d/.test(d) ? PDF_DEV_DIGITS[+d] : d).join(''); }
+function pdfNum(v){ const n = parseFloat(v); return isNaN(n) ? null : n; }
+function pdfFmt(n, dp){ if(n===null||n===undefined||isNaN(n)) return ''; const f = Number(n).toFixed(dp===undefined?1:dp); return f.replace(/\.0+$/,'').replace(/(\.\d*?)0+$/,'$1'); }
+function pdfPlain(v){
+  if(v===null||v===undefined) return '';
+  if(typeof v === 'object') return v.display_value || v.zc_display_value || '';
+  return String(v);
+}
 
-function megaRoleScores() {
+/* Rating (1–5) → percentage using the editable rating map */
+function pdfRatingPct(model, rating){
+  const r = parseInt(rating, 10);
+  if(!r || !model.ratingMap || model.ratingMap[r] === undefined) return null;
+  return parseFloat(model.ratingMap[r]) || 0;
+}
 
-    let self = 0;
-    let manager = 0;
+/* Weighted average rating of a KRA's tasks (by task weightage; equal if none) */
+function pdfKraAvgRating(kra, key){
+  let sum = 0, wt = 0, cnt = 0;
+  (kra.goals||[]).forEach(g => {
+    const r = pdfNum(g[key]); if(r===null) return;
+    const w = pdfNum(g.weightage) || 0;
+    sum += r * (w > 0 ? w : 1); wt += (w > 0 ? w : 1); cnt++;
+  });
+  return cnt ? sum / wt : null;
+}
 
-    let selfCount = 0;
-    let managerCount = 0;
-
-    const attributes = state.attributes || [];
-
-    attributes.forEach(function(a) {
-
-        const weight = Number(a.weightage) || 0;
-
-        const selfRating = String(a.rating || '');
-
-        const managerRating = String(a.apprRating || '');
-
-        if (/^[1-5]$/.test(selfRating)) {
-
-            self += weight * Number(selfRating) / 5;
-
-            selfCount++;
-
-        }
-
-        if (/^[1-5]$/.test(managerRating)) {
-
-            manager += weight * Number(managerRating) / 5;
-
-            managerCount++;
-
-        }
-
+/* KRA section score (out of KRA section weight) for 'selfRating' or 'apprRating' */
+function pdfKraScore(model, key){
+  let total = 0, any = false;
+  (model.kras||[]).forEach(kra => {
+    const kw = pdfNum(kra.weightage) || 0;
+    if(!kw || !(kra.goals||[]).length) return;
+    let ws = 0, wt = 0;
+    kra.goals.forEach(g => {
+      let r = g[key];
+      if(key === 'apprRating' && (r===''||r===null||r===undefined)) return;
+      const pct = pdfRatingPct(model, r); if(pct===null) return;
+      const gw = pdfNum(g.weightage) || 1;
+      ws += gw * pct; wt += gw; any = true;
     });
+    if(wt > 0) total += kw * (ws / wt) / 100;
+  });
+  return any ? total : null;
+}
+function pdfAttrScore(model, key){
+  key = key || 'rating';
+  let total = 0, any = false;
+  (model.attributes||[]).forEach(a => {
+    const pct = pdfRatingPct(model, a[key]); if(pct===null) return;
+    total += (pdfNum(a.weightage)||0) * pct / 100; any = true;
+  });
+  return any ? total : null;
+}
 
-    return {
-        self: Math.round(self * 100) / 100,
-        manager: Math.round(manager * 100) / 100,
-        selfCount: selfCount,
-        managerCount: managerCount,
-        count: attributes.length,
-        maximum: roleTotal()
+/* ---------- Page-1 target block ---------- */
+function pdfTargetLabel(i){
+  const n = i + 1;
+  if(i < PDF_FIXED_TARGETS) return `Target-${n} (उद्दिष्ट ${pdfDev(n)} ) :`;
+  if(i === PDF_FIXED_TARGETS) return `Additional Target ( If any) : (उद्दिष्ट ${pdfDev(n)}):`;
+  return `Additional Target : (उद्दिष्ट ${pdfDev(n)}):`;
+}
+function pdfTargetBlock(kra, i){
+  const n = i + 1;
+  const label = pdfTargetLabel(i);
+  const achLabel = `Achievement: (प्राप्ति ${pdfDev(n)})`;
+  if(!kra || (!kra.name && !(kra.goals||[]).length)){
+    return `<tr class="pa-avoid"><td class="pa-tcell"><div class="pa-b">${label}</div><div class="pa-blank"></div><div class="pa-b">${achLabel}</div><div class="pa-blank-s"></div></td><td></td><td></td></tr>`;
+  }
+  const selfAvg = pdfKraAvgRating(kra, 'selfRating');
+  const apprAvg = pdfKraAvgRating(kra, 'apprRating');
+  const kw = pdfNum(kra.weightage);
+  let html = `<tr class="pa-avoid pa-target-row">
+    <td class="pa-tcell">
+      <div><span class="pa-b">${label}</span> <span class="pa-b">${pdfEsc(kra.name)}</span>${kw!==null?` <span class="pa-wt">(Weightage ${pdfFmt(kw,2)}%)</span>`:''}</div>
+      ${kra.description ? `<div class="pa-desc">${pdfMultiline(kra.description)}</div>` : ''}
+    </td>
+    <td class="pa-rc pa-b">${selfAvg!==null?pdfFmt(selfAvg,1):''}</td>
+    <td class="pa-rc pa-b">${apprAvg!==null?pdfFmt(apprAvg,1):''}</td>
+  </tr>`;
+  const goals = kra.goals || [];
+  if(!goals.length){
+    html += `<tr class="pa-avoid"><td class="pa-tcell pa-task"><div class="pa-b">${achLabel}</div><div class="pa-blank-s"></div></td><td></td><td></td></tr>`;
+  }
+  goals.forEach((g, gi) => {
+    const gw = pdfNum(g.weightage);
+    html += `<tr class="pa-avoid">
+      <td class="pa-tcell pa-task">
+        <div><span class="pa-tasktag">Task ${n}.${gi+1}${gw!==null?` · ${pdfFmt(gw,2)}%`:''}</span> ${g.html ? `<div class="pa-rich">${g.html}</div>` : pdfMultiline(g.name)}</div>
+        <div class="pa-ach"><span class="pa-b">${achLabel}</span> ${pdfMultiline(g.achievement)}</div>
+      </td>
+      <td class="pa-rc">${pdfEsc(g.selfRating)}</td>
+      <td class="pa-rc">${pdfEsc(g.apprRating)}</td>
+    </tr>`;
+  });
+  return html;
+}
+
+/* ---------- Full document ---------- */
+function buildAppraisalPdfHtml(model){
+  const m = model;
+  const kras = (m.kras||[]).filter(k => k && (k.name || (k.goals||[]).length));
+  const slots = Math.max(PDF_FIXED_TARGETS + 1, kras.length);
+  let targetRows = '';
+  for(let i = 0; i < slots; i++) targetRows += pdfTargetBlock(kras[i], i);
+
+  const kraW = pdfNum(m.kraSectionWeight); const roleW = pdfNum(m.roleSectionWeight);
+  const selfScore = pdfKraScore(m, 'selfRating');
+  const apprScore = pdfKraScore(m, 'apprRating');
+  const attrScore = pdfAttrScore(m);
+  const attrApprScore = pdfAttrScore(m, 'apprRating');
+
+  const quarterCells = PDF_QUARTERS.map(q => {
+    const sel = q.id === m.quarter;
+    return `<td class="${sel?'pa-qsel':''}">${sel?`<b>${q.label.split(':')[0]}:</b>${q.label.substring(q.label.indexOf(':')+1)} ${pdfEsc(m.year||'')}`:q.label}</td>`;
+  }).join('');
+
+  const attrs = (m.attributes||[]).filter(a => a && a.name);
+  const attrRows = Math.max(PDF_MIN_ATTR_ROWS, attrs.length);
+  let attrHtml = '';
+  for(let i = 0; i < attrRows; i++){
+    const a = attrs[i];
+    attrHtml += `<tr><td class="pa-b pa-sno">${i+1}</td><td>${a?pdfEsc(a.name)+(pdfNum(a.weightage)!==null?` <span class="pa-wt">(${pdfFmt(a.weightage,2)}%)</span>`:''):''}</td><td class="pa-rc">${a?pdfEsc(a.rating):''}</td><td class="pa-rc">${a?pdfEsc(a.apprRating||''):''}</td></tr>`;
+  }
+
+  const train = (m.training||[]).filter(t => t && (t.need||t.benefit||t.fulfilled));
+  const trainRows = Math.max(PDF_MIN_TRAIN_ROWS, train.length);
+  let trainHtml = '';
+  for(let i = 0; i < trainRows; i++){
+    const t = train[i] || {};
+    trainHtml += `<tr class="pa-avoid"><td>${pdfMultiline(t.need)}</td><td>${pdfMultiline(t.benefit)}</td><td>${pdfMultiline(t.fulfilled)}</td></tr>`;
+  }
+
+  const ovr = String(m.overallRating||'').toLowerCase();
+  const tick = l => `<span class="pa-tick">${ovr===l.toLowerCase()?'☑':'☐'}</span> ${l}`;
+
+  return `
+<div class="pa-pdf">
+  <!-- ================= PAGE 1 ================= -->
+  <div class="pa-page">
+    <div class="pa-head"><img class="pa-logo" src="${PDF_LOGO}" alt="MEGA"><div class="pa-title">Performance Appraisal Form</div></div>
+    <table class="pa-qtable"><tr>${quarterCells}</tr></table>
+    <div class="pa-info">
+      <div class="pa-info-row"><span class="pa-b">Name: ${pdfEsc(m.employeeName)}</span><span class="pa-b pa-dept">Department: ${pdfEsc(m.department)}</span></div>
+      <div class="pa-info-row"><span class="pa-b">Name of Appraiser:&nbsp; ${pdfEsc(m.appraiser)}</span></div>
+    </div>
+    <div class="pa-legend pa-b"><span class="pa-nw">Five Targets are must. Rating : 5 = Outstanding ( 96% and above), 4=Very Good ( 86%-95%) 3 = Good ( 71-85%) 2= Fair ( 50-70%)</span><br><span class="pa-nw">1= Poor ( below 50%)<span class="pa-gap2"></span>Target Achievement: ${pdfFmt(kraW===null?80:kraW,2)}% Weightage</span></div>
+    <table class="pa-grid pa-targets">
+      <thead><tr>
+        <th class="pa-th-main"><div class="pa-b">Performance Parameter, Targets and Achievements</div><div class="pa-th-sub">Targets to be linked to Company Goal/Departmental Goal/Cross Functional Team/ System Development/ Self Development/ People Development</div></th>
+        <th class="pa-th-r">Self Rating</th>
+        <th class="pa-th-r">Appraiser’s rating</th>
+      </tr></thead>
+      <tbody>
+        ${targetRows}
+        <tr class="pa-avoid"><td class="pa-total-cell"><span class="pa-b">Total</span> <span class="pa-wt">(KRA score out of ${pdfFmt(kraW===null?80:kraW,2)})</span></td><td class="pa-rc pa-b">${selfScore!==null?pdfFmt(selfScore,2):''}</td><td class="pa-rc pa-b">${apprScore!==null?pdfFmt(apprScore,2):''}</td></tr>
+        <tr class="pa-avoid"><td colspan="3" class="pa-remark"><span class="pa-b">Appraiser’s / HOD’s Remark:</span> ${pdfMultiline(m.hodRemark)}<div class="pa-blank-s"></div></td></tr>
+      </tbody>
+    </table>
+    <div class="pa-note pa-b">Signature of appraise is to confirm that feedback is given to him and rating given by appraiser is jointly agreed between Appraisee and Appraiser</div>
+    <div class="pa-sign pa-b">Signature Appraisee……………………………..Sign. Appraiser…………………………Sign. HOD</div>
+  </div>
+
+  <!-- ================= PAGE 2 ================= -->
+  <div class="pa-page pa-page2">
+    <div class="pa-head"><img class="pa-logo" src="${PDF_LOGO}" alt="MEGA"></div>
+    <table class="pa-grid pa-factors">
+      <tr class="pa-avoid"><td><span class="pa-b">Facilitating Factors</span>: उद्दिष्ट सुलभ करणारे&nbsp; घटक <i>(Appraisee to write which were the factors that helped to achieve the targets. Please give reference to specific target number)</i><div class="pa-fill">${pdfMultiline(m.facilitating)}</div></td></tr>
+      <tr class="pa-avoid"><td><span class="pa-b">Constraining Factors</span>: उद्दिष्ट साध्य करण्यासाठी आलेले अडथळे&nbsp;&nbsp; <i>(Appraisee to write the factors which were constraints to achieve the targets. Please give reference to specific target number)</i><div class="pa-fill">${pdfMultiline(m.constraining)}</div></td></tr>
+      <tr class="pa-avoid"><td><span class="pa-b">Outstanding Achievement/ Significant Contribution</span>: उल्लेखनीय कामगिरी/ योगदान&nbsp;&nbsp; <i>( Mention quantified benefits to company)</i>&nbsp; कंपनीला झालेला फायदा<div class="pa-fill">${pdfMultiline(m.outstanding)}</div></td></tr>
+      <tr class="pa-avoid"><td><span class="pa-b">Comments of Appraiser</span>: <i>(How facilitating factors will be reinforced and constraining factors will be reduced/ eliminated. Comment on Outstanding achievement)</i><div class="pa-fill">${pdfMultiline(m.comments)}</div></td></tr>
+    </table>
+    <div class="pa-attr-head pa-b"><span>Appraisal on Role Attributes:</span><span>${pdfFmt(roleW===null?20:roleW,2)}%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; weightage</span></div>
+    <div class="pa-p">Rating: 5 = Outstanding,&nbsp; 4= Very Good,&nbsp; 3= Good, 2 = Fair,&nbsp; 1= Poor</div>
+    <table class="pa-grid pa-attr">
+      <tr><th class="pa-sno">S.No</th><th>Role Attribute</th><th class="pa-th-r">Self Rating</th><th class="pa-th-r">Appraiser’s rating</th></tr>
+      ${attrHtml}
+      <tr><td></td><td class="pa-center pa-b">Total <span class="pa-wt">(Role score out of ${pdfFmt(roleW===null?20:roleW,2)})</span></td><td class="pa-rc pa-b">${attrScore!==null?pdfFmt(attrScore,2):''}</td><td class="pa-rc pa-b">${attrApprScore!==null?pdfFmt(attrApprScore,2):''}</td></tr>
+    </table>
+    <div class="pa-center pa-b pa-sub">My Learnings</div>
+    <table class="pa-grid">
+      <tr><td>Appraisee to write details of learnings from: Visit outside organization/ Customer Visit/ Training/ Reading of book/ journal/ internet information/ External Course</td></tr>
+      <tr class="pa-avoid"><td class="pa-learn">${pdfMultiline(m.learnings)}</td></tr>
+    </table>
+    <div class="pa-b pa-sub2">Training Need Identification</div>
+    <div class="pa-p">Appraisee to identify the training needs to improve job performance in consultation with Appraiser</div>
+    <table class="pa-grid pa-train">
+      <tr><th>Training need</th><th>Expected benefit after training</th><th>How training need will be fulfilled ( Internal faculty/ Self-study/ Outside training</th></tr>
+      ${trainHtml}
+    </table>
+    <div class="pa-p"><span class="pa-b">OVERALL PERFORMANCE RATING</span>: (Tick <b>one</b> applicable word)</div>
+    <table class="pa-overall">
+      <tr><td>${tick('Outstanding')}</td><td>${tick('Exceeds Expectations')}</td><td>${tick('Meets Expectations')}</td></tr>
+      <tr><td>${tick('Needs Improvement')}</td><td>${tick('Unacceptable')}</td><td></td></tr>
+    </table>
+    <div class="pa-sign pa-b">Sign. Appraiser……………………………Sign. HOD…………………………</div>
+  </div>
+</div>`;
+}
+
+const PDF_CSS = `
+.pa-pdf{width:718px;background:#fff;color:#000;font-family:Calibri,Carlito,'Noto Sans','Nirmala UI','Noto Sans Devanagari',Arial,sans-serif;font-size:12px;line-height:1.3}
+.pa-pdf *{box-sizing:border-box}
+.pa-page{padding:4px 2px 0}
+.pa-page2{page-break-before:always;break-before:page}
+.pa-b{font-weight:700}
+.pa-head{display:flex;align-items:center;gap:60px;margin-bottom:6px}
+.pa-logo{width:85px;height:auto}
+.pa-title{font-weight:700;font-size:13.5px}
+.pa-qtable{border-collapse:collapse;width:100%;margin-bottom:16px}
+.pa-qtable td{border:1px solid #000;padding:2px 5px;font-style:italic;font-size:11.5px;white-space:nowrap}
+.pa-qsel{background:#E8EEF7}
+.pa-info{margin-bottom:10px}
+.pa-info-row{display:flex;margin-bottom:6px;font-size:12.5px}
+.pa-dept{margin-left:auto;margin-right:110px}
+.pa-legend{margin-bottom:4px;font-size:12px;word-spacing:0}
+.pa-nw{white-space:nowrap}
+.pa-gap2{display:inline-block;width:36px}
+.pa-grid{border-collapse:collapse;width:100%}
+.pa-grid th,.pa-grid td{border:1px solid #000;padding:3px 5px;vertical-align:top;text-align:left}
+.pa-grid th{font-weight:700}
+.pa-th-main{width:78%}
+.pa-th-sub{font-style:italic;font-weight:400;font-size:9.5px}
+.pa-th-r{width:11%;}
+.pa-tcell{min-height:60px}
+.pa-target-row td{border-bottom:none;padding-top:5px}
+.pa-task{border-top:none !important;padding-left:14px !important}
+.pa-tasktag{font-weight:700;font-size:10.5px;background:#EEF1F4;padding:0 4px;margin-right:2px}
+.pa-ach{margin-top:3px}
+.pa-rich{display:inline}.pa-rich p,.pa-rich div{margin:0}.pa-rich ol,.pa-rich ul{margin:2px 0 2px 18px;padding:0}.pa-rich li{margin:0}
+.pa-desc{font-size:11px;font-style:italic;margin-top:2px}
+.pa-wt{font-weight:400;font-size:10px;color:#333}
+.pa-rc{text-align:center !important;vertical-align:middle !important}
+.pa-blank{height:30px}
+.pa-blank-s{height:14px}
+.pa-total-cell{text-align:center !important}
+.pa-remark{min-height:40px}
+.pa-note{font-size:10px;margin-top:3px}
+.pa-sign{margin-top:16px;font-size:12px}
+.pa-factors td{height:auto;padding:4px 5px 8px}
+.pa-fill{min-height:34px;margin-top:4px;font-size:12px}
+.pa-attr-head{display:flex;justify-content:space-between;padding-right:60px;margin-top:2px}
+.pa-p{margin:8px 0}
+.pa-sno{width:44px}
+.pa-center{text-align:center !important}
+.pa-sub{margin:2px 0 6px}
+.pa-sub2{margin-top:22px}
+.pa-learn{min-height:34px}
+.pa-train th{width:33.3%}
+.pa-overall{border-collapse:collapse;width:90%;margin-bottom:4px}
+.pa-overall td{padding:5px 0;font-weight:700;width:33%}
+.pa-tick{font-size:14px;font-weight:400}
+`;
+
+/* Inject PDF CSS once */
+(function(){ const st = document.createElement('style'); st.id = 'paPdfCss'; st.textContent = PDF_CSS; document.head.appendChild(st); })();
+
+function pdfSafeFileName(model){
+  return ('Performance_Appraisal_' + (model.employeeName||'Employee') + '_' + (model.quarter||'') + '_' + (model.year||''))
+    .replace(/[^A-Za-z0-9_\-]+/g,'_').replace(/_+/g,'_') + '.pdf';
+}
+
+/* Print-window fallback if html2pdf is unavailable / blocked */
+function pdfPrintFallback(html){
+  const w = window.open('', '_blank');
+  if(!w){ return false; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Performance Appraisal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
+    <style>@page{size:A4;margin:10mm} body{margin:0} ${PDF_CSS} .pa-pdf{width:auto}</style></head><body>${html}
+    <script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script></body></html>`);
+  w.document.close();
+  return true;
+}
+
+/* Main entry: build + download PDF. Returns a Promise. */
+async function downloadAppraisalPdf(model, onStatus){
+  const say = onStatus || function(){};
+  const html = buildAppraisalPdfHtml(model);
+  if(typeof html2pdf === 'undefined'){
+    say('PDF library not loaded — opening print view (choose "Save as PDF").', null);
+    if(!pdfPrintFallback(html)) say('Pop-up blocked. Allow pop-ups to print / save PDF.', false);
+    return;
+  }
+  say('Generating PDF…', null);
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:absolute;left:0;top:0;width:718px;background:#fff;z-index:-1;pointer-events:none;';
+  const prevScroll = [window.scrollX, window.scrollY]; window.scrollTo(0,0);
+  holder.innerHTML = html;
+  document.body.appendChild(holder);
+  try{
+    if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
+    const imgs = Array.from(holder.querySelectorAll('img'));
+    await Promise.all(imgs.map(im => im.complete ? 1 : new Promise(r => { im.onload = im.onerror = r; })));
+    /* Render each form page separately so page 2 always starts on a fresh
+       sheet (no blank pages), while long target lists flow onto extra pages
+       without cutting a task row in half. */
+    const pages = Array.from(holder.querySelectorAll('.pa-page')).map(pg => {
+      const wrap = document.createElement('div');
+      wrap.className = 'pa-pdf';
+      const clone = pg.cloneNode(true);
+      clone.classList.remove('pa-page2');
+      wrap.appendChild(clone);
+      holder.appendChild(wrap);
+      return wrap;
+    });
+    holder.firstElementChild.style.display = 'none';
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: pdfSafeFileName(model),
+      image: { type: 'jpeg', quality: 0.96 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, x: 0, y: 0, windowWidth: 718 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css'], avoid: ['.pa-avoid'] }
     };
-
-}
-
-
-/* ================================================================
-   3. FIND EXISTING ROLE ATTRIBUTES SECTION
-   ================================================================ */
-
-function megaFindRoleSection() {
-
-    const body = document.getElementById('pageBody');
-
-    if (!body) {
-        return null;
+    /* 1) Each form page → canvas (html2pdf inserts "avoid" spacers so a
+          task row is never cut across two sheets).
+       2) Slice every canvas onto A4 sheets ourselves → page 2 of the form
+          always starts on a new sheet and no blank pages are produced. */
+    const canvases = [];
+    for(const el of pages){
+      canvases.push(await html2pdf().set(opt).from(el).toCanvas().get('canvas'));
     }
-
-    const sections = body.querySelectorAll('.section');
-
-    for (const section of sections) {
-
-        const heading = section.querySelector(
-            '.section-head h2'
-        );
-
-        if (!heading) {
-            continue;
-        }
-
-        if (
-            heading.textContent.trim() ===
-            'Role Attributes'
-        ) {
-
-            return section;
-
-        }
-
-    }
-
-    return null;
-
-}
-
-
-/* ================================================================
-   4. ROLE ATTRIBUTES SCORE DISPLAY
-   ================================================================ */
-
-function megaBuildRoleScore(isManager) {
-
-    const scores = megaRoleScores();
-
-    const score = isManager
-        ? scores.manager
-        : scores.self;
-
-    const count = isManager
-        ? scores.managerCount
-        : scores.selfCount;
-
-    const title = isManager
-        ? 'Manager Role Attribute Score'
-        : 'Employee Self Role Attribute Score';
-
-    const el = document.createElement('div');
-
-    el.id = 'megaRoleScorePanel';
-
-    el.style.cssText = [
-        'margin-top:16px',
-        'padding:16px',
-        'border:1px solid #D9C8FA',
-        'background:#F7F4FF',
-        'border-radius:8px'
-    ].join(';');
-
-    el.innerHTML = `
-        <div style="
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            flex-wrap:wrap;
-            gap:12px;
-        ">
-
-            <div>
-                <div style="
-                    font-size:13px;
-                    font-weight:700;
-                ">
-                    ${title}
-                </div>
-
-                <div style="
-                    font-size:11px;
-                    color:#6B7A8F;
-                    margin-top:4px;
-                ">
-                    ${count} of ${scores.count} rated
-                </div>
-            </div>
-
-            <div
-                id="megaRoleScoreValue"
-                style="
-                    font-size:22px;
-                    font-weight:700;
-                    color:#6D28D9;
-                "
-            >
-                ${fmt(score)} / ${fmt(scores.maximum)}
-            </div>
-
-        </div>
-    `;
-
-    return el;
-
-}
-
-
-/* ================================================================
-   5. UPDATE ROLE ATTRIBUTE LABELS
-   ================================================================ */
-
-function megaUpdateRoleHeading(section, mode) {
-
-    if (!section) {
-        return;
-    }
-
-    const heading = section.querySelector(
-        '.section-head h2'
-    );
-
-    const note = section.querySelector('.note');
-
-    if (mode === 'targets') {
-
-        if (heading) {
-            heading.textContent = 'Role Attributes';
-        }
-
-        if (note) {
-
-            note.textContent =
-                'Enter your own Role Attributes. ' +
-                'Five blank rows are provided initially. ' +
-                'Add or remove attributes as required. ' +
-                'The total Role Attributes weightage ' +
-                'is 20% and is automatically divided ' +
-                'among the attributes.';
-
-        }
-
-    }
-
-    if (mode === 'self') {
-
-        if (heading) {
-
-            heading.textContent =
-                'Role Attributes - Self Rating';
-
-        }
-
-        if (note) {
-
-            note.textContent =
-                'Give your Self Rating out of 5 ' +
-                'for each Role Attribute entered ' +
-                'during New Appraisal.';
-
-        }
-
-    }
-
-    if (mode === 'manager') {
-
-        if (heading) {
-
-            heading.textContent =
-                'Role Attributes - Manager Rating';
-
-        }
-
-        if (note) {
-
-            note.textContent =
-                'Review the employee-defined ' +
-                'Role Attributes and provide a ' +
-                'separate Manager Rating out of 5.';
-
-        }
-
-        section.classList.add('mgr-box');
-
-    }
-
-}
-
-
-/* ================================================================
-   6. NEW APPRAISAL - BLANK ROLE ATTRIBUTES
-   ================================================================ */
-
-function megaUpdateTargetsPage() {
-
-    const section = megaFindRoleSection();
-
-    if (!section) {
-        return;
-    }
-
-    megaUpdateRoleHeading(section, 'targets');
-
-    const inputs = section.querySelectorAll(
-        'input:not([disabled])'
-    );
-
-    inputs.forEach(function(input) {
-
-        if (!input.value) {
-
-            input.placeholder =
-                'Enter your own Role Attribute';
-
-        }
-
+    const probe = document.createElement('div'); probe.style.cssText = 'width:10px;height:10px'; holder.appendChild(probe);
+    // html2pdf does not expose jsPDF globally: take its instance (1 probe page) and drop that page at the end.
+    const pdf = await html2pdf().set(opt).from(probe).toPdf().get('pdf');
+    const M = 10, innerW = 210 - 2*M, innerH = 297 - 2*M;
+    canvases.forEach(cv => {
+      const pxPerPage = Math.floor(cv.width * innerH / innerW);
+      for(let y = 0; y < cv.height; y += pxPerPage){
+        const sliceH = Math.min(pxPerPage, cv.height - y);
+        if(sliceH < 6) break;                         // ignore sub-pixel leftovers
+        const sc = document.createElement('canvas');
+        sc.width = cv.width; sc.height = sliceH;
+        const ctx = sc.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, sc.width, sc.height);
+        ctx.drawImage(cv, 0, y, cv.width, sliceH, 0, 0, cv.width, sliceH);
+        pdf.addPage();
+        pdf.addImage(sc.toDataURL('image/jpeg', 0.96), 'JPEG', M, M, innerW, sliceH * innerW / cv.width);
+      }
     });
-
+    pdf.deletePage(1);
+    pdf.save(opt.filename);
+    say('✅ PDF downloaded.', true);
+  } catch(err){
+    console.error('PDF ERROR', err);
+    say('Direct download failed — opening print view (choose "Save as PDF").', false);
+    pdfPrintFallback(html);
+  } finally {
+    document.body.removeChild(holder);
+    window.scrollTo(prevScroll[0], prevScroll[1]);
+  }
 }
 
 
-/* ================================================================
-   7. SELF RATING - ROLE ATTRIBUTES AT THE END
-   ================================================================ */
+document.querySelectorAll('.mega-logo').forEach(i => i.src = PDF_LOGO);
 
-function megaUpdateSelfRating() {
+/* ============================ STATE ============================ */
+const state = {
+  auth:null,                 // {email, session, sexp}
+  me:null,                   // profile from Creator
+  pending:null,              // {email, challenge, exp} while waiting for the code
+  quarter:currentQuarter(), year:String(new Date().getFullYear()),
+  phase:'loading',           // loading | targets | rating | done
+  reviewStatus:'',
+  kras:[], attributes:[], training:[], overallRating:'',
+  texts:{ facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'' },
+  mode:'menu',            // menu | new | rating
+  periods:[],
+  busy:false, loadToken:0
+};
+let seq = 1;
+function nid(p){ return p + (seq++); }
+function currentQuarter(){ const m = new Date().getMonth(); return m <= 2 ? 'Q4' : m <= 5 ? 'Q1' : m <= 8 ? 'Q2' : 'Q3'; }
 
-    const body = document.getElementById('pageBody');
-
-    if (!body) {
-        return;
-    }
-
-    // This summary belongs only to Manager Rating.
-    const existingSummary =
-        document.getElementById('managerQuarterSummary');
-
-    if (existingSummary) {
-        existingSummary.remove();
-    }
-
-    const section = megaFindRoleSection();
-
-    if (!section) {
-        return;
-    }
-
-    megaUpdateRoleHeading(section, 'self');
-
-    // Move Role Attributes to the last section.
-    body.appendChild(section);
-
-    const oldScore = document.getElementById(
-        'megaRoleScorePanel'
-    );
-
-    if (oldScore) {
-        oldScore.remove();
-    }
-
-    section.appendChild(
-        megaBuildRoleScore(false)
-    );
-
+/* ======================= API ======================= */
+function withTimeout(p, ms){ return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('The server took too long — please try again.')), ms))]); }
+function netErr(msg){ const e = new Error(msg); e.network = true; return e; }
+const READ_ACTIONS = { load:1, periods:1 };
+async function call(action, payload){
+  // read-only calls retry automatically (3 tries); saves never auto-repeat (they are verified instead)
+  const tries = READ_ACTIONS[action] ? 3 : 1;
+  let last;
+  for(let t = 1; t <= tries; t++){
+    try{ return await callOnce(action, payload); }
+    catch(e){ last = e; if(!e.network || t === tries) throw e; await new Promise(r => setTimeout(r, 900 * t)); }
+  }
+  throw last;
+}
+async function callOnce(action, payload){
+  const body = Object.assign({ action }, payload || {});
+  if(state.auth && action !== 'send_code' && action !== 'verify_code'){
+    body.email = state.auth.email; body.session = state.auth.session; body.sexp = state.auth.sexp;
+  }
+  if(typeof navigator !== 'undefined' && navigator.onLine === false) throw netErr('You are offline. Check your internet connection and try again.');
+  const url = API.URL;
+  let res;
+  try{
+    res = await withTimeout(fetch(url, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                                          body:'req=' + encodeURIComponent(JSON.stringify(body)) }), API.TIMEOUT_MS);
+  }catch(e){
+    throw netErr(e && e.message && /too long/.test(e.message) ? e.message : 'Cannot reach the server. Check your internet connection.');
+  }
+  let json;
+  try{ json = await res.json(); }catch(e){ throw netErr('Unexpected server response (HTTP ' + res.status + ').'); }
+  if(json && json.code && json.code !== 3000) throw netErr(json.message || ('Server code ' + json.code));
+  let r = (json && json.result !== undefined) ? json.result : json;
+  if(typeof r === 'string'){ try{ r = JSON.parse(r); }catch(e){} }
+  if(!r || r.status !== 'success'){
+    if(r && r.code === 'AUTH'){ expireSession(r.message); }
+    throw new Error((r && r.message) ? r.message : 'Request failed.');
+  }
+  return r;
 }
 
+/* ======================= SIGN IN ======================= */
+function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function loginMsg(msg, ok){ const el = document.getElementById('loginMsg'); el.textContent = msg || ''; el.className = 'login-msg' + (ok===true?' ok':ok===false?' bad':''); }
+function warmUp(){ if(state.warmed) return; state.warmed = true; call('ping', {}).catch(() => {}); }
+let resendTimer = null;
+function startResendTimer(){
+  const btn = document.getElementById('resendBtn'); if(!btn) return;
+  let left = 15; clearInterval(resendTimer); btn.disabled = true; btn.textContent = 'Send a new code (' + left + 's)';
+  resendTimer = setInterval(() => { left--; if(left <= 0){ clearInterval(resendTimer); btn.disabled = false; btn.textContent = 'Send a new code'; } else btn.textContent = 'Send a new code (' + left + 's)'; }, 1000);
+}
+async function sendCode(resend){
+  const email = resend && state.pending ? state.pending.email : (document.getElementById('loginEmail').value || '').trim().toLowerCase();
+  if(!isEmail(email)){ loginMsg('Please enter a valid email address.', false); return; }
+  const btn = document.getElementById('sendBtn'); btn.disabled = true;
+  /* show the code box at once — the user can watch the inbox while the server sends */
+  state.pending = { email, challenge:'', exp:'' };
+  document.getElementById('codeMail').textContent = email;
+  document.getElementById('stepEmail').classList.add('hidden');
+  document.getElementById('stepCode').classList.remove('hidden');
+  document.getElementById('loginCode').value = '';
+  document.getElementById('loginCode').focus();
+  document.getElementById('verifyBtn').disabled = true;
+  loginMsg('⏳ Sending the code to your email…', null);
+  const reqId = (state.sendReq = (state.sendReq || 0) + 1);
+  try{
+    const r = await call('send_code', { email });
+    if(reqId !== state.sendReq || !state.pending) return;
+    state.pending = { email, challenge:r.challenge, exp:String(r.exp) };
+    document.getElementById('verifyBtn').disabled = false;
+    if((document.getElementById('loginCode').value || '').replace(/\D/g, '').length === 6) verifyCode();
+    startResendTimer();
+    if(r.test_mode) loginMsg('🧪 Test login: no email is sent — enter your TEST PIN.', true);
+    else loginMsg((resend ? 'A new code was sent.' : 'Code sent.') + ' Check your inbox (and spam folder).', true);
+  }catch(err){
+    if(reqId !== state.sendReq) return;
+    backToEmail(); loginMsg(err.message, false);
+  }
+  finally{ btn.disabled = false; }
+}
+async function verifyCode(){
+  const code = (document.getElementById('loginCode').value || '').replace(/\D/g, '');
+  if(code.length !== 6){ loginMsg('Enter the 6-digit code from the email.', false); return; }
+  if(!state.pending){ backToEmail(); return; }
+  if(!state.pending.challenge){ loginMsg('⏳ The code is still being sent — one moment…', null); return; }
+  const btn = document.getElementById('verifyBtn'); btn.disabled = true;
+  loginMsg('Signing in…', null);
+  try{
+    const r = await call('verify_code', { email:state.pending.email, code, challenge:state.pending.challenge, exp:state.pending.exp });
+    state.auth = { email:state.pending.email, session:r.session, sexp:String(r.sexp) };
+    state.me = r.employee;
+    try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify({ auth:state.auth, me:state.me })); }catch(e){}
+    state.pending = null;
+    openApp();
+  }catch(err){ loginMsg(err.message, false); }
+  finally{ btn.disabled = false; }
+}
+function backToEmail(){
+  state.pending = null;
+  document.getElementById('stepCode').classList.add('hidden');
+  document.getElementById('stepEmail').classList.remove('hidden');
+  loginMsg('', null);
+}
+function logout(){
+  saveDraft();
+  try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){}
+  location.reload();
+}
+function expireSession(msg){
+  saveDraft();
+  try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){}
+  state.auth = null; state.me = null;
+  document.getElementById('appView').classList.add('hidden');
+  document.getElementById('footerBar').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+  backToEmail();
+  loginMsg(msg || 'Please sign in again. Your typing is kept.', false);
+}
 
-/* ================================================================
-   8. MANAGER RATING - ROLE ATTRIBUTES AT THE END
-   ================================================================ */
-
-function megaUpdateManagerRating() {
-
-    const body = document.getElementById('pageBody');
-
-    if (!body) {
-        return;
+/* ======================= PAGE + PERIOD ======================= */
+function openApp(){
+  const me = state.me;
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('appView').classList.remove('hidden');
+  document.getElementById('footerBar').classList.remove('hidden');
+  document.getElementById('whoName').textContent = me.name;
+  document.getElementById('whoEmail').textContent = me.email;
+  fillProfile(me);
+  const y = new Date().getFullYear();
+  document.getElementById('yearSelect').innerHTML = [y-1, y, y+1].map(v => `<option ${String(v)===state.year?'selected':''}>${v}</option>`).join('');
+  showMenu();
+}
+function fillProfile(p){
+  p = p || {};
+  document.getElementById('pName').textContent = p.name || '—';
+  document.getElementById('pId').textContent = p.employee_id || '—';
+  document.getElementById('pDept').textContent = p.department || '—';
+  document.getElementById('pMgr').textContent = p.manager || '—';
+  document.getElementById('pHr').textContent = p.hr || '—';
+}
+function isOwnMode(){ return state.mode !== 'team' && state.mode !== 'admin' && state.mode !== 'hod'; }
+/* money formatter (Indian style) */
+function r2(n){ return Math.round((Number(n) || 0) * 100) / 100; }
+function money(n){ return '₹ ' + r2(n).toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
+function companyKey(){ return 'mega_pa_company::' + state.quarter + '::' + state.year; }
+function show(id, on){ document.getElementById(id).classList.toggle('hidden', !on); }
+function showMenu(){
+  if(state.busy) return;
+  state.justSaved = false;
+  saveDraft();
+  state.mode = 'menu'; state.loadToken++; state.phase = 'menu'; resetData();
+  state.target = null; state.subject = null; fillProfile(state.me);
+  show('teamCard', !!(state.me && state.me.is_manager)); show('adminCard', !!(state.me && state.me.is_admin)); show('hodCard', false); show('diagCard', !!(state.me && state.me.is_admin));
+  show('choiceView', true); show('menuBtn', false); show('footerBar', false);
+  show('yearBox', false); show('quarterRow', false); show('periodChips', false);
+  document.getElementById('stepBanner').innerHTML = '';
+  document.getElementById('pageBody').innerHTML = '';
+  window.scrollTo(0,0);
+  renderMenuBadges();
+  refreshPeriods();                       // background — menu stays instant
+}
+/* ---- list of this employee's quarters (cached, refreshed in background) ---- */
+function normPeriods(list){
+  return (list || []).map(p => ({ quarter:String(p.quarter), year:String(p.year).replace(/\.0+$/,''), phase:p.phase }))
+    .sort((a,b) => (Number(b.year) - Number(a.year)) || (Q_ORDER[b.quarter] - Q_ORDER[a.quarter]));
+}
+let periodsPromise = null;
+function refreshPeriods(force){
+  if(periodsPromise && !force) return periodsPromise;
+  periodsPromise = call('periods', {}).then(r => {
+    state.periods = normPeriods(r.periods); state.periodsLoaded = true;
+    renderMenuBadges(); if(state.mode === 'new') renderQuarters(); if(state.mode === 'rating' || state.mode === 'view') renderPeriodChips();
+    return state.periods;
+  }).finally(() => { periodsPromise = null; });
+  periodsPromise.catch(() => {});
+  return periodsPromise;
+}
+function periodOf(q, y){ return state.periods.find(p => p.quarter === q && p.year === String(y)); }
+function renderMenuBadges(){
+  const nb = document.getElementById('newBadge'), rb = document.getElementById('rateBadge');
+  if(!nb || !rb) return;
+  if(!state.periodsLoaded){ nb.classList.add('hidden'); rb.classList.add('hidden'); return; }
+  const toRate = state.periods.filter(p => p.phase === 'rating');
+  const done = state.periods.filter(p => p.phase === 'done');
+  rb.classList.remove('hidden');
+  rb.className = 'badge' + (toRate.length ? '' : ' ok');
+  rb.textContent = toRate.length ? (toRate[0].quarter + ' ' + toRate[0].year + ' waiting') : (done.length ? '✓ All rated' : 'Nothing yet');
+  nb.classList.remove('hidden');
+  nb.textContent = state.periods.length ? (state.periods.length + ' quarter(s) saved') : 'Start here';
+  const vb = document.getElementById('viewBadge');
+  if(vb){ vb.classList.remove('hidden'); vb.textContent = state.periods.length ? (state.periods.length + ' quarter(s)') : 'None yet'; }
+}
+/* ---- New Appraisal: pick quarter, add targets ---- */
+function chooseNew(){
+  state.mode = 'new'; state.justSaved = false;
+  show('choiceView', false); show('menuBtn', true); show('footerBar', true);
+  show('yearBox', true); show('quarterRow', true); show('periodChips', false);
+  if(periodOf(state.quarter, state.year)){
+    const cq = currentQuarter(), cy = String(new Date().getFullYear());
+    state.quarter = cq; state.year = cy;
+  }
+  document.getElementById('yearSelect').value = state.year;
+  renderQuarters();
+  loadPeriod();
+}
+/* ---- Self Rating: open the latest quarter whose targets are waiting for rating ---- */
+const Q_ORDER = { Q1:1, Q2:2, Q3:3, Q4:4 };
+async function chooseRating(){
+  state.mode = 'rating';
+  show('choiceView', false); show('menuBtn', true); show('footerBar', true);
+  show('yearBox', false); show('quarterRow', false); show('periodChips', true);
+  document.getElementById('periodChips').innerHTML = '';
+  state.phase = 'loading'; resetData(); renderPage();
+  setStatus('Finding your last appraisal…', null);
+  const token = ++state.loadToken;
+  try{
+    await refreshPeriods();
+    if(token !== state.loadToken) return;
+    const pending = state.periods.filter(p => p.phase === 'rating');
+    const pick = pending[0] || null;
+    if(!pick){
+      renderPeriodChips();
+      state.phase = 'none'; renderPage();
+      setStatus(state.periods.length ? 'No appraisal is waiting for self rating.' : 'No targets found yet — start a New Appraisal first.', null);
+      return;
     }
+    state.quarter = pick.quarter; state.year = pick.year;
+    renderPeriodChips();
+    loadPeriod();
+  }catch(err){
+    if(token !== state.loadToken) return;
+    state.phase = 'error'; renderPage(); setStatus('❌ ' + err.message, false);
+  }
+}
+function renderPeriodChips(){
+  const el = document.getElementById('periodChips');
+  if(!state.periods.length){ el.innerHTML = ''; return; }
+  el.innerHTML = '<label style="margin:0 6px 0 0;">Your appraisals:</label>' + state.periods.map(p =>
+    `<div class="period-chip ${p.phase==='done'?'done':''} ${p.quarter===state.quarter && p.year===state.year && state.phase!=='none' ? 'active' : ''}" onclick="pickPeriod('${p.quarter}','${p.year}')">${p.quarter} ${p.year}<span class="tag">${p.phase==='done'?'🔒 SUBMITTED':(state.mode==='view'?'TARGETS ONLY':'TO RATE')}</span></div>`).join('');
+}
+/* ---- My Appraisals: read-only view of any saved quarter ---- */
+async function chooseView(q, y){
+  state.mode = 'view'; state.justSaved = false;
+  show('choiceView', false); show('menuBtn', true); show('footerBar', true);
+  show('yearBox', false); show('quarterRow', false); show('periodChips', true);
+  document.getElementById('periodChips').innerHTML = '';
+  state.phase = 'loading'; resetData(); renderPage();
+  setStatus('Loading your appraisals…', null);
+  const token = ++state.loadToken;
+  try{
+    await refreshPeriods(true);
+    if(token !== state.loadToken) return;
+    const pick = (q && y && periodOf(q, y)) || state.periods[0] || null;
+    if(!pick){ renderPeriodChips(); state.phase = 'none'; renderPage(); setStatus('No appraisals saved yet.', null); return; }
+    state.quarter = pick.quarter; state.year = pick.year;
+    renderPeriodChips();
+    loadPeriod();
+  }catch(err){
+    if(token !== state.loadToken) return;
+    state.phase = 'error'; renderPage(); setStatus('❌ ' + err.message, false);
+  }
+}
+function pickPeriod(q, y){
+  if(state.busy) return;
+  saveDraft();
+  state.quarter = q; state.year = y;
+  loadPeriod().then(renderPeriodChips);
+  renderPeriodChips();
+}
+function renderQuarters(){
+  document.getElementById('quarterRow').innerHTML = QUARTERS.map(q => {
+    const p = periodOf(q.id, state.year), lk = p ? (p.phase === 'done' ? '🔒 Submitted' : '🔒 Targets saved') : '';
+    return `<div class="quarter-btn ${state.quarter===q.id?'active':''} ${p?'locked':''}" title="${p?'Already submitted — view only':''}" onclick="setQuarter('${q.id}')">${q.label}${lk?`<span class="lk">${lk}</span>`:''}</div>`;
+  }).join('');
+}
+function setQuarter(q){ if(state.busy || q === state.quarter) return; state.justSaved = false; saveDraft(); state.quarter = q; renderQuarters(); loadPeriod(); }
+function changeYear(){ if(state.busy){ document.getElementById('yearSelect').value = state.year; return; } state.justSaved = false; saveDraft(); state.year = document.getElementById('yearSelect').value; renderQuarters(); loadPeriod(); }
 
-    const section = megaFindRoleSection();
-
-    if (!section) {
-        return;
+async function loadPeriod(){
+  const token = ++state.loadToken;
+  state.phase = 'loading'; resetData(); renderPage();
+  setStatus('Loading your ' + state.quarter + ' ' + state.year + ' appraisal…', null);
+  try{
+    const act = state.mode === 'team' ? 'mgr_load' : state.mode === 'admin' ? 'admin_load' : state.mode === 'hod' ? 'hod_load' : 'load';
+    const payload = { quarter:state.quarter, year:state.year };
+    if(!isOwnMode()) payload.target = state.target;
+    const r = await call(act, payload);
+    if(token !== state.loadToken) return;
+    if(isOwnMode()){ if(r.employee){ const keep = { is_manager:state.me.is_manager, is_admin:state.me.is_admin, is_hod:state.me.is_hod }; state.me = Object.assign(state.me || {}, r.employee); if(r.employee.is_manager === undefined) Object.assign(state.me, keep); } }
+    else { state.subject = r.employee || {}; fillProfile(state.subject); }
+    state.mgrDone = !!r.mgr_done; state.finalDone = !!r.final_done; state.hodDone = !!r.hod_done; state.serverVersion = r.version || '';
+    state.phase = r.phase;
+    state.kras = (r.kras || []).map(k => ({ id:nid('k'), recId:String(k.id), name:k.name, description:k.description, weightage:num(k.weightage),
+      goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, html:richFromServer(g.html, g.name), weightage:num(g.weightage), achievement:g.achievement || '',
+        selfRating:g.self_rating || '', apprRating:g.appraiser_rating || '' })) }));
+    state.attributes = (r.attributes || []).map(a => ({ id:nid('a'), recId:String(a.id), name:a.name, weightage:num(a.weightage), rating:a.rating || '', apprRating:a.appraiser_rating || '' }));
+    state.training = (r.training || []).map(t => ({ id:nid('t'), saved:true, need:t.need, benefit:t.benefit, fulfilled:t.fulfilled }));
+    const rv = r.review || {};
+    state.texts = { facilitating:rv.facilitating || '', constraining:rv.constraining || '', outstanding:rv.outstanding || '', comments:rv.comments || '', learnings:rv.learnings || '' };
+    state.overallRating = rv.overall || '';
+    state.reviewStatus = rv.status || '';
+    state.managerRemark = rv.manager_remark || ''; state.managerScore = rv.manager_score || ''; state.selfScoreSaved = rv.final_score || '';
+    state.final = { rating:rv.final_rating || '', payout:rv.final_payout || '', remark:rv.final_remark || '', by:rv.approved_by || '' };
+    let savedCo = ''; try{ savedCo = localStorage.getItem(companyKey()) || ''; }catch(e){}
+    const emp = r.employee || {};
+    state.hod = { company:rv.company_score || ((state.mode === 'hod' || state.mode === 'admin') && !r.final_done ? savedCo : ''), ips:(r.final_done && rv.weighted_score) ? rv.weighted_score : '', weighted:rv.weighted_score || '', remark:rv.hod_remark || '', by:rv.hod_by || '',
+                  yv:emp.yearly_variable || '', ep:emp.emp_pct || '', cp:emp.comp_pct || '',
+                  eligible:rv.eligible || '', empVar:rv.emp_var || '', compVar:rv.comp_var || '', payout:rv.payout || '' };
+    state.final.payoutEdited = false;
+    if(state.mode === 'admin' && !r.final_done && state.final.payout === '' && r.mgr_done){ const c0 = hodCalc(); if(varSetupOk()) state.final.payout = String(c0.payout); }
+    if(state.phase === 'targets'){ if(!restoreDraft()) addKRA(true); if(!state.attributes.length) addDefaultAttrs(); }
+    else if(state.phase === 'rating' && state.mode !== 'view'){ restoreDraft(); }
+    renderPage();
+    if(!isOwnMode()){
+      const canMgr = state.mode === 'team' && state.phase === 'done' && !state.mgrDone && !state.finalDone;
+      const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
+      const canHod = canHodNow();
+      setStatus(canMgr ? 'Give your Manager Rating for every task and role attribute, then click Submit Manager Rating.' : canHod ? 'Enter the company score, check the variable pay, then click Submit HOD Review.' : canAdm ? 'Check / change the % values and Company performance %, choose the final rating, then click Approve & Finalize.' : 'View only.', true);
+      return;
     }
+    setStatus({ targets:'Step 1 — add your Targets (KRA) and tasks, then click Submit Targets.',
+                rating:'Step 2 — fill achievement and self rating for each task, then click Submit Self Rating.',
+                done:'This appraisal is complete. You can download the PDF.' }[state.phase] || 'Ready.', true);
+  }catch(err){
+    if(token !== state.loadToken) return;
+    state.phase = 'error'; renderPage();
+    setStatus('❌ ' + err.message, false);
+  }
+}
+function resetData(){
+  state.hodDone = false; state.hod = { company:'', ips:'', weighted:'', remark:'', by:'', yv:'', ep:'', cp:'', eligible:'', empVar:'', compVar:'', payout:'' };
+  state.mgrDone = false; state.finalDone = false; state.managerRemark = ''; state.managerScore = ''; state.selfScoreSaved = '';
+  state.final = { rating:'', payout:'', remark:'', by:'' };
+  state.kras = []; state.attributes = []; state.training = []; state.overallRating = ''; state.reviewStatus = '';
+  state.texts = { facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'' };
+}
+function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
-    megaUpdateRoleHeading(section, 'manager');
+/* ======================= AUTO WEIGHTAGE ======================= */
+function splitEven(total, count){
+  if(count <= 0) return [];
+  const each = Math.floor((total / count) * 100) / 100;
+  const arr = new Array(count).fill(each);
+  arr[count-1] = Math.round((total - each * (count-1)) * 100) / 100;
+  return arr;
+}
+function sectionShares(){ const r = state.attributes.length > 0; return { kra: r ? KRA_SHARE : 100, role: r ? ROLE_SHARE : 0 }; }
+function applyWeights(){                     // Step 1 only; later the saved weights are used
+  if(state.phase !== 'targets') return;
+  const sh = sectionShares(), kw = splitEven(sh.kra, state.kras.length);
+  state.kras.forEach((k, i) => { k.weightage = kw[i]; const gw = splitEven(k.weightage, k.goals.length); k.goals.forEach((g, j) => g.weightage = gw[j]); });
+  const aw = splitEven(sh.role, state.attributes.length);
+  state.attributes.forEach((a, i) => a.weightage = aw[i]);
+}
+function pct(r){ const n = parseInt(r, 10); return RATING_PCT[n] !== undefined ? RATING_PCT[n] : 0; }
+function computeScores(){
+  let kra = 0, role = 0;
+  state.kras.forEach(k => k.goals.forEach(g => { kra += (g.weightage || 0) * pct(g.selfRating) / 100; }));
+  state.attributes.forEach(a => { role += (a.weightage || 0) * pct(a.rating) / 100; });
+  kra = Math.round(kra*100)/100; role = Math.round(role*100)/100;
+  return { kra, role, total: Math.round((kra + role)*100)/100 };
+}
+function suggestedOverall(s){ return s >= 96 ? 'Outstanding' : s >= 86 ? 'Exceeds Expectations' : s >= 71 ? 'Meets Expectations' : s >= 50 ? 'Needs Improvement' : 'Unacceptable'; }
+function kraTotal(){ return state.kras.reduce((s,k) => s + (k.weightage||0), 0); }
+function roleTotal(){ return state.attributes.reduce((s,a) => s + (a.weightage||0), 0); }
 
-    const oldScore = document.getElementById(
-        'megaRoleScorePanel'
-    );
+/* ======================= EDITING ======================= */
+function newGoal(){ return { id:nid('g'), recId:'', name:'', achievement:'', weightage:0, selfRating:'', apprRating:'' }; }
+function addKRA(silent){ state.kras.push({ id:nid('k'), recId:'', name:'', description:'', weightage:0, goals:[newGoal()] }); if(!silent){ renderPage(); markUnsaved(); } }
+function removeKRA(id){ state.kras = state.kras.filter(k => k.id !== id); renderPage(); markUnsaved(); }
+function findKra(id){ return state.kras.find(k => k.id === id); }
+function findGoal(kid, gid){ return findKra(kid).goals.find(g => g.id === gid); }
+function addGoal(kid){ findKra(kid).goals.push(newGoal()); renderPage(); markUnsaved(); }
+function removeGoal(kid, gid){ const k = findKra(kid); k.goals = k.goals.filter(g => g.id !== gid); renderPage(); markUnsaved(); }
+function addAttribute(){ state.attributes.push({ id:nid('a'), recId:'', name:'', weightage:0, rating:'' }); renderPage(); markUnsaved(); }
+function removeAttribute(id){ if(state.attributes.length <= 1){ setStatus('❌ At least one Role Attribute is required (20% of the score).', false); return; } state.attributes = state.attributes.filter(a => a.id !== id); renderPage(); markUnsaved(); }
+// Start with five empty, employee-defined role attributes. No preset names.
+function addDefaultAttrs(){
+  if(state.attributes.length) return;
+  for(let i=0;i<5;i++) state.attributes.push({ id:nid('a'), recId:'', name:'', weightage:0, rating:'', apprRating:'' });
+}
+/* text edits never re-render (keeps the click where the user put it) */
+function setKra(id, f, v){ findKra(id)[f] = v; markUnsaved(); }
+function setGoal(kid, gid, f, v){ findGoal(kid, gid)[f] = v; if(f === 'selfRating' || f === 'apprRating') renderScores(); markUnsaved(); }
+function setAttr(id, f, v){ state.attributes.find(a => a.id === id)[f] = v; if(f === 'rating' || f === 'apprRating') renderScores(); markUnsaved(); }
+function setText(id, v){ state.texts[id] = v; markUnsaved(); }
 
-    if (oldScore) {
-        oldScore.remove();
-    }
+/* ======================= RICH TEXT (Task) ======================= */
+const RICH_TAGS = { B:'b', STRONG:'b', I:'i', EM:'i', U:'u', OL:'ol', UL:'ul', LI:'li', BR:'br', P:'div', DIV:'div' };
+function sanitizeRich(html){
+  const src = document.createElement('div'); src.innerHTML = String(html || '');
+  const out = document.createElement('div');
+  (function walk(from, to){
+    from.childNodes.forEach(n => {
+      if(n.nodeType === 3){ to.appendChild(document.createTextNode(n.nodeValue)); return; }
+      if(n.nodeType !== 1) return;
+      const tag = RICH_TAGS[n.tagName];
+      if(n.tagName === 'SCRIPT' || n.tagName === 'STYLE') return;
+      if(!tag){                                   // unknown tag → keep its text, honour bold/underline styles
+        const st = (n.getAttribute && n.getAttribute('style')) || '';
+        let target = to;
+        if(/font-weight\s*:\s*(bold|[6-9]00)/i.test(st)){ const b = document.createElement('b'); to.appendChild(b); target = b; }
+        if(/underline/i.test(st)){ const u = document.createElement('u'); target.appendChild(u); target = u; }
+        walk(n, target); return;
+      }
+      const el = document.createElement(tag); to.appendChild(el);
+      if(tag !== 'br') walk(n, el);
+    });
+  })(src, out);
+  return out.innerHTML.replace(/(<br>\s*)+$/,'').replace(/^(\s|&nbsp;|<br>)+$/,'').trim();
+}
+function plainFromRich(html){
+  const box = document.createElement('div'); box.innerHTML = sanitizeRich(html);
+  let txt = '';
+  (function walk(node, listType, idx){
+    node.childNodes.forEach(n => {
+      if(n.nodeType === 3){ txt += n.nodeValue.replace(/ /g,' '); return; }
+      if(n.nodeType !== 1) return;
+      const t = n.tagName;
+      if(t === 'BR'){ txt += '\n'; return; }
+      if(t === 'OL' || t === 'UL'){ let i = 0; if(txt && !txt.endsWith('\n')) txt += '\n';
+        n.childNodes.forEach(li => { if(li.nodeType === 1 && li.tagName === 'LI'){ i++; txt += (t === 'OL' ? i + '. ' : '• '); walk(li); if(!txt.endsWith('\n')) txt += '\n'; } }); return; }
+      if(t === 'DIV' && txt && !txt.endsWith('\n')) txt += '\n';
+      walk(n);
+      if(t === 'DIV' && !txt.endsWith('\n')) txt += '\n';
+    });
+  })(box);
+  return txt.replace(/\n{3,}/g, '\n\n').trim();
+}
+function richFromServer(html, name){
+  const h = String(html || '').trim();
+  if(h && /<[a-z][\s\S]*>/i.test(h)) return sanitizeRich(h);
+  return '';                                       // plain text → shown from name
+}
+function richOf(g){ return g.html && /<[a-z]/i.test(g.html) ? sanitizeRich(g.html) : (esc(g.name).replace(/\n/g,'<br>') || '—'); }
+function rteCmd(cmd){ try{ document.execCommand(cmd, false, null); }catch(e){} const a = document.activeElement; if(a && a.classList && a.classList.contains('rte-area')) rteInput(a); }
+function rtePaste(e){
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain') || '';
+  try{ document.execCommand('insertText', false, text); }catch(err){}
+  rteInput(e.target.closest('.rte-area'));
+}
+function rteInput(el, final){
+  if(!el) return;
+  const g = findGoal(el.dataset.k, el.dataset.g); if(!g) return;
+  g.html = sanitizeRich(el.innerHTML);
+  g.name = plainFromRich(g.html);
+  if(!g.name){ g.html = ''; if(final) el.innerHTML = ''; }
+  markUnsaved();
+}
 
-    // Place Role Attributes at the end.
-    body.appendChild(section);
+/* ======================= MODAL / OVERLAY ======================= */
+function confirmBox(title, html, okText){
+  return new Promise(resolve => {
+    const ov = document.getElementById('overlay');
+    ov.innerHTML = `<div class="modal"><h3>${title}</h3><div class="mbody">${html}</div>
+      <div class="mbtns"><button id="mNo">Cancel</button><button class="solid" id="mYes">${okText || 'Yes, submit'}</button></div></div>`;
+    ov.classList.remove('hidden');
+    const done = v => { ov.classList.add('hidden'); ov.innerHTML = ''; resolve(v); };
+    document.getElementById('mNo').onclick = () => done(false);
+    document.getElementById('mYes').onclick = () => done(true);
+  });
+}
+function busyOverlay(msg){
+  const ov = document.getElementById('overlay');
+  if(!msg){ ov.classList.add('hidden'); ov.innerHTML = ''; return; }
+  ov.innerHTML = `<div class="modal" style="text-align:center;"><div class="load-art" style="padding:4px 0 0;"><div class="bars"><i></i><i></i><i></i><i></i><i></i></div></div><h3>${msg}</h3><div class="busy-bar"><span></span></div><div class="mbody" style="margin:0;color:var(--muted)">Please do not close or refresh this page.</div></div>`;
+  ov.classList.remove('hidden');
+}
+function addTrainingRow(){ state.training.push({ id:nid('t'), saved:false, need:'', benefit:'', fulfilled:'' }); renderPage(); markUnsaved(); }
+function removeTrainingRow(id){ state.training = state.training.filter(t => t.id !== id); renderPage(); markUnsaved(); }
+function setTrain(id, f, v){ state.training.find(t => t.id === id)[f] = v; markUnsaved(); }
+function setOverall(l){ if(state.phase !== 'rating' || state.mode === 'view') return; state.overallRating = l; renderOverall(); markUnsaved(); }
 
-    section.appendChild(
-        megaBuildRoleScore(true)
-    );
-
-    // Add quarterly calculation after Role Attributes.
-    let summary = document.getElementById(
-        'managerQuarterSummary'
-    );
-
-    if (!summary) {
-
-        const holder = document.createElement('div');
-
-        holder.innerHTML = managerQuarterTable();
-
-        summary = holder.firstElementChild;
-
-    }
-
-    if (summary) {
-        body.appendChild(summary);
-    }
-
+/* ======================= RENDER ======================= */
+function ratingSelect(value, onchange){
+  return `<select onchange="${onchange}"><option value="">— Rate —</option>${[5,4,3,2,1].map(r =>
+    `<option value="${r}" ${String(value)===String(r)?'selected':''}>${RATING_LABELS[r]}</option>`).join('')}</select>`;
+}
+function renderBanner(){
+  const p = state.phase, el = document.getElementById('stepBanner'), btn = document.getElementById('mainBtn');
+  const editable = (state.mode === 'new' && p === 'targets') || (state.mode === 'rating' && p === 'rating');
+  if(!isOwnMode()){
+    document.getElementById('pdfBtn').disabled = !(p === 'rating' || p === 'done');
+    if(!state.target){ btn.classList.add('hidden'); el.innerHTML = ''; return; }
+    const canMgr = state.mode === 'team' && p === 'done' && !state.mgrDone && !state.finalDone;
+    const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
+    const canHod = canHodNow();
+    btn.classList.toggle('hidden', !(canMgr || canAdm || canHod));
+    btn.textContent = canMgr ? 'Submit Manager Rating' : canHod ? 'Submit HOD Review' : 'Approve & Finalize';
+    btn.disabled = state.busy;
+    const who = (state.subject && state.subject.name) || state.target;
+    const stTxt = state.finalDone ? 'FINAL — approved' + (state.final.rating ? ' · ' + state.final.rating : '') : state.mgrDone ? 'Manager rating done — waiting for Super Admin' : p === 'done' ? 'Self rating done — waiting for manager rating' : 'Employee has not submitted self rating yet';
+    el.innerHTML = `<div class="step-banner ${state.finalDone ? 'done' : 'rating'}"><span class="num">${state.mode === 'team' ? 'MANAGER' : state.mode === 'hod' ? 'HOD' : 'SUPER ADMIN'}</span><div><div class="t">${esc(who)} — ${state.quarter} ${state.year}</div><div class="d">${esc(stTxt)}</div></div>
+      <div class="steps"><span class="on">1 · Self</span><span class="${state.mgrDone?'on':''}">2 · Manager</span><span class="${state.finalDone?'on':''}">3 · Super Admin</span></div></div>`;
+    return;
+  }
+  if(state.mode === 'view'){
+    btn.classList.add('hidden');
+    document.getElementById('pdfBtn').disabled = !(p === 'rating' || p === 'done');
+    el.innerHTML = (p === 'rating' || p === 'done') ? `<div class="step-banner done"><span class="num">VIEW</span><div><div class="t">My Appraisal — ${state.quarter} ${state.year}</div><div class="d">Read-only. Status: ${esc(state.reviewStatus || (p === 'done' ? 'Submitted' : 'Targets submitted — self rating pending'))}</div></div></div>` : '';
+    return;
+  }
+  btn.classList.toggle('hidden', !editable);
+  btn.textContent = p === 'targets' ? 'Submit Targets' : 'Submit Self Rating';
+  btn.disabled = state.busy;
+  document.getElementById('pdfBtn').disabled = !(p === 'targets' || p === 'rating' || p === 'done');
+  if(!(p === 'targets' || p === 'rating' || p === 'done') || (state.mode === 'new' && p !== 'targets')){ el.innerHTML = ''; return; }
+  const info = {
+    targets:['STEP 1','Set your Targets','Add each Target (KRA) and the tasks under it. Weightage is calculated automatically. You rate them later in Step 2.',''],
+    rating:['STEP 2','Self Rating','Your targets are saved and locked. Fill the achievement and your self rating for every task, then submit.','rating'],
+    done:['DONE','Appraisal submitted','Status: ' + (state.reviewStatus || 'Submitted') + '. Your entries are locked — download the PDF anytime.','done']
+  }[p];
+  el.innerHTML = `<div class="step-banner ${info[3]}"><span class="num">${info[0]}</span><div><div class="t">${info[1]}</div><div class="d">${info[2]}</div></div>
+    <div class="steps"><span class="${p==='targets'?'on':''}">1 · Targets</span><span class="${p==='rating'?'on':''}">2 · Self Rating</span><span class="${p==='done'?'on':''}">✓ Done</span></div></div>`;
+}
+function renderPage(){
+  applyWeights();
+  renderBanner();
+  const body = document.getElementById('pageBody');
+  if(state.phase === 'loading'){ body.innerHTML = '<div class="section"><div class="load-art"><div class="bars"><i></i><i></i><i></i><i></i><i></i></div><div class="t">Loading appraisal data…</div></div></div><div class="section"><div class="skel h"></div><div class="skel b"></div><div class="skel r"></div><div class="skel r"></div></div><div class="section"><div class="skel h"></div><div class="skel r"></div></div>'; return; }
+  if(state.phase === 'error'){ body.innerHTML = `<div class="section notice"><h3>Could not load</h3><p>Please check your internet connection. Nothing you typed is lost.</p><button class="solid" onclick="${state.mode==='rating'?'chooseRating()':state.mode==='team'&&!state.target?'chooseTeam()':state.mode==='admin'&&!state.target?'chooseAdmin()':state.mode==='hod'&&!state.target?'chooseHod()':'loadPeriod()'}">Try again</button> &nbsp; <button onclick="showMenu()">Back to menu</button></div>`; return; }
+  if(!isOwnMode()){
+    if(!state.target){ body.innerHTML = queueHtml(); return; }
+    body.innerHTML = `<div style="margin-bottom:12px;"><button class="small" onclick="backToQueue()">← Back to list</button></div>` +
+      (state.phase === 'done' ? reviewHtml() : `<div class="section notice"><h3>Self rating not submitted yet</h3><p>This employee has not submitted the self rating for ${state.quarter} ${state.year}.</p></div>`);
+    renderScores(); renderOverall();
+    return;
+  }
+  if(state.phase === 'none' && state.mode === 'view'){
+    body.innerHTML = `<div class="section notice"><h3>No appraisals yet</h3><p>You have not submitted any targets yet. Start a New Appraisal first.</p><button class="solid" onclick="showMenu();chooseNew()">Start New Appraisal</button></div>`;
+    return;
+  }
+  if(state.phase === 'none'){
+    body.innerHTML = `<div class="section notice"><h3>Nothing to rate</h3>
+      <p>${state.periods.length ? 'All your saved appraisals are already self-rated. Pick one above to view it or download its PDF.' : 'You have not set any targets yet. Start a New Appraisal first.'}</p>
+      <button class="solid" onclick="showMenu();chooseNew()">Start New Appraisal</button></div>`;
+    return;
+  }
+  if(state.mode === 'new' && state.phase !== 'targets'){
+    const q = state.quarter + ' ' + state.year;
+    body.innerHTML = state.justSaved
+      ? `<div class="section notice"><h3>✅ Targets saved for ${q}</h3>
+          <p>Your targets are saved in the system. You can download the PDF now. Later, open this link again and choose <b>Self Rating</b>.</p>
+          <button onclick="downloadPdf()">Download PDF</button> &nbsp; <button onclick="chooseView('${state.quarter}','${state.year}')">View it</button> &nbsp; <button class="solid" onclick="showMenu()">Back to menu</button></div>`
+      : `<div class="section notice"><h3>Targets for ${q} are already saved</h3>
+          <p>${state.phase === 'rating' ? 'They are waiting for your self rating.' : 'This appraisal is already complete.'} Choose another quarter for a new appraisal, or go to Self Rating.</p>
+          <button onclick="chooseView('${state.quarter}','${state.year}')">View it</button> &nbsp; <button class="solid" onclick="showMenu();chooseRating()">Go to Self Rating</button></div>`;
+    return;
+  }
+  if(state.mode === 'view'){
+    if(state.phase === 'targets'){ body.innerHTML = `<div class="section notice"><h3>No appraisal for ${state.quarter} ${state.year}</h3><p>Pick a quarter above.</p></div>`; return; }
+    const isDone = state.phase === 'done';
+    body.innerHTML = `<div class="lock-note">🔒 <div><b>${state.quarter} ${state.year} — view only.</b> ${isDone ? 'Self rating is submitted. Nothing can be changed.' : 'Targets are submitted; self rating is still pending (do it from <b>Self Rating</b>).'}</div></div>` + ratingHtml(true);
+    renderScores(); renderOverall();
+    return;
+  }
+  body.innerHTML = state.phase === 'targets' ? targetsHtml()
+    : (state.phase === 'done' ? `<div class="lock-note">🔒 <div><b>${state.quarter} ${state.year} is submitted and locked.</b> Nothing can be changed — you can only view it and download the PDF.</div></div>` : '') + ratingHtml(state.phase === 'done');
+  renderScores(); renderOverall();
+}
+function targetsHtml(){
+  const sh = sectionShares();
+  return `
+  <div class="section">
+    <div class="section-head"><h2>Targets (KRA) &amp; Tasks</h2><span class="weight-badge">${fmt(sh.kra)}% · ${state.kras.length} target(s)</span></div>
+    <div class="note">Weightage is automatic: ${fmt(sh.kra)}% is split equally between Targets, and each Target's share is split equally between its tasks.</div>
+    ${state.kras.length ? state.kras.map((k, i) => `
+      <div class="kra-block">
+        <div class="kra-top">
+          <div class="fields">
+            <div><label>Target ${i+1} <span class="req">*</span></label><input value="${esc(k.name)}" maxlength="200" placeholder="e.g. Zoho Creator Development" onchange="setKra('${k.id}','name',this.value)"></div>
+            <div><label>Description</label><input value="${esc(k.description)}" maxlength="500" placeholder="What this target covers" onchange="setKra('${k.id}','description',this.value)"></div>
+            <div><label>Weightage (auto)</label><input value="${fmt(k.weightage)}%" disabled></div>
+          </div>
+          <div class="kra-actions"><button class="small danger" onclick="removeKRA('${k.id}')">Remove</button></div>
+        </div>
+        ${k.goals.map((g, j) => `
+          <div class="goal-row">
+            <div class="goal-row-header"><span class="goal-tag">TASK ${i+1}.${j+1} · ${fmt(g.weightage)}%</span><button class="small danger" onclick="removeGoal('${k.id}','${g.id}')">Remove</button></div>
+            <div><label>Task <span class="req">*</span></label>
+              <div class="rte">
+                <div class="rte-bar">
+                  <button type="button" title="Bold" onmousedown="event.preventDefault();rteCmd('bold')"><b>B</b></button>
+                  <button type="button" title="Italic" onmousedown="event.preventDefault();rteCmd('italic')"><i>I</i></button>
+                  <button type="button" title="Underline" onmousedown="event.preventDefault();rteCmd('underline')"><u>U</u></button>
+                  <button type="button" title="Numbered list" onmousedown="event.preventDefault();rteCmd('insertOrderedList')">1. List</button>
+                  <button type="button" title="Bullet list" onmousedown="event.preventDefault();rteCmd('insertUnorderedList')">• List</button>
+                  <button type="button" title="Clear formatting" onmousedown="event.preventDefault();rteCmd('removeFormat')">Clear</button>
+                </div>
+                <div class="rte-area" contenteditable="true" data-ph="Describe the task — use the buttons for bold, underline, numbering" data-k="${k.id}" data-g="${g.id}"
+                     oninput="rteInput(this)" onblur="rteInput(this,true)" onpaste="rtePaste(event)">${g.html ? sanitizeRich(g.html) : esc(g.name).replace(/\n/g,'<br>')}</div>
+              </div></div>
+          </div>`).join('')}
+        <div style="margin-top:12px;"><button class="small" onclick="addGoal('${k.id}')">+ Add Task under Target ${i+1}</button></div>
+      </div>`).join('') : '<div class="empty">No targets yet.</div>'}
+    <div style="margin-top:14px;"><button class="solid" onclick="addKRA()">+ Add Target (KRA)</button></div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(sh.role)}% · ${state.attributes.length} attribute(s)</span></div>
+    <div class="note">Enter your own Role Attributes in the five blank rows. Add or remove rows as needed. The 20% role weightage is divided equally among the attributes saved. Each attribute is self-rated and manager-rated separately out of 5.</div>
+    ${state.attributes.length ? state.attributes.map((a, i) => `
+      <div class="attr-row" style="grid-template-columns:3fr 1fr auto;">
+        <div><label>Attribute ${i+1} <span class="req">*</span></label><input value="${esc(a.name)}" maxlength="200" placeholder="Enter your own Role Attribute" onchange="setAttr('${a.id}','name',this.value)"></div>
+        <div><label>Weightage (auto)</label><input value="${fmt(a.weightage)}%" disabled></div>
+        <div><button class="small danger" onclick="removeAttribute('${a.id}')">✕</button></div>
+      </div>`).join('') : '<div class="empty" style="color:var(--red)">Add at least one role attribute.</div>'}
+    <div style="margin-top:10px;"><button class="small" onclick="addAttribute()">+ Add Role Attribute</button></div>
+  </div>`;
+}
+function ratingHtml(ro){
+  const ta = (id, ph) => ro ? `<div class="ro">${esc(state.texts[id]) || '—'}</div>`
+                            : `<textarea maxlength="3000" placeholder="${ph}" onchange="setText('${id}',this.value)">${esc(state.texts[id])}</textarea>`;
+  return `
+  <div class="score-bar" id="scoreBar"></div>
+  <div class="section">
+    <div class="section-head"><h2>Targets (KRA) &amp; Tasks</h2><span class="weight-badge">${fmt(kraTotal())}% · ${state.kras.length} target(s)</span></div>
+    ${state.kras.map((k, i) => `
+      <div class="kra-block">
+        <div><b>Target ${i+1}: ${esc(k.name)}</b> <span class="goal-tag">· ${fmt(k.weightage)}%</span></div>
+        ${k.description ? `<div style="font-size:12px;color:var(--muted);margin-top:3px;">${esc(k.description)}</div>` : ''}
+        ${k.goals.map((g, j) => `
+          <div class="goal-row">
+            <div class="rate-grid">
+              <div><label>Task ${i+1}.${j+1} · ${fmt(g.weightage)}%</label><div class="ro rich">${richOf(g)}</div></div>
+              <div><label>Achievement</label>${ro ? `<div class="ro">${esc(g.achievement) || '—'}</div>`
+                 : `<textarea maxlength="2000" placeholder="What was achieved" onchange="setGoal('${k.id}','${g.id}','achievement',this.value)">${esc(g.achievement)}</textarea>`}</div>
+              <div><label>Self Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(g.selfRating) || '—'}</div>` : ratingSelect(g.selfRating, `setGoal('${k.id}','${g.id}','selfRating',this.value)`)}</div>
+              <div><label>Appraiser Rating</label><div class="ro">${esc(g.apprRating) || '—'}</div></div>
+            </div>
+          </div>`).join('')}
+      </div>`).join('')}
+  </div>
+  <div class="section two-col">
+    <div><label>Facilitating Factors</label>${ta('facilitating','Factors that helped achieve the targets (mention target number)')}</div>
+    <div><label>Constraining Factors</label>${ta('constraining','Factors that were constraints (mention target number)')}</div>
+    <div><label>Outstanding Achievement / Significant Contribution</label>${ta('outstanding','Quantified benefit to company')}</div>
+    <div><label>Comments of Appraiser</label><div class="ro">${esc(state.texts.comments) || '— (filled by your manager)'}</div></div>
+  </div>
+  ${state.managerRemark || state.final.rating ? `<div class="section mgr-box"><div class="section-head"><h2>Manager &amp; Final Review</h2></div>
+    ${state.managerRemark ? `<label>Appraiser's / HOD's Remark</label><div class="ro" style="margin-bottom:10px;">${esc(state.managerRemark)}</div>` : ''}
+    ${state.final.rating ? `<label>Final Overall Rating (approved)</label><div class="ro"><b>${esc(state.final.rating)}</b></div>` : ''}</div>` : ''}
+  <div class="section">
+    <div class="section-head"><h2>My Learnings</h2></div>
+    ${ta('learnings','Visit outside organization / Customer Visit / Training / Reading / External Course')}
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>Training Need Identification</h2>${ro ? '' : '<button class="small" onclick="addTrainingRow()">+ Add Row</button>'}</div>
+    <table class="train-table">
+      <thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled</th>${ro?'':'<th style="width:50px"></th>'}</tr></thead>
+      <tbody>${state.training.length ? state.training.map(t => ro || t.saved ? `
+        <tr><td>${esc(t.need)}</td><td>${esc(t.benefit)}</td><td>${esc(t.fulfilled)}</td>${ro?'':'<td></td>'}</tr>` : `
+        <tr><td><input value="${esc(t.need)}" maxlength="300" onchange="setTrain('${t.id}','need',this.value)"></td>
+            <td><input value="${esc(t.benefit)}" maxlength="300" onchange="setTrain('${t.id}','benefit',this.value)"></td>
+            <td><input value="${esc(t.fulfilled)}" maxlength="300" placeholder="Internal / Self-study / Outside" onchange="setTrain('${t.id}','fulfilled',this.value)"></td>
+            <td><button class="small danger" onclick="removeTrainingRow('${t.id}')">✕</button></td></tr>`).join('')
+        : `<tr><td colspan="4" class="empty">${ro ? 'None.' : 'No training needs added yet.'}</td></tr>`}</tbody>
+    </table>
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>Overall Performance Rating</h2></div>
+    <div class="overall-options" id="overallOptions"></div>
+  </div>
+  ${state.attributes.length ? `
+  <div class="section">
+    <div class="section-head"><h2>Role Attributes — Self Rating</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
+    <div class="note">Rating: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
+    ${state.attributes.map((a, i) => `
+      <div class="attr-row" style="grid-template-columns:3fr 1fr 1.3fr ${ro ? '1.3fr' : ''};">
+        <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
+        <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
+        <div><label>Self Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
+        ${ro ? `<div><label style="color:#6D28D9;">Manager Rating</label><div class="ro"><b>${esc(a.apprRating) || (state.mgrDone ? '—' : 'Waiting')}</b></div></div>` : ''}
+      </div>`).join('')}
+  </div>` : ''}
+`;
+}
+function computeMgrScores(){
+  let kra = 0, role = 0;
+  state.kras.forEach(k => k.goals.forEach(g => { kra += (g.weightage || 0) * pct(g.apprRating) / 100; }));
+  state.attributes.forEach(a => { role += (a.weightage || 0) * pct(a.apprRating) / 100; });
+  kra = Math.round(kra*100)/100; role = Math.round(role*100)/100;
+  return { kra, role, total: Math.round((kra + role)*100)/100 };
+}
+/* Manager score presentation: convert each weighted section to an equivalent mark out of 25.
+   This is a DISPLAY conversion only; the Creator API remains the calculation authority.
+   E.g. task contribution 57.6/80 => 18/25 and role 20/20 => 25/25. */
+function managerQuarterBreakdown(){
+  const m = computeMgrScores();
+  const tasks = state.kras.flatMap(k => k.goals);
+  const taskDone = tasks.filter(g => /^[1-5]$/.test(String(g.apprRating))).length;
+  const roleDone = state.attributes.filter(a => /^[1-5]$/.test(String(a.apprRating))).length;
+  const tw = kraTotal(), rw = roleTotal();
+  return { ...m, taskMark:tw ? m.kra * 25 / tw : 0, roleMark:rw ? m.role * 25 / rw : 0,
+    tw, rw, taskDone, taskCount:tasks.length, roleDone, roleCount:state.attributes.length,
+    complete:taskDone === tasks.length && roleDone === state.attributes.length && tasks.length > 0 };
+}
+function managerQuarterTable(){
+  const a = managerQuarterBreakdown();
+  const mark = (value, done, total) => total && done === total ? fmt(value) + ' / 25' : '— / 25';
+  const perc = (value, weight, done, total) => total && done === total && weight ? fmt(value * 100 / weight) + '%' : 'Pending';
+  const cont = (value, done, total) => total && done === total ? fmt(value) + '%' : 'Pending';
+  return `<div class="section mgr-box" id="managerQuarterSummary">
+    <div class="section-head"><h2>Quarterly Appraisal — Manager Rating Summary</h2><span class="weight-badge">Task 80% + Role 20%</span></div>
+    <div class="note">Each section is shown as an equivalent rating out of 25. All tasks and attributes must be rated to finalize the quarterly score.</div>
+    <div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Appraisal criteria</th><th>Manager rating</th><th>Achievement</th><th>Weightage</th><th>Weighted contribution</th></tr></thead><tbody>
+      <tr><td><b>Task Performance</b><div class="note" style="margin:3px 0 0">${a.taskDone} / ${a.taskCount} tasks rated</div></td><td>${mark(a.taskMark,a.taskDone,a.taskCount)}</td><td>${perc(a.kra,a.tw,a.taskDone,a.taskCount)}</td><td>${fmt(a.tw)}%</td><td>${cont(a.kra,a.taskDone,a.taskCount)}</td></tr>
+      <tr><td><b>Role Attributes</b><div class="note" style="margin:3px 0 0">${a.roleDone} / ${a.roleCount} attributes rated</div></td><td>${a.roleCount ? mark(a.roleMark,a.roleDone,a.roleCount) : 'Not applicable'}</td><td>${a.roleCount ? perc(a.role,a.rw,a.roleDone,a.roleCount) : 'Not applicable'}</td><td>${fmt(a.rw)}%</td><td>${a.roleCount ? cont(a.role,a.roleDone,a.roleCount) : '0%'}</td></tr>
+      <tr style="font-weight:700;background:#F1EBFD"><td>Combined Quarterly Appraisal</td><td colspan="3">${a.complete ? 'All ratings completed' : 'Complete all manager ratings'}</td><td style="font-size:17px;color:#6D28D9">${a.complete ? fmt(a.total) + '%': 'Pending'}</td></tr>
+    </tbody></table></div>
+    <div class="note" style="margin:10px 0 0">Formula: (Task equivalent rating / 25 × Task weightage) + (Role equivalent rating / 25 × Role weightage). This is the employee-performance score used for quarterly variable-pay calculations; company performance is calculated separately.</div>
+  </div>`;
+}
+function refreshManagerQuarterTable(){
+  const old = document.getElementById('managerQuarterSummary');
+  if(!old) return;
+  const holder = document.createElement('div'); holder.innerHTML = managerQuarterTable();
+  old.replaceWith(holder.firstElementChild);
+}
+function renderScores(){
+  const el = document.getElementById('scoreBar'); if(!el) return;
+  if(!isOwnMode()){
+    const s = computeScores(), m = computeMgrScores();
+    const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0), mr = state.kras.reduce((n,k) => n + k.goals.filter(g => g.apprRating).length, 0);
+    el.innerHTML = `
+      <div class="score-tile"><div class="k">Employee self score</div><div class="v">${fmt(s.total)} / 100</div><div class="s">KRA ${fmt(s.kra)} · Role ${fmt(s.role)} · ≈ ${suggestedOverall(s.total)}</div></div>
+      <div class="score-tile final" style="border-color:#6D28D9;background:#F1EBFD;"><div class="k">Manager score</div><div class="v" style="color:#6D28D9;">${fmt(m.total)} / 100</div><div class="s">KRA ${fmt(m.kra)} · Role ${fmt(m.role)} · ${mr} of ${tasks} task(s) rated</div></div>
+      <div class="score-tile"><div class="k">Manager: Task / Role achievement</div><div class="v">${fmt(kraTotal() ? m.kra * 100 / kraTotal() : 0)}% / ${roleTotal() ? fmt(m.role * 100 / roleTotal()) + '%' : '—'}</div><div class="s">Difference vs self: ${fmt(m.total - s.total)}</div></div>`;
     refreshManagerQuarterTable();
-
+    return;
+  }
+  const s = computeScores();
+  const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0), rated = state.kras.reduce((n,k) => n + k.goals.filter(g => g.selfRating).length, 0);
+  el.innerHTML = `
+    <div class="score-tile"><div class="k">Targets (KRA)</div><div class="v">${fmt(s.kra)} / ${fmt(kraTotal())}</div><div class="s">${rated} of ${tasks} task(s) rated</div></div>
+    <div class="score-tile"><div class="k">Role Attributes</div><div class="v">${fmt(s.role)} / ${fmt(roleTotal())}</div><div class="s">${state.attributes.length} attribute(s)</div></div>
+    <div class="score-tile final"><div class="k">Self Score (auto)</div><div class="v">${fmt(s.total)} / 100</div><div class="s">≈ ${suggestedOverall(s.total)}</div></div>`;
+}
+function renderOverall(){
+  const el = document.getElementById('overallOptions'); if(!el) return;
+  const ro = state.phase !== 'rating' || state.mode === 'view' || !isOwnMode();
+  el.innerHTML = OVERALL_LABELS.map(l => `<div class="overall-opt ${state.overallRating===l?'selected':''}" ${ro?'':`onclick="setOverall('${l}')"`}>${l}</div>`).join('');
 }
 
+/* ======================= STATUS / DRAFT ======================= */
+function setStatus(msg, ok){ const s = document.getElementById('statusText'); s.textContent = msg; s.classList.remove('ok','bad'); if(ok===true) s.classList.add('ok'); if(ok===false) s.classList.add('bad'); }
+function draftKey(){ return `mega_pa3::${state.me ? state.me.email : ''}::${state.quarter}::${state.year}::${state.phase}`; }
+function markUnsaved(){ if(!isOwnMode()){ setStatus('Not submitted yet — click the Submit button when ready.', null); return; } if(state.phase !== 'targets' && state.phase !== 'rating') return; saveDraft(); setStatus('Draft kept in this browser — remember to submit.', null); }
+function saveDraft(){
+  if(state.mode === 'view' || !isOwnMode()) return;
+  if(!state.me || (state.phase !== 'targets' && state.phase !== 'rating')) return;
+  const d = state.phase === 'targets'
+    ? { kras:state.kras, attributes:state.attributes }
+    : { goals:Object.fromEntries(state.kras.flatMap(k => k.goals).map(g => [g.recId, { a:g.achievement, r:g.selfRating }])),
+        attrs:Object.fromEntries(state.attributes.map(a => [a.recId, a.rating])),
+        training:state.training.filter(t => !t.saved), texts:state.texts, overall:state.overallRating };
+  try{ localStorage.setItem(draftKey(), JSON.stringify(d)); }catch(e){}
+}
+function restoreDraft(){
+  let d = null; try{ d = JSON.parse(localStorage.getItem(draftKey()) || 'null'); }catch(e){}
+  if(!d) return false;
+  if(state.phase === 'targets'){
+    if(!Array.isArray(d.kras) || !d.kras.length) return false;
+    state.kras = d.kras; state.attributes = d.attributes || [];
+  } else {
+    state.kras.forEach(k => k.goals.forEach(g => { const x = d.goals && d.goals[g.recId]; if(x){ if(x.a && !g.achievement) g.achievement = x.a; if(x.r && !g.selfRating) g.selfRating = x.r; } }));
+    state.attributes.forEach(a => { const r = d.attrs && d.attrs[a.recId]; if(r && !a.rating) a.rating = r; });
+    if(Array.isArray(d.training)) state.training = state.training.filter(t => t.saved).concat(d.training);
+    if(d.texts) Object.keys(state.texts).forEach(k => { if(!state.texts[k] && d.texts[k]) state.texts[k] = d.texts[k]; });
+    if(d.overall && !state.overallRating) state.overallRating = d.overall;
+  }
+  const ids = [...state.kras.flatMap(k => [k.id, ...(k.goals||[]).map(g => g.id)]), ...state.attributes.map(a => a.id), ...state.training.map(t => t.id)];
+  seq = Math.max(seq, ids.reduce((m, id) => Math.max(m, parseInt(String(id).slice(1)) || 0), 0) + 1);
+  return true;
+}
+function clearDraft(){ try{ localStorage.removeItem(draftKey()); }catch(e){} }
 
-/* ================================================================
-   9. LIVE SCORE REFRESH
-   ================================================================ */
-
-function megaRefreshRoleScore() {
-
-    const panel = document.getElementById(
-        'megaRoleScorePanel'
-    );
-
-    if (!panel) {
-        return;
+/* ======================= SUBMIT ======================= */
+function mainAction(){
+  if(state.mode === 'team'){ submitManager(); return; }
+  if(state.mode === 'admin'){ submitFinal(); return; }
+  if(state.mode === 'hod'){ submitHod(); return; }
+  if(state.phase === 'targets') submitTargets(); else if(state.phase === 'rating') submitRating();
+}
+function lock(on){ state.busy = on; document.getElementById('mainBtn').disabled = on; }
+function validateTargets(){
+  if(!state.kras.length) return 'Add at least one Target (KRA).';
+  for(let i = 0; i < state.kras.length; i++){
+    const k = state.kras[i];
+    if(!k.name.trim()) return `Target ${i+1}: enter the target name.`;
+    if(!k.goals.length) return `Target ${i+1}: add at least one task.`;
+    for(let j = 0; j < k.goals.length; j++){
+      if(!k.goals[j].name.trim()) return `Task ${i+1}.${j+1}: describe the task (or remove it).`;
+      if(sanitizeRich(k.goals[j].html || '').length > 18000) return `Task ${i+1}.${j+1}: the text is too long — please shorten it.`;
     }
-
-    const isManager = !isOwnMode();
-
-    const scores = megaRoleScores();
-
-    const value = document.getElementById(
-        'megaRoleScoreValue'
-    );
-
-    const score = isManager
-        ? scores.manager
-        : scores.self;
-
-    const count = isManager
-        ? scores.managerCount
-        : scores.selfCount;
-
-    if (value) {
-
-        value.textContent =
-            fmt(score) +
-            ' / ' +
-            fmt(scores.maximum);
-
+  }
+  if(!state.attributes.length) return 'Add at least one Role Attribute (Role attributes = 20%, Targets = 80%).';
+  for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].name.trim()) return `Role Attribute ${i+1}: enter the name (or remove it).`;
+  return '';
+}
+async function submitTargets(){
+  if(state.busy) return;
+  document.querySelectorAll('.rte-area').forEach(el => rteInput(el, true));
+  applyWeights();
+  const problem = validateTargets(); if(problem){ setStatus('❌ ' + problem, false); return; }
+  const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0);
+  const ok = await confirmBox('Submit targets for ' + state.quarter + ' ' + state.year + '?',
+    `You are submitting <b>${state.kras.length} target(s)</b>, <b>${tasks} task(s)</b> and <b>${state.attributes.length} role attribute(s)</b>.<br><br>
+     After submitting, the targets for this quarter are <b>locked</b> and cannot be changed. A quarter can be submitted only once.`, 'Yes, submit targets');
+  if(!ok) return;
+  const q = state.quarter, y = state.year;
+  lock(true); busyOverlay('Saving your targets…');
+  setStatus('Saving your targets… please do not close this page.', null);
+  let saved = false, errMsg = '';
+  try{
+    await call('save_targets', { quarter:q, year:y,
+      kras:state.kras.map(k => ({ name:k.name.trim(), description:(k.description||'').trim(), goals:k.goals.map(g => ({ name:g.name.trim(), html:sanitizeRich(g.html || '') })) })),
+      attributes:state.attributes.map(a => ({ name:a.name.trim() })) });
+    saved = true;
+  }catch(err){
+    errMsg = err.message;
+    // connection broke or "already saved" → check what really reached the system
+    if(err.network || /already saved/i.test(err.message)){
+      busyOverlay('Checking that your targets reached the system…');
+      try{ const chk = await call('load', { quarter:q, year:y }); if(chk.phase && chk.phase !== 'targets') saved = true; }catch(e){}
     }
-
-    const details = panel.querySelector(
-        'div div div:nth-child(2)'
-    );
-
-    if (details) {
-
-        details.textContent =
-            count +
-            ' of ' +
-            scores.count +
-            ' rated';
-
+  }
+  busyOverlay(null); lock(false);
+  if(saved){
+    clearDraft();
+    state.justSaved = true;
+    refreshPeriods(true);
+    await loadPeriod();
+    setStatus('✅ Targets submitted for ' + q + ' ' + y + '. A confirmation email has been sent to you.', true);
+  } else {
+    setStatus('❌ ' + errMsg + ' Your entries are kept — please try Submit again.', false);
+  }
+}
+function validateRating(){
+  if(!state.kras.length) return 'No targets found for this quarter.';
+  for(let i = 0; i < state.kras.length; i++) for(let j = 0; j < state.kras[i].goals.length; j++)
+    if(!state.kras[i].goals[j].selfRating) return `Task ${i+1}.${j+1}: select your self rating.`;
+  for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].rating) return `Role Attribute ${i+1}: select a rating.`;
+  return '';
+}
+async function submitRating(){
+  if(state.busy) return;
+  const problem = validateRating(); if(problem){ setStatus('❌ ' + problem, false); return; }
+  const sc = computeScores();
+  const ok = await confirmBox('Submit self rating for ' + state.quarter + ' ' + state.year + '?',
+    `Your self score is <b>${fmt(sc.total)} / 100</b> (Targets ${fmt(sc.kra)} + Role ${fmt(sc.role)}).<br><br>
+     After submitting, this quarter is <b>fully locked</b> — nothing can be changed. You can still view it and download the PDF.`, 'Yes, submit rating');
+  if(!ok) return;
+  const q = state.quarter, y = state.year;
+  lock(true); busyOverlay('Saving your self rating…');
+  setStatus('Saving your self rating… please do not close this page.', null);
+  let saved = false, errMsg = '', finalScore;
+  try{
+    const r = await call('save_rating', { quarter:q, year:y,
+      goals:state.kras.flatMap(k => k.goals).map(g => ({ id:g.recId, achievement:g.achievement || '', self_rating:String(g.selfRating) })),
+      attributes:state.attributes.map(a => ({ id:a.recId, rating:String(a.rating) })),
+      training:state.training.filter(t => !t.saved && t.need.trim()).map(t => ({ need:t.need.trim(), benefit:t.benefit || '', fulfilled:t.fulfilled || '' })),
+      facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
+      comments:state.texts.comments, learnings:state.texts.learnings, overall:state.overallRating || '' });
+    saved = true; finalScore = r.final_score;
+  }catch(err){
+    errMsg = err.message;
+    if(err.network || /already submitted/i.test(err.message)){
+      busyOverlay('Checking that your rating reached the system…');
+      try{ const chk = await call('load', { quarter:q, year:y }); if(chk.phase === 'done') saved = true; }catch(e){}
     }
-
+  }
+  busyOverlay(null); lock(false);
+  if(saved){
+    clearDraft();
+    refreshPeriods(true);
+    await loadPeriod();
+    renderPeriodChips();
+    setStatus('✅ Self rating submitted' + (finalScore !== undefined ? ' (score ' + finalScore + ' / 100)' : '') + '. This quarter is now locked. A confirmation email has been sent to you.', true);
+  } else {
+    setStatus('❌ ' + errMsg + ' Your entries are kept — please try Submit again.', false);
+  }
 }
 
-
-/* ================================================================
-   10. KEEP ORIGINAL RENDERING FUNCTIONALITY
-   ================================================================ */
-
-const megaSavedRenderPage = renderPage;
-
-renderPage = function() {
-
-    // Execute original HTML rendering.
-    megaSavedRenderPage();
-
-    if (
-        state.phase === 'loading' ||
-        state.phase === 'error' ||
-        state.phase === 'none'
-    ) {
-        return;
+/* ======================= MANAGER / SUPER ADMIN ======================= */
+const STAGE_TXT = { self_done:['Waiting for manager','s1'], manager_done:['Manager rated — waiting Super Admin','s2'], hod_done:['Waiting Super Admin','s2'], final:['Final ✓','s3'] };
+const FIRST_STAGE = { team:'self_done', hod:'manager_done', admin:'manager_done' };
+function isFirst(kind, st){ return st === FIRST_STAGE[kind] || (kind === 'admin' && st === 'hod_done'); }
+async function loadQueue(kind){
+  state.mode = kind; state.target = null; state.subject = null; fillProfile(state.me);
+  show('choiceView', false); show('menuBtn', true); show('footerBar', true);
+  show('yearBox', false); show('quarterRow', false); show('periodChips', false);
+  state.phase = 'loading'; resetData(); renderPage();
+  setStatus(kind === 'team' ? 'Loading your team…' : kind === 'hod' ? 'Loading your department…' : 'Loading appraisals for final review…', null);
+  const token = ++state.loadToken;
+  try{
+    const r = await call(kind === 'team' ? 'team' : kind === 'hod' ? 'hod_queue' : 'admin_queue', {});
+    if(token !== state.loadToken) return;
+    const order = { self_done:0, manager_done:1, hod_done:2, final:3 };
+    const first = FIRST_STAGE[kind];
+    state.queue = (r.queue || []).map(q => Object.assign(q, { year:String(q.year).replace(/\.0+$/,'') }))
+      .sort((a,b) => ((isFirst(kind, a.stage) ? -1 : order[a.stage]) - (isFirst(kind, b.stage) ? -1 : order[b.stage])) || (Number(b.year) - Number(a.year)) || (Q_ORDER[b.quarter] - Q_ORDER[a.quarter]));
+    state.team = r.team || [];
+    state.phase = 'queue'; renderPage();
+    const pend = state.queue.filter(q => isFirst(kind, q.stage)).length;
+    setStatus((pend ? pend + ' appraisal(s) waiting for you.' : 'Nothing waiting for you right now.') + ' · ' + state.queue.length + ' total · server v' + (r.version || 'old — update the Zoho function'), true);
+  }catch(err){
+    if(token !== state.loadToken) return;
+    state.phase = 'error'; renderPage(); setStatus('❌ ' + err.message, false);
+  }
+}
+function chooseTeam(){ loadQueue('team'); }
+function chooseAdmin(){ loadQueue('admin'); }
+function chooseHod(){ loadQueue('hod'); }
+function backToQueue(){ if(state.busy) return; loadQueue(state.mode); }
+function openReview(i){
+  const q = state.queue[i]; if(!q || state.busy) return;
+  state.target = q.email; state.quarter = q.quarter; state.year = q.year;
+  window.scrollTo(0,0);
+  loadPeriod();
+}
+function queueHtml(){
+  const kind = state.mode;
+  const first = FIRST_STAGE[kind];
+  const teamLine = kind === 'team' ? `<div class="note" style="margin:0 0 12px;">${kind === 'hod' ? 'Your department' : 'Your team'} (${state.team.length}): ${state.team.length ? '' : (kind === 'hod' ? 'no other employee in All Employees has the same Department as you (' + esc((state.me && state.me.department) || '—') + ').' : 'nobody has you as Reporting Manager in All Employees.')}</div>
+    <div class="team-chips" style="margin:-6px 0 14px;">${state.team.map(t => `<span>${esc(t.name)}</span>`).join('')}</div>` : '';
+  const rows = state.queue.map((q, i) => {
+    const st = STAGE_TXT[q.stage] || ['—',''];
+    return `<tr><td><b>${esc(q.name)}</b><div style="font-size:11px;color:var(--muted)">${esc(q.department || '')}</div></td>
+      <td class="mono">${esc(q.quarter)} ${esc(q.year)}</td>
+      <td>${q.self_score !== '' ? esc(q.self_score) : '—'}</td>
+      <td>${q.manager_score !== '' ? esc(q.manager_score) : '—'}</td>
+      ${kind !== 'team' ? `<td>${q.eligible ? money(q.eligible) : '—'}</td><td>${q.payout ? '<b>' + money(q.payout) + '</b>' : '—'}</td>` : ''}
+      ${kind === 'admin' ? `<td>${q.final_rating ? esc(q.final_rating) + (q.final_payout ? ' · ' + money(q.final_payout) : '') : '—'}</td>` : ''}
+      <td><span class="stage ${st[1]}">${st[0]}</span></td>
+      <td><button class="small ${isFirst(kind, q.stage) ? 'solid' : ''}" onclick="openReview(${i})">${isFirst(kind, q.stage) ? 'Review' : 'View'}</button></td></tr>`;
+  }).join('');
+  return (kind === 'admin' ? periodHtml() : '') + `<div class="section">
+    <div class="section-head"><h2>${kind === 'team' ? '👥 Team Ratings' : kind === 'hod' ? '🏢 HOD Review' : '🏆 Final Review'}</h2><span class="weight-badge">${state.queue.length} appraisal(s)</span></div>
+    ${teamLine}
+    ${state.queue.length ? `<div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Employee</th><th>Quarter</th><th>Self score</th><th>Manager score</th>${kind !== 'team' ? '<th>Eligible</th><th>Calculated payout</th>' : ''}${kind === 'admin' ? '<th>Final</th>' : ''}<th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : `<div class="empty">${kind === 'team' ? 'No self ratings from your team yet. They appear here after an employee submits the self rating.' : kind === 'hod' ? 'No appraisals are waiting for HOD review yet. An employee appears here as soon as their manager submits the Manager Rating.' : 'No submitted appraisals yet.'}</div>`}
+  </div>`;
+}
+/* ---- Super Admin: variable pay for a period (quarter / 6 months / year) ---- */
+const PERIODS = { Q1:['Q1'], Q2:['Q2'], Q3:['Q3'], Q4:['Q4'], H1:['Q1','Q2'], H2:['Q3','Q4'], FY:['Q1','Q2','Q3','Q4'] };
+const PERIOD_LABEL = { Q1:'Q1 (Apr–Jun)', Q2:'Q2 (Jul–Sep)', Q3:'Q3 (Oct–Dec)', Q4:'Q4 (Jan–Mar)', H1:'6 months: Q1 + Q2', H2:'6 months: Q3 + Q4', FY:'Full year: Q1–Q4' };
+function periodHtml(){
+  const years = [...new Set(state.queue.map(q => q.year))].sort().reverse();
+  if(!years.length) return '';
+  state.period = state.period || { year:years[0], p:'FY' };
+  if(!years.includes(state.period.year)) state.period.year = years[0];
+  const qs = PERIODS[state.period.p];
+  const num = v => (v === '' || v === undefined || v === null || isNaN(Number(v))) ? null : Number(v);
+  const byEmp = {};
+  state.queue.filter(q => q.year === state.period.year && qs.includes(q.quarter)).forEach(q => {
+    const e = byEmp[q.email] = byEmp[q.email] || { name:q.name, dept:q.department, target:0, ind:0, comp:0, paid:0, done:0, quarters:[] };
+    const el = num(q.eligible), ind = num(q.emp_var), cmp = num(q.comp_var), calc = num(q.payout), fin = num(q.final_payout);
+    if(el !== null && calc !== null){
+      e.done++; e.target += el; e.ind += ind || 0; e.comp += cmp || 0;
+      e.paid += fin !== null ? fin : calc;
+      e.quarters.push(q.quarter + ': ' + money(fin !== null ? fin : calc) + (fin !== null ? ' ✓' : ''));
+    } else e.quarters.push(q.quarter + ': pending');
+  });
+  const list = Object.values(byEmp).sort((a,b) => a.name.localeCompare(b.name));
+  const rows = list.map(e => `<tr>
+    <td><b>${esc(e.name)}</b><div style="font-size:11px;color:var(--muted)">${esc(e.dept || '')}</div></td>
+    <td style="font-size:12px;">${e.quarters.map(esc).join('<br>')}</td>
+    <td>${e.done} of ${qs.length}</td>
+    <td>${money(e.target)}</td><td>${money(e.ind)}</td><td>${money(e.comp)}</td><td><b>${money(e.paid)}</b></td>
+    <td>${e.target ? fmt(e.paid * 100 / e.target) + '%' : '—'}</td><td>${money(e.target - e.paid)}</td></tr>`).join('');
+  const t = list.reduce((a,e) => ({ tg:a.tg + e.target, i:a.i + e.ind, c:a.c + e.comp, p:a.p + e.paid }), { tg:0, i:0, c:0, p:0 });
+  return `<div class="section adm-box">
+    <div class="section-head"><h2>💰 Variable pay settlement</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select style="width:auto" onchange="state.period.year=this.value;renderPage()">${years.map(y => `<option ${y===state.period.year?'selected':''}>${y}</option>`).join('')}</select>
+        <select style="width:auto" onchange="state.period.p=this.value;renderPage()">${Object.keys(PERIODS).map(k => `<option value="${k}" ${k===state.period.p?'selected':''}>${PERIOD_LABEL[k]}</option>`).join('')}</select>
+      </div></div>
+    <div class="note">H1 = Q1 + Q2, H2 = Q3 + Q4, Year = H1 + H2. Each quarter is calculated separately (quarterly target = annual ÷ 4) and the earned amounts are added — never averaged. Payout = approved final payout (✓) or else the calculated amount. Target counts only quarters already calculated.</div>
+    ${rows ? `<div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Employee</th><th>Quarters</th><th>Calculated</th><th>Target</th><th>Individual earned</th><th>Company earned</th><th>Total earned</th><th>Achievement</th><th>Not earned</th></tr></thead><tbody>${rows}
+      <tr><td colspan="3"><b>Total</b></td><td><b>${money(t.tg)}</b></td><td><b>${money(t.i)}</b></td><td><b>${money(t.c)}</b></td><td><b>${money(t.p)}</b></td><td>${t.tg ? fmt(t.p * 100 / t.tg) + '%' : '—'}</td><td><b>${money(t.tg - t.p)}</b></td></tr></tbody></table></div>`
+      : '<div class="empty">No appraisals in this period.</div>'}
+  </div>`;
+}
+function reviewHtml(){
+  const canMgr = state.mode === 'team' && state.phase === 'done' && !state.mgrDone && !state.finalDone;
+  const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
+  const canHod = canHodNow();
+  const t = id => `<div class="ro">${esc(state.texts[id]) || '—'}</div>`;
+  const mgrSel = (v, on) => canMgr ? ratingSelect(v, on) : `<div class="ro"><b>${esc(v) || '—'}</b></div>`;
+  return `
+  ${state.finalDone ? `<div class="lock-note">🔒 <div><b>Final — approved.</b> This appraisal is locked for everyone.</div></div>` : (!canMgr && !canAdm && !canHod ? `<div class="lock-note">🔒 <div><b>View only.</b> ${state.mgrDone ? 'Manager rating is submitted.' : 'Waiting for the manager rating.'}</div></div>` : '')}
+  <div class="score-bar" id="scoreBar"></div>
+  <div class="section">
+    <div class="section-head"><h2>Targets (KRA) &amp; Tasks</h2><span class="weight-badge">${fmt(kraTotal())}% · ${state.kras.length} target(s)</span></div>
+    ${state.kras.map((k, i) => `
+      <div class="kra-block">
+        <div><b>Target ${i+1}: ${esc(k.name)}</b> <span class="goal-tag">· ${fmt(k.weightage)}%</span></div>
+        ${k.description ? `<div style="font-size:12px;color:var(--muted);margin-top:3px;">${esc(k.description)}</div>` : ''}
+        ${k.goals.map((g, j) => `
+          <div class="goal-row">
+            <div class="rate-grid mg">
+              <div><label>Task ${i+1}.${j+1} · ${fmt(g.weightage)}%</label><div class="ro rich">${richOf(g)}</div></div>
+              <div><label>Achievement (employee)</label><div class="ro">${esc(g.achievement) || '—'}</div></div>
+              <div><label>Self Rating</label><div class="ro">${esc(g.selfRating) || '—'}</div></div>
+              <div><label style="color:#6D28D9;">Manager Rating ${canMgr ? '<span class="req">*</span>' : ''}</label>${mgrSel(g.apprRating, `setGoal('${k.id}','${g.id}','apprRating',this.value)`)}</div>
+            </div>
+          </div>`).join('')}
+      </div>`).join('')}
+  </div>
+  <div class="section two-col">
+    <div><label>Facilitating Factors (employee)</label>${t('facilitating')}</div>
+    <div><label>Constraining Factors (employee)</label>${t('constraining')}</div>
+    <div><label>Outstanding Achievement (employee)</label>${t('outstanding')}</div>
+    <div><label>My Learnings (employee)</label>${t('learnings')}</div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>Training Need Identification</h2></div>
+    <table class="train-table"><thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled</th></tr></thead>
+      <tbody>${state.training.length ? state.training.map(tr => `<tr><td>${esc(tr.need)}</td><td>${esc(tr.benefit)}</td><td>${esc(tr.fulfilled)}</td></tr>`).join('') : '<tr><td colspan="3" class="empty">None.</td></tr>'}</tbody></table>
+  </div>
+  <div class="section">
+    <div class="section-head"><h2>Employee's Overall Rating (self)</h2></div>
+    <div class="overall-options" id="overallOptions"></div>
+  </div>
+  <div class="section mgr-box">
+    <div class="section-head"><h2>Manager Review</h2></div>
+    <div class="two-col">
+      <div><label>Comments of Appraiser</label>${canMgr ? `<textarea maxlength="3000" placeholder="How facilitating factors will be reinforced and constraining factors reduced" onchange="setText('comments',this.value)">${esc(state.texts.comments)}</textarea>` : `<div class="ro">${esc(state.texts.comments) || '—'}</div>`}</div>
+      <div><label>Appraiser's / HOD's Remark</label>${canMgr ? `<textarea maxlength="3000" placeholder="Overall remark on this appraisal" onchange="state.managerRemark=this.value;markUnsaved()">${esc(state.managerRemark)}</textarea>` : `<div class="ro">${esc(state.managerRemark) || '—'}</div>`}</div>
+    </div>
+  </div>
+  ${state.mode === 'admin' && state.mgrDone ? hodBoxHtml(canAdm) : ''}
+  ${state.mode === 'admin' ? `
+  <div class="section adm-box">
+    <div class="section-head"><h2>Final Decision (Super Admin)</h2></div>
+    <label>Final Overall Rating ${canAdm ? '<span class="req">*</span>' : ''}</label>
+    <div class="overall-options" style="margin-bottom:14px;">${OVERALL_LABELS.map(l => `<div class="overall-opt ${state.final.rating===l?'selected':''}" ${canAdm ? `onclick="setFinal('rating','${l}')"` : ''}>${l}</div>`).join('')}</div>
+    <div class="two-col">
+      <div><label>Final variable payout for this quarter (₹) ${canAdm ? '<span class="req">*</span>' : ''}</label>${canAdm ? `<input id="finPay" type="number" min="0" step="0.01" value="${esc(state.final.payout)}" oninput="setFinal('payout',this.value)"><div class="note" style="margin:4px 0 0;">Auto-filled from the calculation above (<span id="finCalc">${money(hodCalc().payout)}</span>). You can type a different amount.</div>` : `<div class="ro"><b>${state.final.payout !== '' ? money(state.final.payout) : '—'}</b></div>`}</div>
+      <div><label>Final Remark</label>${canAdm ? `<textarea maxlength="3000" placeholder="Reason for the decision" onchange="setFinal('remark',this.value)">${esc(state.final.remark)}</textarea>` : `<div class="ro">${esc(state.final.remark) || '—'}</div>`}</div>
+    </div>
+    ${state.final.by ? `<div class="note" style="margin:10px 0 0;">Approved by ${esc(state.final.by)}</div>` : ''}
+  </div>` : ''}
+  ${state.attributes.length ? `
+  <div class="section mgr-box">
+    <div class="section-head"><h2>Role Attributes — Manager Rating</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
+    <div class="note">Rate each employee-defined Role Attribute out of 5. Its saved weightage contributes to the quarterly Manager score.</div>
+    ${state.attributes.map((a, i) => `
+      <div class="attr-row" style="grid-template-columns:3fr 1fr 1fr 1.3fr;">
+        <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
+        <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
+        <div><label>Self Rating</label><div class="ro">${esc(a.rating) || '—'}</div></div>
+        <div><label style="color:#6D28D9;">Manager Rating ${canMgr ? '<span class="req">*</span>' : ''}</label>${mgrSel(a.apprRating, `setAttr('${a.id}','apprRating',this.value)`)}</div>
+      </div>`).join('')}
+  </div>` : ''}
+  ${managerQuarterTable()}`;
+}
+function setFinal(f, v){
+  state.final[f] = v;
+  if(f === 'payout') state.final.payoutEdited = true;
+  if(f === 'rating'){ const keep = window.scrollY; renderPage(); window.scrollTo(0, keep); }
+  markUnsaved();
+}
+function canHodNow(){ return false; /* HOD step removed — Super Admin decides */ }
+function varSetupOk(){
+  const yv = Number(state.hod.yv), ep = Number(state.hod.ep), cp = Number(state.hod.cp);
+  return state.hod.yv !== '' && state.hod.ep !== '' && state.hod.cp !== '' && yv > 0 && Math.abs(ep + cp - 100) < 0.001;
+}
+function hodCalc(){
+  /* Layer 1 — appraisal (Task 80 : Role 20) from MANAGER ratings */
+  const m = computeMgrScores();
+  const kt = kraTotal() || 0, rt = roleTotal() || 0;
+  const taskAch = kt ? m.kra * 100 / kt : 0;            // Task achievement %  (= task rating / 25)
+  const roleAch = rt ? m.role * 100 / rt : 0;           // Role achievement %  (= role rating / 25)
+  const mgrAuto = state.managerScore !== '' && !isNaN(Number(state.managerScore)) ? Number(state.managerScore) : m.total;  // from manager ratings
+  const mgr = state.hod.ips !== '' && !isNaN(Number(state.hod.ips)) ? Number(state.hod.ips) : mgrAuto;  // Individual Performance % used for pay (Super Admin can change)
+  /* Layer 2 — variable pay (Individual : Company from All Employees) */
+  const yv = Number(state.hod.yv) || 0, ep = Number(state.hod.ep) || 0, cp = Number(state.hod.cp) || 0;
+  const co = Number(state.hod.company) || 0;
+  const qvp = r2(yv / 4), ict = r2(qvp * ep / 100), cct = r2(qvp * cp / 100);
+  const aic = r2(ict * mgr / 100), acc = r2(cct * co / 100), qep = r2(aic + acc);
+  return { mgrAuto, m, kt, rt, taskAch, roleAch, taskRating25: taskAch / 4, roleRating25: roleAch / 4, mgr, yv, ep, cp, co,
+           eligible:qvp, empPart:ict, compPart:cct, empVar:aic, compVar:acc, payout:qep,
+           pct: qvp ? qep * 100 / qvp : 0, notEarned: r2(qvp - qep) };
+}
+function hodBoxHtml(canEdit){
+  const c = hodCalc();
+  const saved = state.finalDone && state.hod.payout !== '';
+  const shown = saved ? { empVar:Number(state.hod.empVar), compVar:Number(state.hod.compVar), payout:Number(state.hod.payout) } : c;
+  const pctShown = c.eligible ? shown.payout * 100 / c.eligible : 0;
+  const inp = (f, val, ph, extra) => `<input id="in_${f}" type="number" step="0.01" min="0" ${extra || ''} style="max-width:170px" value="${esc(val)}" placeholder="${ph}" oninput="setHod('${f}',this.value)">`;
+  const ro = (id, t) => `<span id="${id}">${t}</span>`;
+  return `<div class="section hod-box" id="hodBox">
+    <div class="section-head"><h2>Variable pay — ${state.quarter} ${state.year} (Super Admin)</h2><span class="weight-badge" style="border-color:#0E7490;color:#0E7490;background:#E6F6FA;">Individual ${ro('vEp', fmt(c.ep))}% · Company ${ro('vCp', fmt(c.cp))}%</span></div>
+    ${canEdit ? `<div class="note" style="margin:0 0 12px;">All white boxes are pre-filled (All Employees + manager rating). <b>You can change any of them</b> — the pay is re-calculated instantly.</div>` : ''}
+    <h3 style="font-size:14px;color:#0E7490;margin:4px 0 8px;">A. Individual Performance (manager ratings · Task ${fmt(c.kt)} : Role ${fmt(c.rt)})</h3>
+    <table class="calc">
+      <tr><td>Task rating (manager) — out of 25</td><td>${fmt(c.taskRating25)} / 25 &nbsp;·&nbsp; ${fmt(c.taskAch)}% → ${fmt(c.m.kra)} points</td></tr>
+      <tr><td>Role rating (manager) — out of 25</td><td>${c.rt ? fmt(c.roleRating25) + ' / 25 &nbsp;·&nbsp; ' + fmt(c.roleAch) + '% → ' + fmt(c.m.role) + ' points' : '— (no role attributes)'}</td></tr>
+      <tr><td>Individual Performance Score from manager rating</td><td>${fmt(c.mgrAuto)}%</td></tr>
+      <tr class="big"><td>Individual Performance % used for pay ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('ips', state.hod.ips !== '' ? state.hod.ips : String(r2(c.mgrAuto)), 'e.g. 77.6', 'max="100"') + ' %' : fmt(c.mgr) + '%'}</td></tr>
+    </table>
+    <h3 style="font-size:14px;color:#0E7490;margin:14px 0 8px;">B. Quarterly variable pay</h3>
+    <table class="calc">
+      <tr><td>Annual variable pay ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('yv', state.hod.yv, 'e.g. 100000') : money(c.yv)}</td></tr>
+      <tr><td>Quarterly target = annual ÷ 4</td><td>${ro('vQ', money(c.eligible))}</td></tr>
+      <tr><td>Individual % ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('ep', state.hod.ep, 'e.g. 70', 'max="100"') + ' %' : fmt(c.ep) + '%'}</td></tr>
+      <tr><td>Company % (Individual + Company = 100)</td><td>${canEdit ? inp('cp', state.hod.cp, 'e.g. 30', 'max="100"') + ' %' : fmt(c.cp) + '%'}</td></tr>
+      <tr><td>Individual component target = quarterly target × Individual %</td><td>${ro('vIT', money(c.empPart))}</td></tr>
+      <tr><td>Company component target = quarterly target × Company %</td><td>${ro('vCT', money(c.compPart))}</td></tr>
+      <tr><td>Company performance % ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('company', state.hod.company, 'e.g. 90', 'max="100"') + ' %' : (state.hod.company !== '' ? esc(state.hod.company) + '%' : '—')}</td></tr>
+      <tr><td>Individual variable = individual target × Individual Performance %</td><td>${ro('hodEmpVar', money(shown.empVar))}</td></tr>
+      <tr><td>Company variable = company target × Company performance %</td><td>${ro('hodCompVar', money(shown.compVar))}</td></tr>
+      <tr class="big"><td>Total quarterly variable pay</td><td>${ro('hodPayout', money(shown.payout))}</td></tr>
+      <tr><td>Quarterly payout achievement</td><td>${ro('hodPct', fmt(pctShown) + '%')}</td></tr>
+      <tr><td>Quarterly target not earned</td><td>${ro('hodNot', money(c.eligible - shown.payout))}</td></tr>
+    </table>
+    <div id="hodWarn" class="note" style="margin:8px 0 0;color:#9B1C1C;font-weight:600;">${canEdit && !varSetupOk() ? '⛔ Annual variable must be more than 0 and Individual % + Company % must be 100.' : ''}</div>
+    ${!canEdit && state.hod.remark ? `<div class="note" style="margin:8px 0 0;">${esc(state.hod.remark)}</div>` : ''}
+    <div class="note" style="margin:10px 0 0;">Rating 1–5 → 5 = 100%, 4 = 80%, 3 = 60%, 2 = 40%, 1 = 20% (= rating ÷ 25). Only manager ratings are used. Amounts rounded to 2 decimals.</div>
+  </div>`;
+}
+function setHod(f, v){
+  state.hod[f] = v;
+  const setVal = (id, t) => { const el = document.getElementById(id); if(el) el.value = t; };
+  if(f === 'ep' && v !== '' && !isNaN(Number(v))){ state.hod.cp = String(r2(100 - Number(v))); setVal('in_cp', state.hod.cp); }
+  if(f === 'cp' && v !== '' && !isNaN(Number(v))){ state.hod.ep = String(r2(100 - Number(v))); setVal('in_ep', state.hod.ep); }
+  if(f === 'company'){ try{ localStorage.setItem(companyKey(), v); }catch(e){} }
+  refreshHod();
+  markUnsaved();
+}
+function refreshHod(){
+  const c = hodCalc();
+  const set = (id, t) => { const el = document.getElementById(id); if(el) el.textContent = t; };
+  set('vEp', fmt(c.ep)); set('vCp', fmt(c.cp)); set('vQ', money(c.eligible)); set('vIT', money(c.empPart)); set('vCT', money(c.compPart));
+  set('hodCompVar', money(c.compVar)); set('hodEmpVar', money(c.empVar));
+  set('hodPayout', money(c.payout)); set('hodPct', fmt(c.pct) + '%'); set('hodNot', money(c.notEarned));
+  set('finCalc', money(c.payout));
+  set('hodWarn', varSetupOk() ? '' : '⛔ Annual variable must be more than 0 and Individual % + Company % must be 100.');
+  if(!state.final.payoutEdited){ state.final.payout = String(c.payout); const el = document.getElementById('finPay'); if(el) el.value = state.final.payout; }
+}
+async function submitHod(){
+  if(state.busy) return;
+  if(!varSetupOk()){ setStatus('❌ Variable pay is not set up for this employee in All Employees.', false); return; }
+  const co = parseFloat(state.hod.company);
+  if(state.hod.company === '' || isNaN(co) || co < 0 || co > 100){ setStatus('❌ Enter the company performance score (0 to 100).', false); return; }
+  const c = hodCalc(), who = (state.subject && state.subject.name) || state.target;
+  const ok = await confirmBox('Submit HOD review?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Eligible: <b>${money(c.eligible)}</b><br>Employee variable: <b>${money(c.empVar)}</b> · Company variable: <b>${money(c.compVar)}</b><br>Quarter payout: <b>${money(c.payout)}</b><br><br>The server re-calculates and saves these amounts. After submitting, your review is <b>locked</b> and goes to the Super Admin.`, 'Yes, submit');
+  if(!ok) return;
+  const tg = state.target, q = state.quarter, y = state.year;
+  lock(true); busyOverlay('Saving HOD review…');
+  let saved = false, errMsg = '';
+  try{
+    await call('hod_save', { target:tg, quarter:q, year:y, company_score:String(co), hod_remark:state.hod.remark || '' });
+    saved = true;
+  }catch(err){
+    errMsg = err.message;
+    if(err.network || /already submitted/i.test(err.message)){
+      busyOverlay('Checking that your review reached the system…');
+      try{ const chk = await call(state.mode === 'admin' ? 'admin_load' : 'hod_load', { target:tg, quarter:q, year:y }); if(chk.hod_done) saved = true; }catch(e){}
     }
-
-    // New Appraisal
-    if (
-        state.mode === 'new' &&
-        state.phase === 'targets'
-    ) {
-
-        megaUpdateTargetsPage();
-
-        return;
-
+  }
+  busyOverlay(null); lock(false);
+  if(saved){ await loadPeriod(); setStatus('✅ HOD review submitted and locked. The Super Admin has been notified.', true); }
+  else setStatus('❌ ' + errMsg, false);
+}
+async function submitManager(){
+  if(state.busy) return;
+  for(let i = 0; i < state.kras.length; i++) for(let j = 0; j < state.kras[i].goals.length; j++)
+    if(!state.kras[i].goals[j].apprRating){ setStatus(`❌ Task ${i+1}.${j+1}: select the manager rating.`, false); return; }
+  for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].apprRating){ setStatus(`❌ Role Attribute ${i+1}: select the manager rating.`, false); return; }
+  const m = computeMgrScores(), who = (state.subject && state.subject.name) || state.target;
+  const ok = await confirmBox('Submit manager rating?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Task performance: <b>${fmt(m.kra)} / ${fmt(kraTotal())}</b><br>Role attributes: <b>${fmt(m.role)} / ${fmt(roleTotal())}</b><br>Combined quarterly score: <b>${fmt(m.total)} / 100</b><br><br>After submitting, your rating is <b>locked</b> and goes to the Super Admin.`, 'Yes, submit rating');
+  if(!ok) return;
+  const tg = state.target, q = state.quarter, y = state.year;
+  lock(true); busyOverlay('Saving manager rating…');
+  let saved = false, errMsg = '';
+  try{
+    await call('mgr_save', { target:tg, quarter:q, year:y,
+      goals:state.kras.flatMap(k => k.goals).map(g => ({ id:g.recId, appraiser_rating:String(g.apprRating) })),
+      attributes:state.attributes.map(a => ({ id:a.recId, appraiser_rating:String(a.apprRating) })),
+      manager_remark:state.managerRemark || '', comments:state.texts.comments || '' });
+    saved = true;
+  }catch(err){
+    errMsg = err.message;
+    if(err.network || /already submitted/i.test(err.message)){
+      busyOverlay('Checking that your rating reached the system…');
+      try{ const chk = await call('mgr_load', { target:tg, quarter:q, year:y }); if(chk.mgr_done) saved = true; }catch(e){}
     }
-
-    // Manager Rating / Super Admin review
-    if (
-        !isOwnMode() &&
-        state.target &&
-        state.phase === 'done'
-    ) {
-
-        megaUpdateManagerRating();
-
-        return;
-
+  }
+  busyOverlay(null); lock(false);
+  if(saved){ await loadPeriod(); setStatus('✅ Manager rating submitted and locked. It now goes to the Super Admin.', true); }
+  else setStatus('❌ ' + errMsg + ' Your ratings are kept on screen — please try Submit again.', false);
+}
+async function submitFinal(){
+  if(state.busy) return;
+  if(!varSetupOk()){ setStatus('❌ Annual variable must be more than 0 and Individual % + Company % must be 100.', false); return; }
+  const cF = hodCalc();
+  if(state.hod.company === '' || isNaN(cF.co) || cF.co < 0 || cF.co > 100){ setStatus('❌ Enter the Company performance % (0 to 100).', false); return; }
+  if(isNaN(cF.mgr) || cF.mgr < 0 || cF.mgr > 100){ setStatus('❌ Individual Performance % must be 0 to 100.', false); return; }
+  if(!state.final.rating){ setStatus('❌ Choose the Final Overall Rating.', false); return; }
+  const pay = parseFloat(state.final.payout);
+  if(state.final.payout === '' || isNaN(pay) || pay < 0){ setStatus('❌ Enter the final variable payout (₹).', false); return; }
+  const who = (state.subject && state.subject.name) || state.target;
+  const ok = await confirmBox('Approve & finalize?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Final rating: <b>${esc(state.final.rating)}</b><br>Individual Performance: <b>${fmt(cF.mgr)}%</b> · Split <b>${fmt(cF.ep)} / ${fmt(cF.cp)}</b> · Company performance <b>${fmt(cF.co)}%</b><br>Calculated: <b>${money(cF.payout)}</b><br>Final payout: <b>${money(pay)}</b><br><br>After approval, this appraisal is <b>final and locked</b> for everyone.`, 'Yes, approve');
+  if(!ok) return;
+  const tg = state.target, q = state.quarter, y = state.year;
+  lock(true); busyOverlay('Saving final decision…');
+  let saved = false, errMsg = '';
+  try{
+    await call('admin_save', { target:tg, quarter:q, year:y, final_rating:state.final.rating, final_payout:String(r2(pay)), final_remark:state.final.remark || '', yearly_variable:String(cF.yv), emp_pct:String(cF.ep), comp_pct:String(cF.cp), ips:String(r2(cF.mgr)), company_score:String(cF.co) });
+    saved = true;
+  }catch(err){
+    errMsg = err.message;
+    if(err.network || /already final/i.test(err.message)){
+      busyOverlay('Checking that the decision reached the system…');
+      try{ const chk = await call('admin_load', { target:tg, quarter:q, year:y }); if(chk.final_done) saved = true; }catch(e){}
     }
+  }
+  busyOverlay(null); lock(false);
+  if(saved){ await loadPeriod(); setStatus('✅ Appraisal approved and final. The employee has been emailed.', true); }
+  else setStatus('❌ ' + errMsg, false);
+}
 
-    // Employee Self Rating and submitted appraisal
-    if (
-        isOwnMode() &&
-        (state.phase === 'rating' ||
-         state.phase === 'done')
-    ) {
-
-        megaUpdateSelfRating();
-
-    }
-
+/* ======================= DIAGNOSTICS (super admin) ======================= */
+const DIAG_REQUIRED = {
+  review:['Quarter','Year_field','Employee_Email','Employee_Lookup','Status','Final_Score','Manager_KRA_Score','Manager_Role_Score','Manager_Final_Score','Manager_Remark','Appraiser_Comments','Company_Score','Weighted_Score','Eligible_Variable','Employee_Variable','Company_Variable','Variable_Payout','HOD_Remark','HOD_By','Final_Rating','Final_Payout','Final_Remark','Approved_By','Facilitating_Factors1','Constraining_Factors','Outstanding_Achievement','My_Learnings','Overall_Rating'],
+  goal:['Goal_Name','Description','KRA','Weightage','Achievement','Self_Rating','Appraiser_Rating'],
+  competency:['Attribute_Name','Weightage','Rating','Appraiser_Rating','Employee_Name1','Quarter','Year_field1']
 };
+function chooseDiag(){
+  state.mode = 'diag'; state.loadToken++;
+  show('choiceView', false); show('menuBtn', true); show('footerBar', true);
+  show('yearBox', false); show('quarterRow', false); show('periodChips', false);
+  document.getElementById('stepBanner').innerHTML = '';
+  document.getElementById('mainBtn').classList.add('hidden');
+  const d = state.diag || { email:'', quarter:currentQuarter(), year:String(new Date().getFullYear()) };
+  state.diag = d;
+  const emails = [...new Set((state.queue || []).map(q => q.email))];
+  document.getElementById('pageBody').innerHTML = `<div class="section">
+    <div class="section-head"><h2>🔧 Diagnostics</h2></div>
+    <div class="note">Pick an employee and quarter, then Run. You will see exactly what Zoho returns, and ✅ / ❌ for every field the system needs.</div>
+    <div class="tb-grid">
+      <div><label>Employee email</label><input id="dgMail" list="dgList" value="${esc(d.email)}" placeholder="balaji.kadam@megaepc.com"><datalist id="dgList">${emails.map(e => `<option value="${esc(e)}">`).join('')}</datalist></div>
+      <div><label>Quarter</label><select id="dgQ">${['Q1','Q2','Q3','Q4'].map(q => `<option ${q===d.quarter?'selected':''}>${q}</option>`).join('')}</select></div>
+      <div><label>Year</label><input id="dgY" value="${esc(d.year)}"></div>
+    </div>
+    <div style="margin-top:12px;"><button class="solid" onclick="runDiag()">Run diagnostics</button></div>
+  </div><div id="dgOut"></div>`;
+  setStatus('Diagnostics ready.', null);
+}
+function dgTable(title, obj, required){
+  const keys = Object.keys(obj || {});
+  const lowerKeys = keys.map(k => k.toLowerCase());
+  let html = `<div class="section"><div class="section-head"><h2>${title}</h2><span class="weight-badge">${keys.length} field(s) returned</span></div>`;
+  if(required){
+    const rows = required.map(f => { const ok = lowerKeys.includes(f.toLowerCase()); const v = ok ? obj[keys[lowerKeys.indexOf(f.toLowerCase())]] : '';
+      return `<tr><td class="mono">${f}</td><td>${ok ? '✅' : '❌'}</td><td>${ok ? (esc(v) || '<span style="color:var(--muted)">(empty)</span>') : '<span style="color:var(--red)">Not returned — add this field to the form AND show it in the report (link name must match)</span>'}</td></tr>`; }).join('');
+    html += `<table class="q-table"><thead><tr><th>Needed field (link name)</th><th>Found</th><th>Value</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  html += `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;color:var(--navy)">Show all ${keys.length} raw fields returned</summary>
+    <table class="q-table" style="margin-top:8px;"><tbody>${keys.map(k => `<tr><td class="mono">${esc(k)}</td><td>${esc(obj[k])}</td></tr>`).join('') || '<tr><td>Nothing returned.</td></tr>'}</tbody></table></details></div>`;
+  return html;
+}
+async function runDiag(){
+  const d = state.diag;
+  d.email = (document.getElementById('dgMail').value || '').trim().toLowerCase();
+  d.quarter = document.getElementById('dgQ').value; d.year = (document.getElementById('dgY').value || '').trim();
+  const out = document.getElementById('dgOut');
+  if(!d.email){ setStatus('❌ Enter the employee email.', false); return; }
+  out.innerHTML = '<div class="section"><div class="skel h"></div><div class="skel b"></div></div>';
+  setStatus('Running diagnostics…', null);
+  try{
+    const r = await call('diagnose', { target:d.email, quarter:d.quarter, year:d.year });
+    const kv = o => `<table class="q-table"><tbody>${Object.keys(o || {}).map(k => `<tr><td><b>${esc(k)}</b></td><td>${esc(String(o[k]))}</td></tr>`).join('')}</tbody></table>`;
+    out.innerHTML = `<div class="section adm-box"><div class="section-head"><h2>Result — ${esc(d.email)} · ${d.quarter} ${esc(d.year)}</h2><span class="weight-badge">server v${esc(r.version || '?')}</span></div>${kv(r.state)}</div>
+      <div class="section"><div class="section-head"><h2>All Employees — fields detected</h2></div>${kv(r.detected)}</div>
+      ${dgTable('Review record (Review_Report)', r.review_fields, DIAG_REQUIRED.review)}
+      ${dgTable('First task record (Goal_Report)', r.goal_fields, DIAG_REQUIRED.goal)}
+      ${dgTable('First role attribute record (Competency_Report)', r.competency_fields, DIAG_REQUIRED.competency)}
+      ${dgTable('Employee record (All_Employees)', r.employee_fields, null)}`;
+    setStatus('✅ Diagnostics done (server v' + (r.version || '?') + '). Send a screenshot of any ❌ rows.', true);
+  }catch(err){
+    out.innerHTML = `<div class="section notice"><h3>Diagnostics failed</h3><p>${esc(err.message)}</p></div>`;
+    setStatus('❌ ' + err.message, false);
+  }
+}
 
+/* ======================= PDF ======================= */
+function downloadPdf(){
+  if(!(state.phase === 'targets' || state.phase === 'rating' || state.phase === 'done')){ setStatus('Please wait — still loading.', null); return; }
+  applyWeights();
+  const me = (isOwnMode() ? state.me : state.subject) || {};
+  downloadAppraisalPdf({
+    employeeName:me.name, department:me.department, appraiser:me.manager || '', year:state.year, quarter:state.quarter,
+    kraSectionWeight:Math.round(kraTotal()*100)/100 || 100, roleSectionWeight:Math.round(roleTotal()*100)/100, ratingMap:RATING_PCT,
+    kras:state.kras.map(k => ({ name:k.name, description:k.description, weightage:k.weightage,
+      goals:k.goals.filter(g => g.name || g.achievement).map(g => ({ name:g.name, html:(g.html && /<[a-z]/i.test(g.html)) ? sanitizeRich(g.html) : '', achievement:g.achievement, weightage:g.weightage, selfRating:g.selfRating, apprRating:g.apprRating })) })),
+    attributes:state.attributes.map(a => ({ name:a.name, weightage:a.weightage, rating:a.rating, apprRating:a.apprRating || '' })),
+    facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
+    comments:state.texts.comments, learnings:state.texts.learnings, hodRemark:state.managerRemark || '',
+    training:state.training.map(t => ({ need:t.need, benefit:t.benefit, fulfilled:t.fulfilled })),
+    overallRating:state.overallRating || ''
+  }, setStatus);
+}
 
-/* ================================================================
-   11. KEEP EXISTING SCORE CALCULATIONS
-   ================================================================ */
+/* ======================= UTIL ======================= */
+function esc(s){ return (s === null || s === undefined ? '' : String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(n){ const x = Number(n) || 0; return (Math.round(x * 100) / 100).toString(); }
 
-const megaSavedRenderScores = renderScores;
-
-renderScores = function() {
-
-    // Execute original calculation and summary.
-    megaSavedRenderScores();
-
-    // Update Role Attribute score live.
-    megaRefreshRoleScore();
-
-    // Update combined Manager Quarterly Score.
-    if (!isOwnMode()) {
-
-        refreshManagerQuarterTable();
-
-    }
-
-};
-
-
-/* ================================================================
-   END - MEGA ENGINEERING APPRAISAL UPDATE
-   ================================================================ */
+/* ======================= INIT ======================= */
+window.addEventListener('beforeunload', e => { saveDraft(); if(state.busy){ e.preventDefault(); e.returnValue = 'Saving is in progress.'; } });
+(function init(){
+  const t0 = Date.now();
+  const hideSplash = () => { const sp = document.getElementById('splash'); if(sp){ setTimeout(() => sp.classList.add('gone'), Math.max(0, 900 - (Date.now() - t0))); setTimeout(() => sp.remove(), 1600); } };
+  if(document.readyState === 'complete') hideSplash(); else window.addEventListener('load', hideSplash);
+  setTimeout(hideSplash, 4000);
+  try{ warmUp(); }catch(e){}
+  let s = null;
+  try{ s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); }catch(e){}
+  if(s && s.auth && s.me && Number(s.auth.sexp) > Date.now()){
+    state.auth = s.auth; state.me = s.me; openApp();      // same tab refreshed → stay signed in
+  } else {
+    document.getElementById('loginEmail').focus();
+  }
+})();
+</script>
+</body>
+</html>
