@@ -1168,12 +1168,12 @@ function findKra(id){ return state.kras.find(k => k.id === id); }
 function findGoal(kid, gid){ return findKra(kid).goals.find(g => g.id === gid); }
 function addGoal(kid){ findKra(kid).goals.push(newGoal()); renderPage(); markUnsaved(); }
 function removeGoal(kid, gid){ const k = findKra(kid); k.goals = k.goals.filter(g => g.id !== gid); renderPage(); markUnsaved(); }
-function addAttribute(){ state.attributes.push({ id:nid('a'), recId:'', name:'', weightage:0, rating:'' }); renderPage(); markUnsaved(); }
+function addAttribute(){ state.attributes.push({ id:nid('a'), recId:'', name:'', weightage:0, rating:'', apprRating:'' }); renderPage(); markUnsaved(); }
 function removeAttribute(id){ if(state.attributes.length <= 1){ setStatus('❌ At least one Role Attribute is required (20% of the score).', false); return; } state.attributes = state.attributes.filter(a => a.id !== id); renderPage(); markUnsaved(); }
-// Start with five empty, employee-defined role attributes. No preset names.
+// Five empty suggestions, never predefined role-attribute names.
 function addDefaultAttrs(){
   if(state.attributes.length) return;
-  for(let i=0;i<5;i++) state.attributes.push({ id:nid('a'), recId:'', name:'', weightage:0, rating:'', apprRating:'' });
+  for(let i=0;i<5;i++) state.attributes.push({id:nid('a'),recId:'',name:'',weightage:0,rating:'',apprRating:''});
 }
 /* text edits never re-render (keeps the click where the user put it) */
 function setKra(id, f, v){ findKra(id)[f] = v; markUnsaved(); }
@@ -1310,6 +1310,30 @@ function renderBanner(){
   el.innerHTML = `<div class="step-banner ${info[3]}"><span class="num">${info[0]}</span><div><div class="t">${info[1]}</div><div class="d">${info[2]}</div></div>
     <div class="steps"><span class="${p==='targets'?'on':''}">1 · Targets</span><span class="${p==='rating'?'on':''}">2 · Self Rating</span><span class="${p==='done'?'on':''}">✓ Done</span></div></div>`;
 }
+function placeRoleAttributesLast(){
+  const body=document.getElementById('pageBody');
+  if(!body) return;
+  const role=[...body.querySelectorAll('.section')].find(section => {
+    const h=section.querySelector('.section-head h2');
+    return h && h.textContent.trim()==='Role Attributes';
+  });
+  if(isOwnMode()){
+    // The same employee-saved attributes and 1–5 self-rating controls are moved
+    // as a unit; original event handlers and persisted IDs are preserved.
+    if(role && state.phase !== 'targets') body.appendChild(role);
+    return;
+  }
+  if(state.phase !== 'done') return;
+  if(role) body.appendChild(role);
+  const missing=body.querySelector('[data-role-section="true"]');
+  if(missing) body.appendChild(missing);
+  if(!document.getElementById('managerQuarterSummary')) {
+    const wrap=document.createElement('div');
+    wrap.innerHTML=managerQuarterTable();
+    body.appendChild(wrap.firstElementChild);
+  }
+}
+
 function renderPage(){
   applyWeights();
   renderBanner();
@@ -1320,7 +1344,7 @@ function renderPage(){
     if(!state.target){ body.innerHTML = queueHtml(); return; }
     body.innerHTML = `<div style="margin-bottom:12px;"><button class="small" onclick="backToQueue()">← Back to list</button></div>` +
       (state.phase === 'done' ? reviewHtml() : `<div class="section notice"><h3>Self rating not submitted yet</h3><p>This employee has not submitted the self rating for ${state.quarter} ${state.year}.</p></div>`);
-    renderScores(); renderOverall();
+    placeRoleAttributesLast(); renderScores(); renderOverall();
     return;
   }
   if(state.phase === 'none' && state.mode === 'view'){
@@ -1348,12 +1372,12 @@ function renderPage(){
     if(state.phase === 'targets'){ body.innerHTML = `<div class="section notice"><h3>No appraisal for ${state.quarter} ${state.year}</h3><p>Pick a quarter above.</p></div>`; return; }
     const isDone = state.phase === 'done';
     body.innerHTML = `<div class="lock-note">🔒 <div><b>${state.quarter} ${state.year} — view only.</b> ${isDone ? 'Self rating is submitted. Nothing can be changed.' : 'Targets are submitted; self rating is still pending (do it from <b>Self Rating</b>).'}</div></div>` + ratingHtml(true);
-    renderScores(); renderOverall();
+    placeRoleAttributesLast(); renderScores(); renderOverall();
     return;
   }
   body.innerHTML = state.phase === 'targets' ? targetsHtml()
     : (state.phase === 'done' ? `<div class="lock-note">🔒 <div><b>${state.quarter} ${state.year} is submitted and locked.</b> Nothing can be changed — you can only view it and download the PDF.</div></div>` : '') + ratingHtml(state.phase === 'done');
-  renderScores(); renderOverall();
+  placeRoleAttributesLast(); renderScores(); renderOverall();
 }
 function targetsHtml(){
   const sh = sectionShares();
@@ -1394,10 +1418,10 @@ function targetsHtml(){
   </div>
   <div class="section">
     <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(sh.role)}% · ${state.attributes.length} attribute(s)</span></div>
-    <div class="note">Enter your own Role Attributes in the five blank rows. Add or remove rows as needed. The 20% role weightage is divided equally among the attributes saved. Each attribute is self-rated and manager-rated separately out of 5.</div>
+    <div class="note"><b>Required.</b> Enter your own Role Attributes in the five blank rows, or add/remove rows. Leave unused rows blank; blank rows will be ignored when submitting. Attributes have 20% of the employee performance score; KRA has 80%. Self Rating and Manager Rating are each out of 5.</div>
     ${state.attributes.length ? state.attributes.map((a, i) => `
       <div class="attr-row" style="grid-template-columns:3fr 1fr auto;">
-        <div><label>Attribute ${i+1} <span class="req">*</span></label><input value="${esc(a.name)}" maxlength="200" placeholder="Enter your own Role Attribute" onchange="setAttr('${a.id}','name',this.value)"></div>
+        <div><label>Attribute ${i+1} <span class="req">*</span></label><input value="${esc(a.name)}" maxlength="200" placeholder="Enter your own Role Attribute (optional blank row)" onchange="setAttr('${a.id}','name',this.value)"></div>
         <div><label>Weightage (auto)</label><input value="${fmt(a.weightage)}%" disabled></div>
         <div><button class="small danger" onclick="removeAttribute('${a.id}')">✕</button></div>
       </div>`).join('') : '<div class="empty" style="color:var(--red)">Add at least one role attribute.</div>'}
@@ -1427,6 +1451,18 @@ function ratingHtml(ro){
           </div>`).join('')}
       </div>`).join('')}
   </div>
+  ${state.attributes.length ? `
+  <div class="section">
+    <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
+    <div class="note">Rating: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
+    ${state.attributes.map((a, i) => `
+      <div class="attr-row" style="grid-template-columns:3fr 1fr 1.3fr ${ro ? '1.3fr' : ''};">
+        <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
+        <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
+        <div><label>Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
+        ${ro ? `<div><label style="color:#6D28D9;">Manager Rating</label><div class="ro"><b>${esc(a.apprRating) || (state.mgrDone ? '—' : 'Waiting')}</b></div></div>` : ''}
+      </div>`).join('')}
+  </div>` : `<div class="section"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note" style="color:var(--red)">No Role Attributes are saved for this quarter. The employee cannot rate attributes that are missing from the submitted targets. Contact HR to correct the saved Zoho Creator appraisal.</div></div>`}
   <div class="section two-col">
     <div><label>Facilitating Factors</label>${ta('facilitating','Factors that helped achieve the targets (mention target number)')}</div>
     <div><label>Constraining Factors</label>${ta('constraining','Factors that were constraints (mention target number)')}</div>
@@ -1456,20 +1492,7 @@ function ratingHtml(ro){
   <div class="section">
     <div class="section-head"><h2>Overall Performance Rating</h2></div>
     <div class="overall-options" id="overallOptions"></div>
-  </div>
-  ${state.attributes.length ? `
-  <div class="section">
-    <div class="section-head"><h2>Role Attributes — Self Rating</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
-    <div class="note">Rating: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
-    ${state.attributes.map((a, i) => `
-      <div class="attr-row" style="grid-template-columns:3fr 1fr 1.3fr ${ro ? '1.3fr' : ''};">
-        <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
-        <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
-        <div><label>Self Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
-        ${ro ? `<div><label style="color:#6D28D9;">Manager Rating</label><div class="ro"><b>${esc(a.apprRating) || (state.mgrDone ? '—' : 'Waiting')}</b></div></div>` : ''}
-      </div>`).join('')}
-  </div>` : ''}
-`;
+  </div>`;
 }
 function computeMgrScores(){
   let kra = 0, role = 0;
@@ -1489,7 +1512,7 @@ function managerQuarterBreakdown(){
   const tw = kraTotal(), rw = roleTotal();
   return { ...m, taskMark:tw ? m.kra * 25 / tw : 0, roleMark:rw ? m.role * 25 / rw : 0,
     tw, rw, taskDone, taskCount:tasks.length, roleDone, roleCount:state.attributes.length,
-    complete:taskDone === tasks.length && roleDone === state.attributes.length && tasks.length > 0 };
+    complete:taskDone === tasks.length && roleDone === state.attributes.length && tasks.length > 0 && state.attributes.length > 0 };
 }
 function managerQuarterTable(){
   const a = managerQuarterBreakdown();
@@ -1497,14 +1520,14 @@ function managerQuarterTable(){
   const perc = (value, weight, done, total) => total && done === total && weight ? fmt(value * 100 / weight) + '%' : 'Pending';
   const cont = (value, done, total) => total && done === total ? fmt(value) + '%' : 'Pending';
   return `<div class="section mgr-box" id="managerQuarterSummary">
-    <div class="section-head"><h2>Quarterly Appraisal — Manager Rating Summary</h2><span class="weight-badge">Task 80% + Role 20%</span></div>
-    <div class="note">Each section is shown as an equivalent rating out of 25. All tasks and attributes must be rated to finalize the quarterly score.</div>
+    <div class="section-head"><h2>Quarterly Appraisal — Manager Rating Summary</h2><span class="weight-badge">Employee score: KRA 80% + Role 20%</span></div>
+    <div class="note">Each section is shown as an equivalent rating out of 25. All tasks and saved Role Attributes must receive manager ratings. If Role Attributes are missing from an already submitted appraisal, the employee appraisal record needs authorized correction in Zoho Creator before finalization.</div>
     <div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Appraisal criteria</th><th>Manager rating</th><th>Achievement</th><th>Weightage</th><th>Weighted contribution</th></tr></thead><tbody>
       <tr><td><b>Task Performance</b><div class="note" style="margin:3px 0 0">${a.taskDone} / ${a.taskCount} tasks rated</div></td><td>${mark(a.taskMark,a.taskDone,a.taskCount)}</td><td>${perc(a.kra,a.tw,a.taskDone,a.taskCount)}</td><td>${fmt(a.tw)}%</td><td>${cont(a.kra,a.taskDone,a.taskCount)}</td></tr>
-      <tr><td><b>Role Attributes</b><div class="note" style="margin:3px 0 0">${a.roleDone} / ${a.roleCount} attributes rated</div></td><td>${a.roleCount ? mark(a.roleMark,a.roleDone,a.roleCount) : 'Not applicable'}</td><td>${a.roleCount ? perc(a.role,a.rw,a.roleDone,a.roleCount) : 'Not applicable'}</td><td>${fmt(a.rw)}%</td><td>${a.roleCount ? cont(a.role,a.roleDone,a.roleCount) : '0%'}</td></tr>
+      <tr><td><b>Role Attributes</b><div class="note" style="margin:3px 0 0">${a.roleDone} / ${a.roleCount} attributes rated</div></td><td>${a.roleCount ? mark(a.roleMark,a.roleDone,a.roleCount) : 'Missing'}</td><td>${a.roleCount ? perc(a.role,a.rw,a.roleDone,a.roleCount) : 'Missing'}</td><td>${fmt(a.rw)}%</td><td>${a.roleCount ? cont(a.role,a.roleDone,a.roleCount) : 'Missing'}</td></tr>
       <tr style="font-weight:700;background:#F1EBFD"><td>Combined Quarterly Appraisal</td><td colspan="3">${a.complete ? 'All ratings completed' : 'Complete all manager ratings'}</td><td style="font-size:17px;color:#6D28D9">${a.complete ? fmt(a.total) + '%': 'Pending'}</td></tr>
     </tbody></table></div>
-    <div class="note" style="margin:10px 0 0">Formula: (Task equivalent rating / 25 × Task weightage) + (Role equivalent rating / 25 × Role weightage). This is the employee-performance score used for quarterly variable-pay calculations; company performance is calculated separately.</div>
+    <div class="note" style="margin:10px 0 0">Formula: (Task equivalent rating / 25 × Task weightage) + (Role equivalent rating / 25 × Role weightage). This is the employee-performance score used for quarterly variable-pay calculations; company performance is calculated separately using the employee/company percentage split configured in the employee master (for example, 90% employee + 10% company). Within the 90% employee share, KRA is 80% and Role Attributes 20%.</div>
   </div>`;
 }
 function refreshManagerQuarterTable(){
@@ -1590,15 +1613,16 @@ function validateTargets(){
       if(sanitizeRich(k.goals[j].html || '').length > 18000) return `Task ${i+1}.${j+1}: the text is too long — please shorten it.`;
     }
   }
-  if(!state.attributes.length) return 'Add at least one Role Attribute (Role attributes = 20%, Targets = 80%).';
-  for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].name.trim()) return `Role Attribute ${i+1}: enter the name (or remove it).`;
+  if(!state.attributes.some(a => (a.name||'').trim())) return 'Enter at least one Role Attribute name before submitting.';
   return '';
 }
 async function submitTargets(){
   if(state.busy) return;
   document.querySelectorAll('.rte-area').forEach(el => rteInput(el, true));
-  applyWeights();
   const problem = validateTargets(); if(problem){ setStatus('❌ ' + problem, false); return; }
+  // Empty initial placeholders are not actual appraisal records.
+  state.attributes=state.attributes.filter(a=>(a.name||'').trim());
+  applyWeights();
   const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0);
   const ok = await confirmBox('Submit targets for ' + state.quarter + ' ' + state.year + '?',
     `You are submitting <b>${state.kras.length} target(s)</b>, <b>${tasks} task(s)</b> and <b>${state.attributes.length} role attribute(s)</b>.<br><br>
@@ -1633,6 +1657,7 @@ async function submitTargets(){
   }
 }
 function validateRating(){
+  if(!state.attributes.length) return 'No saved Role Attributes for this quarter. Please contact HR for correction.';
   if(!state.kras.length) return 'No targets found for this quarter.';
   for(let i = 0; i < state.kras.length; i++) for(let j = 0; j < state.kras[i].goals.length; j++)
     if(!state.kras[i].goals[j].selfRating) return `Task ${i+1}.${j+1}: select your self rating.`;
@@ -1804,6 +1829,18 @@ function reviewHtml(){
           </div>`).join('')}
       </div>`).join('')}
   </div>
+  ${state.attributes.length ? `
+  <div class="section">
+    <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
+    <div class="note">Rating: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
+    ${state.attributes.map((a, i) => `
+      <div class="attr-row" style="grid-template-columns:3fr 1fr 1fr 1.3fr;">
+        <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
+        <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
+        <div><label>Self Rating</label><div class="ro">${esc(a.rating) || '—'}</div></div>
+        <div><label style="color:#6D28D9;">Manager Rating ${canMgr ? '<span class="req">*</span>' : ''}</label>${mgrSel(a.apprRating, `setAttr('${a.id}','apprRating',this.value)`)}</div>
+      </div>`).join('')}
+  </div>` : `<div class="section mgr-box" data-role-section="true"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note" style="color:var(--red)">No saved Role Attributes were returned by Zoho Creator for this quarter. The manager cannot create or rate missing employee attributes here. An authorized correction to the saved target records is needed before manager approval; this form will not invent ratings.</div></div>`}
   <div class="section two-col">
     <div><label>Facilitating Factors (employee)</label>${t('facilitating')}</div>
     <div><label>Constraining Factors (employee)</label>${t('constraining')}</div>
@@ -1837,20 +1874,7 @@ function reviewHtml(){
       <div><label>Final Remark</label>${canAdm ? `<textarea maxlength="3000" placeholder="Reason for the decision" onchange="setFinal('remark',this.value)">${esc(state.final.remark)}</textarea>` : `<div class="ro">${esc(state.final.remark) || '—'}</div>`}</div>
     </div>
     ${state.final.by ? `<div class="note" style="margin:10px 0 0;">Approved by ${esc(state.final.by)}</div>` : ''}
-  </div>` : ''}
-  ${state.attributes.length ? `
-  <div class="section mgr-box">
-    <div class="section-head"><h2>Role Attributes — Manager Rating</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
-    <div class="note">Rate each employee-defined Role Attribute out of 5. Its saved weightage contributes to the quarterly Manager score.</div>
-    ${state.attributes.map((a, i) => `
-      <div class="attr-row" style="grid-template-columns:3fr 1fr 1fr 1.3fr;">
-        <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
-        <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
-        <div><label>Self Rating</label><div class="ro">${esc(a.rating) || '—'}</div></div>
-        <div><label style="color:#6D28D9;">Manager Rating ${canMgr ? '<span class="req">*</span>' : ''}</label>${mgrSel(a.apprRating, `setAttr('${a.id}','apprRating',this.value)`)}</div>
-      </div>`).join('')}
-  </div>` : ''}
-  ${managerQuarterTable()}`;
+  </div>` : ''}`;
 }
 function setFinal(f, v){
   state.final[f] = v;
@@ -1965,6 +1989,7 @@ async function submitManager(){
   if(state.busy) return;
   for(let i = 0; i < state.kras.length; i++) for(let j = 0; j < state.kras[i].goals.length; j++)
     if(!state.kras[i].goals[j].apprRating){ setStatus(`❌ Task ${i+1}.${j+1}: select the manager rating.`, false); return; }
+  if(!state.attributes.length){ setStatus('❌ This appraisal has no saved Role Attributes. Correct the source appraisal in Zoho Creator before manager submission.', false); return; }
   for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].apprRating){ setStatus(`❌ Role Attribute ${i+1}: select the manager rating.`, false); return; }
   const m = computeMgrScores(), who = (state.subject && state.subject.name) || state.target;
   const ok = await confirmBox('Submit manager rating?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Task performance: <b>${fmt(m.kra)} / ${fmt(kraTotal())}</b><br>Role attributes: <b>${fmt(m.role)} / ${fmt(roleTotal())}</b><br>Combined quarterly score: <b>${fmt(m.total)} / 100</b><br><br>After submitting, your rating is <b>locked</b> and goes to the Super Admin.`, 'Yes, submit rating');
