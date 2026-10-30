@@ -1462,7 +1462,7 @@ function ratingHtml(ro){
         <div><label>Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
         ${ro ? `<div><label style="color:#6D28D9;">Manager Rating</label><div class="ro"><b>${esc(a.apprRating) || (state.mgrDone ? '—' : 'Waiting')}</b></div></div>` : ''}
       </div>`).join('')}
-  </div>` : `<div class="section"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note" style="color:var(--red)">No Role Attributes are saved for this quarter. The employee cannot rate attributes that are missing from the submitted targets. Contact HR to correct the saved Zoho Creator appraisal.</div></div>`}
+  </div>` : `<div class="section"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note" style="color:var(--red)">No Role Attributes were found in Review.Role_Attributes or legacy Competency records for this quarter. Check the saved Review subform.</div></div>`}
   <div class="section two-col">
     <div><label>Facilitating Factors</label>${ta('facilitating','Factors that helped achieve the targets (mention target number)')}</div>
     <div><label>Constraining Factors</label>${ta('constraining','Factors that were constraints (mention target number)')}</div>
@@ -1840,7 +1840,7 @@ function reviewHtml(){
         <div><label>Self Rating</label><div class="ro">${esc(a.rating) || '—'}</div></div>
         <div><label style="color:#6D28D9;">Manager Rating ${canMgr ? '<span class="req">*</span>' : ''}</label>${mgrSel(a.apprRating, `setAttr('${a.id}','apprRating',this.value)`)}</div>
       </div>`).join('')}
-  </div>` : `<div class="section mgr-box" data-role-section="true"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note" style="color:var(--red)">No saved Role Attributes were returned by Zoho Creator for this quarter. The manager cannot create or rate missing employee attributes here. An authorized correction to the saved target records is needed before manager approval; this form will not invent ratings.</div></div>`}
+  </div>` : `<div class="section mgr-box" data-role-section="true"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note" style="color:var(--red)">No Role Attributes were returned from Review.Role_Attributes or historical Competency records. Ask the employee or HR to verify this quarter's Review subform before manager submission.</div></div>`}
   <div class="section two-col">
     <div><label>Facilitating Factors (employee)</label>${t('facilitating')}</div>
     <div><label>Constraining Factors (employee)</label>${t('constraining')}</div>
