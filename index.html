@@ -1095,6 +1095,11 @@ async function loadPeriod(){
       const fixed = splitEven(ROLE_SHARE, state.attributes.length);
       state.attributes.forEach((a,i) => a.weightage = fixed[i]);
     }
+    // On legacy quarters, recover zero Role Attribute weights for display.
+    if(state.attributes.length && state.attributes.every(a=>!(Number(a.weightage)>0))){
+      const weights=splitEven(ROLE_SHARE,state.attributes.length);
+      state.attributes.forEach((a,i)=>a.weightage=weights[i]);
+    }
     state.training = (r.training || []).map(t => ({ id:nid('t'), saved:true, need:t.need, benefit:t.benefit, fulfilled:t.fulfilled }));
     const rv = r.review || {};
     state.texts = { facilitating:rv.facilitating || '', constraining:rv.constraining || '', outstanding:rv.outstanding || '', comments:rv.comments || '', learnings:rv.learnings || '' };
@@ -1329,9 +1334,14 @@ function placeRoleAttributesLast(){
     return;
   }
   if(state.phase !== 'done') return;
-  if(role) body.appendChild(role);
+  const kraSection=[...body.querySelectorAll('.section')].find(s=>s.querySelector('.section-head h2')?.textContent.includes('Targets (KRA)'));
+  if(role && kraSection) kraSection.after(role);
   const missing=body.querySelector('[data-role-section="true"]');
-  if(missing) body.appendChild(missing);
+  if(missing && kraSection) kraSection.after(missing);
+  const variable=body.querySelector('#hodBox');
+  if(variable && kraSection) (role || missing || kraSection).after(variable);
+  const managerReview=[...body.querySelectorAll('.section')].find(s=>s.querySelector('.section-head h2')?.textContent.trim()==='Manager Review');
+  if(managerReview && variable) variable.after(managerReview);
   if(!document.getElementById('managerQuarterSummary')) {
     const wrap=document.createElement('div');
     wrap.innerHTML=managerQuarterTable();
@@ -1423,7 +1433,7 @@ function targetsHtml(){
   </div>
   <div class="section">
     <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(sh.role)}% · ${state.attributes.length} attribute(s)</span></div>
-    <div class="note"><b>Required.</b> Enter your own Role Attributes in the five blank rows, or add/remove rows. Leave unused rows blank; blank rows will be ignored when submitting. Attributes have 20% of the employee performance score; KRA has 80%. Self Rating and Manager Rating are each out of 5.</div>
+    <div class="note"><b>Required.</b> Enter your own Role Attributes in the five blank rows, or add/remove rows. Leave unused rows blank; blank rows will be ignored when submitting. Attributes have 20% of the employee performance score; KRA has 80%. Only the manager rates Role Attributes out of 5; employees enter names only.</div>
     ${state.attributes.length ? state.attributes.map((a, i) => `
       <div class="attr-row" style="grid-template-columns:3fr 1fr auto;">
         <div><label>Attribute ${i+1} <span class="req">*</span></label><input value="${esc(a.name)}" maxlength="200" placeholder="Enter your own Role Attribute (optional blank row)" onchange="setAttr('${a.id}','name',this.value)"></div>
@@ -1433,9 +1443,41 @@ function targetsHtml(){
     <div style="margin-top:10px;"><button class="small" onclick="addAttribute()">+ Add Role Attribute</button></div>
   </div>`;
 }
+function appraisalRichText(id, value, editable, placeholder, kind){
+  const raw = String(value || '');
+  const content = /<[a-z][\s\S]*>/i.test(raw) ? sanitizeRich(raw) : esc(raw).replace(/\n/g,'<br>');
+  if(!editable) return `<div class="ro rich">${content || '—'}</div>`;
+  return `<div class="rte"><div class="rte-bar">
+    <button type="button" onmousedown="event.preventDefault();appraisalRichCmd(this,'bold')"><b>B</b></button>
+    <button type="button" onmousedown="event.preventDefault();appraisalRichCmd(this,'italic')"><i>I</i></button>
+    <button type="button" onmousedown="event.preventDefault();appraisalRichCmd(this,'underline')"><u>U</u></button>
+    <button type="button" onmousedown="event.preventDefault();appraisalRichCmd(this,'insertOrderedList')">1. List</button>
+    <button type="button" onmousedown="event.preventDefault();appraisalRichCmd(this,'insertUnorderedList')">• List</button>
+  </div><div class="rte-area" contenteditable="true" data-field="${id}" data-kind="${kind || 'text'}" data-ph="${esc(placeholder || 'Write here')}"
+    oninput="appraisalRichSave(this)" onblur="appraisalRichSave(this,true)" onpaste="appraisalRichPaste(event)">${content}</div></div>`;
+}
+function appraisalRichSave(el,final){
+  if(!el) return;
+  const html = sanitizeRich(el.innerHTML);
+  if(el.dataset.kind === 'remark') state.managerRemark = html;
+  else state.texts[el.dataset.field] = html;
+  if(final && !plainFromRich(html)) el.innerHTML = '';
+  markUnsaved();
+}
+function appraisalRichCmd(button, command){
+  const editor = button.closest('.rte').querySelector('.rte-area');
+  editor.focus();
+  document.execCommand(command,false,null);
+  appraisalRichSave(editor);
+}
+function appraisalRichPaste(e){
+  e.preventDefault();
+  const val=(e.clipboardData || window.clipboardData).getData('text/plain') || '';
+  document.execCommand('insertText',false,val);
+  appraisalRichSave(e.target.closest('.rte-area'));
+}
 function ratingHtml(ro){
-  const ta = (id, ph) => ro ? `<div class="ro">${esc(state.texts[id]) || '—'}</div>`
-                            : `<textarea maxlength="3000" placeholder="${ph}" onchange="setText('${id}',this.value)">${esc(state.texts[id])}</textarea>`;
+  const ta = (id, ph) => appraisalRichText(id, state.texts[id], !ro, ph, 'text');
   return `
   <div class="score-bar" id="scoreBar"></div>
   <div class="section">
@@ -1459,20 +1501,18 @@ function ratingHtml(ro){
   ${state.attributes.length ? `
   <div class="section">
     <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
-    <div class="note">Rating: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
-    ${state.attributes.map((a, i) => `
-      <div class="attr-row" style="grid-template-columns:3fr 1fr 1.3fr ${ro ? '1.3fr' : ''};">
-        <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
-        <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
-        <div><label>Rating ${ro?'':'<span class="req">*</span>'}</label>${ro ? `<div class="ro">${esc(a.rating) || '—'}</div>` : ratingSelect(a.rating, `setAttr('${a.id}','rating',this.value)`)}</div>
-        ${ro ? `<div><label style="color:#6D28D9;">Manager Rating</label><div class="ro"><b>${esc(a.apprRating) || (state.mgrDone ? '—' : 'Waiting')}</b></div></div>` : ''}
-      </div>`).join('')}
-  </div>` : `<div class="section"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note" style="color:var(--red)">No Role Attributes were found in Role_Attribute_Details or legacy Competency records for this quarter. Check Role_Attribute_Details_Report.</div></div>`}
+    <div class="note">These Role Attributes were defined during New Appraisal. Only the manager rates them.</div>
+    ${state.attributes.map((a,i) => `<div class="attr-row" style="grid-template-columns:3fr 1fr 1.3fr;">
+      <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
+      <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
+      <div><label>Manager Rating</label><div class="ro">${esc(a.apprRating) || 'Waiting for manager'}</div></div>
+    </div>`).join('')}
+  </div>` : `<div class="section"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note">Check Role_Attribute_Details_Report for this quarter.</div></div>`}
   <div class="section two-col">
     <div><label>Facilitating Factors</label>${ta('facilitating','Factors that helped achieve the targets (mention target number)')}</div>
     <div><label>Constraining Factors</label>${ta('constraining','Factors that were constraints (mention target number)')}</div>
     <div><label>Outstanding Achievement / Significant Contribution</label>${ta('outstanding','Quantified benefit to company')}</div>
-    <div><label>Comments of Appraiser</label><div class="ro">${esc(state.texts.comments) || '— (filled by your manager)'}</div></div>
+    <div><label>Comments of Appraiser</label>${appraisalRichText('comments',state.texts.comments,false,'','text')}</div>
   </div>
   ${state.managerRemark || state.final.rating ? `<div class="section mgr-box"><div class="section-head"><h2>Manager &amp; Final Review</h2></div>
     ${state.managerRemark ? `<label>Appraiser's / HOD's Remark</label><div class="ro" style="margin-bottom:10px;">${esc(state.managerRemark)}</div>` : ''}
@@ -1494,10 +1534,7 @@ function ratingHtml(ro){
         : `<tr><td colspan="4" class="empty">${ro ? 'None.' : 'No training needs added yet.'}</td></tr>`}</tbody>
     </table>
   </div>
-  <div class="section">
-    <div class="section-head"><h2>Overall Performance Rating</h2></div>
-    <div class="overall-options" id="overallOptions"></div>
-  </div>`;
+  `;
 }
 function computeMgrScores(){
   let kra = 0, role = 0;
@@ -1557,8 +1594,7 @@ function renderScores(){
   const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0), rated = state.kras.reduce((n,k) => n + k.goals.filter(g => g.selfRating).length, 0);
   el.innerHTML = `
     <div class="score-tile"><div class="k">Targets (KRA)</div><div class="v">${fmt(s.kra)} / ${fmt(kraTotal())}</div><div class="s">${rated} of ${tasks} task(s) rated</div></div>
-    <div class="score-tile"><div class="k">Role Attributes</div><div class="v">${fmt(s.role)} / ${fmt(roleTotal())}</div><div class="s">${state.attributes.length} attribute(s)</div></div>
-    <div class="score-tile final"><div class="k">Self Score (auto)</div><div class="v">${fmt(s.total)} / 100</div><div class="s">≈ ${suggestedOverall(s.total)}</div></div>`;
+    <div class="score-tile"><div class="k">Role Attributes</div><div class="v">${fmt(roleTotal())}%</div><div class="s">Manager rating only · ${state.attributes.length} attribute(s)</div></div>`;
 }
 function renderOverall(){
   const el = document.getElementById('overallOptions'); if(!el) return;
@@ -1666,7 +1702,6 @@ function validateRating(){
   if(!state.kras.length) return 'No targets found for this quarter.';
   for(let i = 0; i < state.kras.length; i++) for(let j = 0; j < state.kras[i].goals.length; j++)
     if(!state.kras[i].goals[j].selfRating) return `Task ${i+1}.${j+1}: select your self rating.`;
-  for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].rating) return `Role Attribute ${i+1}: select a rating.`;
   return '';
 }
 async function submitRating(){
@@ -1674,7 +1709,7 @@ async function submitRating(){
   const problem = validateRating(); if(problem){ setStatus('❌ ' + problem, false); return; }
   const sc = computeScores();
   const ok = await confirmBox('Submit self rating for ' + state.quarter + ' ' + state.year + '?',
-    `Your self score is <b>${fmt(sc.total)} / 100</b> (Targets ${fmt(sc.kra)} + Role ${fmt(sc.role)}).<br><br>
+    `Your task self-rating score is <b>${fmt(sc.kra)} / ${fmt(kraTotal())}</b>. Role Attributes will be rated by the manager.<br><br>
      After submitting, this quarter is <b>fully locked</b> — nothing can be changed. You can still view it and download the PDF.`, 'Yes, submit rating');
   if(!ok) return;
   const q = state.quarter, y = state.year;
@@ -1684,7 +1719,7 @@ async function submitRating(){
   try{
     const r = await call('save_rating', { quarter:q, year:y,
       goals:state.kras.flatMap(k => k.goals).map(g => ({ id:g.recId, achievement:g.achievement || '', self_rating:String(g.selfRating) })),
-      attributes:state.attributes.map(a => ({ id:a.recId, rating:String(a.rating) })),
+      attributes:[],
       training:state.training.filter(t => !t.saved && t.need.trim()).map(t => ({ need:t.need.trim(), benefit:t.benefit || '', fulfilled:t.fulfilled || '' })),
       facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
       comments:state.texts.comments, learnings:state.texts.learnings, overall:state.overallRating || '' });
@@ -1812,7 +1847,7 @@ function reviewHtml(){
   const canMgr = state.mode === 'team' && state.phase === 'done' && !state.mgrDone && !state.finalDone;
   const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
   const canHod = canHodNow();
-  const t = id => `<div class="ro">${esc(state.texts[id]) || '—'}</div>`;
+  const t = id => appraisalRichText(id, state.texts[id], false, '', 'text');
   const mgrSel = (v, on) => canMgr ? ratingSelect(v, on) : `<div class="ro"><b>${esc(v) || '—'}</b></div>`;
   return `
   ${state.finalDone ? `<div class="lock-note">🔒 <div><b>Final — approved.</b> This appraisal is locked for everyone.</div></div>` : (!canMgr && !canAdm && !canHod ? `<div class="lock-note">🔒 <div><b>View only.</b> ${state.mgrDone ? 'Manager rating is submitted.' : 'Waiting for the manager rating.'}</div></div>` : '')}
@@ -1839,10 +1874,9 @@ function reviewHtml(){
     <div class="section-head"><h2>Role Attributes</h2><span class="weight-badge">${fmt(roleTotal())}%</span></div>
     <div class="note">Rating: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
     ${state.attributes.map((a, i) => `
-      <div class="attr-row" style="grid-template-columns:3fr 1fr 1fr 1.3fr;">
+      <div class="attr-row" style="grid-template-columns:3fr 1fr 1.3fr;">
         <div><label>Attribute ${i+1}</label><div class="ro">${esc(a.name)}</div></div>
         <div><label>Weightage</label><div class="ro">${fmt(a.weightage)}%</div></div>
-        <div><label>Self Rating</label><div class="ro">${esc(a.rating) || '—'}</div></div>
         <div><label style="color:#6D28D9;">Manager Rating ${canMgr ? '<span class="req">*</span>' : ''}</label>${mgrSel(a.apprRating, `setAttr('${a.id}','apprRating',this.value)`)}</div>
       </div>`).join('')}
   </div>` : `<div class="section mgr-box" data-role-section="true"><div class="section-head"><h2>Role Attributes — Missing Data</h2></div><div class="note" style="color:var(--red)">No Role Attributes were returned from Role_Attribute_Details or historical Competency records. Ask the employee or HR to verify this quarter's Review subform before manager submission.</div></div>`}
@@ -1857,15 +1891,11 @@ function reviewHtml(){
     <table class="train-table"><thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled</th></tr></thead>
       <tbody>${state.training.length ? state.training.map(tr => `<tr><td>${esc(tr.need)}</td><td>${esc(tr.benefit)}</td><td>${esc(tr.fulfilled)}</td></tr>`).join('') : '<tr><td colspan="3" class="empty">None.</td></tr>'}</tbody></table>
   </div>
-  <div class="section">
-    <div class="section-head"><h2>Employee's Overall Rating (self)</h2></div>
-    <div class="overall-options" id="overallOptions"></div>
-  </div>
   <div class="section mgr-box">
     <div class="section-head"><h2>Manager Review</h2></div>
     <div class="two-col">
-      <div><label>Comments of Appraiser</label>${canMgr ? `<textarea maxlength="3000" placeholder="How facilitating factors will be reinforced and constraining factors reduced" onchange="setText('comments',this.value)">${esc(state.texts.comments)}</textarea>` : `<div class="ro">${esc(state.texts.comments) || '—'}</div>`}</div>
-      <div><label>Appraiser's / HOD's Remark</label>${canMgr ? `<textarea maxlength="3000" placeholder="Overall remark on this appraisal" onchange="state.managerRemark=this.value;markUnsaved()">${esc(state.managerRemark)}</textarea>` : `<div class="ro">${esc(state.managerRemark) || '—'}</div>`}</div>
+      <div><label>Comments of Appraiser</label>${appraisalRichText('comments',state.texts.comments,canMgr,'Appraiser comments','text')}</div>
+      <div><label>Appraiser's / HOD's Remark</label>${appraisalRichText('managerRemark',state.managerRemark,canMgr,'Overall manager remark','remark')}</div>
     </div>
   </div>
   ${state.mode === 'admin' && state.mgrDone ? hodBoxHtml(canAdm) : ''}
