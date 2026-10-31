@@ -1359,7 +1359,13 @@ function renderPage(){
     if(!state.target){ body.innerHTML = queueHtml(); return; }
     body.innerHTML = `<div style="margin-bottom:12px;"><button class="small" onclick="backToQueue()">← Back to list</button></div>` +
       (state.phase === 'done' ? reviewHtml() : `<div class="section notice"><h3>Self rating not submitted yet</h3><p>This employee has not submitted the self rating for ${state.quarter} ${state.year}.</p></div>`);
-    placeRoleAttributesLast(); renderScores(); renderOverall();
+    placeRoleAttributesLast();
+    if(state.mode === 'admin'){
+      const role = body.querySelector('[data-role-section="true"]');
+      const pay = body.querySelector('#hodBox');
+      if(role && pay) role.insertAdjacentElement('afterend', pay);
+    }
+    renderScores(); renderOverall();
     return;
   }
   if(state.phase === 'none' && state.mode === 'view'){
@@ -1919,7 +1925,7 @@ function reviewHtml(){
       <div><label>Appraiser's / HOD's Remark</label>${appraisalRichText('managerRemark',state.managerRemark,canMgr,'Overall manager remark','remark')}</div>
     </div>
   </div>
-  ${state.mode === 'admin' && state.mgrDone ? hodBoxHtml(canAdm) : ''}
+  ${state.mode === 'admin' ? hodBoxHtml(canAdm) : ''}
   ${state.mode === 'admin' ? `
   <div class="section adm-box">
     <div class="section-head"><h2>Final Decision (Super Admin)</h2></div>
@@ -1962,6 +1968,7 @@ function hodCalc(){
 }
 function hodBoxHtml(canEdit){
   const c = hodCalc();
+  const managerComplete = managerQuarterBreakdown().complete && state.mgrDone;
   const saved = state.finalDone && state.hod.payout !== '';
   const shown = saved ? { empVar:Number(state.hod.empVar), compVar:Number(state.hod.compVar), payout:Number(state.hod.payout) } : c;
   const pctShown = c.eligible ? shown.payout * 100 / c.eligible : 0;
@@ -1969,12 +1976,13 @@ function hodBoxHtml(canEdit){
   const ro = (id, t) => `<span id="${id}">${t}</span>`;
   return `<div class="section hod-box" id="hodBox">
     <div class="section-head"><h2>Variable pay — ${state.revisionLabel || state.quarter} ${state.year} (Super Admin)</h2><span class="weight-badge" style="border-color:#0E7490;color:#0E7490;background:#E6F6FA;">Individual ${ro('vEp', fmt(c.ep))}% · Company ${ro('vCp', fmt(c.cp))}%</span></div>
+    ${!managerComplete && !state.finalDone ? `<div class="note" style="margin:0 0 12px;color:#9B1C1C;font-weight:700;border:1px solid #FECACA;border-radius:6px;padding:10px;background:#FFF7F7;">Manager Rating pending — this is a preview only. All KRA tasks and all Role Attributes must be rated and saved before Super Admin can finalize variable pay. Partial manager scores must not be used for payout.</div>` : ''}
     ${canEdit ? `<div class="note" style="margin:0 0 12px;">All white boxes are pre-filled (All Employees + manager rating). <b>You can change any of them</b> — the pay is re-calculated instantly.</div>` : ''}
     <h3 style="font-size:14px;color:#0E7490;margin:4px 0 8px;">A. Individual Performance (manager ratings · Task ${fmt(c.kt)} : Role ${fmt(c.rt)})</h3>
     <table class="calc">
       <tr><td>Task rating (manager) — out of 25</td><td>${fmt(c.taskRating25)} / 25 &nbsp;·&nbsp; ${fmt(c.taskAch)}% → ${fmt(c.m.kra)} points</td></tr>
       <tr><td>Role rating (manager) — out of 25</td><td>${c.rt ? fmt(c.roleRating25) + ' / 25 &nbsp;·&nbsp; ' + fmt(c.roleAch) + '% → ' + fmt(c.m.role) + ' points' : '— (no role attributes)'}</td></tr>
-      <tr><td>Individual Performance Score from manager rating</td><td>${fmt(c.mgrAuto)}%</td></tr>
+      <tr><td>Individual Performance Score from manager rating</td><td>${managerComplete ? fmt(c.mgrAuto) + "%" : "Pending — manager ratings incomplete"}</td></tr>
       <tr class="big"><td>Individual Performance % used for pay ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('ips', state.hod.ips !== '' ? state.hod.ips : String(r2(c.mgrAuto)), 'e.g. 77.6', 'max="100"') + ' %' : fmt(c.mgr) + '%'}</td></tr>
     </table>
     <h3 style="font-size:14px;color:#0E7490;margin:14px 0 8px;">B. Quarterly variable pay</h3>
@@ -1988,7 +1996,7 @@ function hodBoxHtml(canEdit){
       <tr><td>Company performance % ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('company', state.hod.company, 'e.g. 90', 'max="100"') + ' %' : (state.hod.company !== '' ? esc(state.hod.company) + '%' : '—')}</td></tr>
       <tr><td>Individual variable = individual target × Individual Performance %</td><td>${ro('hodEmpVar', money(shown.empVar))}</td></tr>
       <tr><td>Company variable = company target × Company performance %</td><td>${ro('hodCompVar', money(shown.compVar))}</td></tr>
-      <tr class="big"><td>Total quarterly variable pay</td><td>${ro('hodPayout', money(shown.payout))}</td></tr>
+      <tr class="big"><td>Total quarterly variable pay</td><td>${managerComplete || state.finalDone ? ro('hodPayout', money(shown.payout)) : "Pending manager rating"}</td></tr>
       <tr><td>Quarterly payout achievement</td><td>${ro('hodPct', fmt(pctShown) + '%')}</td></tr>
       <tr><td>Quarterly target not earned</td><td>${ro('hodNot', money(c.eligible - shown.payout))}</td></tr>
     </table>
