@@ -789,7 +789,7 @@ const state = {
   texts:{ facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'' },
   mode:'menu',            // menu | new | rating
   periods:[],
-  revisionMode:false, revisionNumber:0, revisionBase:0, busy:false, loadToken:0
+  revisionMode:false, revisionNumber:0, revisionLabel:'', revisionBase:0, busy:false, loadToken:0
 };
 let seq = 1;
 function nid(p){ return p + (seq++); }
@@ -1085,7 +1085,7 @@ async function loadPeriod(){
     if(isOwnMode()){ if(r.employee){ const keep = { is_manager:state.me.is_manager, is_admin:state.me.is_admin, is_hod:state.me.is_hod }; state.me = Object.assign(state.me || {}, r.employee); if(r.employee.is_manager === undefined) Object.assign(state.me, keep); } }
     else { state.subject = r.employee || {}; fillProfile(state.subject); }
     state.mgrDone = !!r.mgr_done; state.finalDone = !!r.final_done; state.hodDone = !!r.hod_done; state.serverVersion = r.version || '';
-    state.phase = r.phase; state.revisionNumber = Number(r.revision_number || 0); state.revisionMode = false;
+    state.phase = r.phase; state.revisionNumber = Number(r.revision_number || 0); state.revisionLabel = r.revision_label || (state.quarter + (state.revisionNumber > 0 ? '-R' + state.revisionNumber : '')); state.revisionMode = false;
     state.kras = (r.kras || []).map(k => ({ id:nid('k'), recId:String(k.id), name:k.name, description:k.description, weightage:num(k.weightage),
       goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, html:richFromServer(g.html, g.name), weightage:num(g.weightage), achievement:g.achievement || '',
         selfRating:g.self_rating || '', apprRating:g.appraiser_rating || '' })) }));
@@ -1162,7 +1162,7 @@ function pct(r){ const n = parseInt(r, 10); return RATING_PCT[n] !== undefined ?
 function computeScores(){
   let kra = 0, role = 0;
   state.kras.forEach(k => k.goals.forEach(g => { kra += (g.weightage || 0) * pct(g.selfRating) / 100; }));
-  state.attributes.forEach(a => { role += (a.weightage || 0) * pct(a.rating) / 100; });
+  // Employee does not rate Role Attributes: they contribute only to manager score.
   kra = Math.round(kra*100)/100; role = Math.round(role*100)/100;
   return { kra, role, total: Math.round((kra + role)*100)/100 };
 }
@@ -1297,14 +1297,14 @@ function renderBanner(){
     btn.disabled = state.busy;
     const who = (state.subject && state.subject.name) || state.target;
     const stTxt = state.finalDone ? 'FINAL — approved' + (state.final.rating ? ' · ' + state.final.rating : '') : state.mgrDone ? 'Manager rating done — waiting for Super Admin' : p === 'done' ? 'Self rating done — waiting for manager rating' : 'Employee has not submitted self rating yet';
-    el.innerHTML = `<div class="step-banner ${state.finalDone ? 'done' : 'rating'}"><span class="num">${state.mode === 'team' ? 'MANAGER' : state.mode === 'hod' ? 'HOD' : 'SUPER ADMIN'}</span><div><div class="t">${esc(who)} — ${state.quarter} ${state.year}</div><div class="d">${esc(stTxt)}</div></div>
+    el.innerHTML = `<div class="step-banner ${state.finalDone ? 'done' : 'rating'}"><span class="num">${state.mode === 'team' ? 'MANAGER' : state.mode === 'hod' ? 'HOD' : 'SUPER ADMIN'}</span><div><div class="t">${esc(who)} — ${state.revisionLabel || state.quarter} ${state.year}</div><div class="d">${esc(stTxt)}</div></div>
       <div class="steps"><span class="on">1 · Self</span><span class="${state.mgrDone?'on':''}">2 · Manager</span><span class="${state.finalDone?'on':''}">3 · Super Admin</span></div></div>`;
     return;
   }
   if(state.mode === 'view'){
     btn.classList.add('hidden');
     document.getElementById('pdfBtn').disabled = !(p === 'rating' || p === 'done');
-    el.innerHTML = (p === 'rating' || p === 'done') ? `<div class="step-banner done"><span class="num">VIEW</span><div><div class="t">My Appraisal — ${state.quarter} ${state.year}</div><div class="d">Read-only. Status: ${esc(state.reviewStatus || (p === 'done' ? 'Submitted' : 'Targets submitted — self rating pending'))}</div></div></div>` : '';
+    el.innerHTML = (p === 'rating' || p === 'done') ? `<div class="step-banner done"><span class="num">VIEW</span><div><div class="t">My Appraisal — ${state.revisionLabel || state.quarter} ${state.year}</div><div class="d">Read-only. Status: ${esc(state.reviewStatus || (p === 'done' ? 'Submitted' : 'Targets submitted — self rating pending'))}</div></div></div>` : '';
     return;
   }
   btn.classList.toggle('hidden', !editable);
@@ -1373,7 +1373,7 @@ function renderPage(){
     return;
   }
   if(state.mode === 'new' && state.phase !== 'targets'){
-    const q = state.quarter + ' ' + state.year;
+    const q = (state.revisionLabel || state.quarter) + ' ' + state.year;
     body.innerHTML = state.justSaved
       ? `<div class="section notice"><h3>✅ Targets saved for ${q}</h3>
           <p>Your targets are saved in the system. You can download the PDF now. Later, open this link again and choose <b>Self Rating</b>.</p>
@@ -1387,12 +1387,12 @@ function renderPage(){
   if(state.mode === 'view'){
     if(state.phase === 'targets'){ body.innerHTML = `<div class="section notice"><h3>No appraisal for ${state.quarter} ${state.year}</h3><p>Pick a quarter above.</p></div>`; return; }
     const isDone = state.phase === 'done';
-    body.innerHTML = `<div class="lock-note">🔒 <div><b>${state.quarter} ${state.year} — view only.</b> ${isDone ? 'Self rating is submitted. Nothing can be changed.' : 'Targets are submitted; self rating is still pending (do it from <b>Self Rating</b>).'}</div></div>` + ratingHtml(true);
+    body.innerHTML = `<div class="lock-note">🔒 <div><b>${state.revisionLabel || state.quarter} ${state.year} — view only.</b> ${isDone ? 'Self rating is submitted. Nothing can be changed.' : 'Targets are submitted; self rating is still pending (do it from <b>Self Rating</b>).'}</div></div>` + ratingHtml(true);
     placeRoleAttributesLast(); renderScores(); renderOverall();
     return;
   }
   body.innerHTML = state.phase === 'targets' ? targetsHtml()
-    : (state.phase === 'done' ? `<div class="lock-note">🔒 <div><b>${state.quarter} ${state.year} is submitted and locked.</b> Nothing can be changed — you can only view it and download the PDF.</div></div>` : '') + ratingHtml(state.phase === 'done');
+    : (state.phase === 'done' ? `<div class="lock-note">🔒 <div><b>${state.revisionLabel || state.quarter} ${state.year} is submitted and locked.</b> Nothing can be changed — you can only view it and download the PDF.</div></div>` : '') + ratingHtml(state.phase === 'done');
   placeRoleAttributesLast(); renderScores(); renderOverall();
 }
 async function startAppraisalRevision(){
@@ -1527,8 +1527,7 @@ function ratingHtml(ro){
     <div><label>Facilitating Factors</label>${ta('facilitating','Factors that helped achieve the targets (mention target number)')}</div>
     <div><label>Constraining Factors</label>${ta('constraining','Factors that were constraints (mention target number)')}</div>
     <div><label>Outstanding Achievement / Significant Contribution</label>${ta('outstanding','Quantified benefit to company')}</div>
-    <div><label>Comments of Appraiser</label>${appraisalRichText('comments',state.texts.comments,false,'','text')}</div>
-  </div>
+      </div>
   ${state.managerRemark || state.final.rating ? `<div class="section mgr-box"><div class="section-head"><h2>Manager &amp; Final Review</h2></div>
     ${state.managerRemark ? `<label>Appraiser's / HOD's Remark</label><div class="ro" style="margin-bottom:10px;">${esc(state.managerRemark)}</div>` : ''}
     ${state.final.rating ? `<label>Final Overall Rating (approved)</label><div class="ro"><b>${esc(state.final.rating)}</b></div>` : ''}</div>` : ''}
@@ -1577,13 +1576,19 @@ function managerQuarterTable(){
   const perc = (value, weight, done, total) => total && done === total && weight ? fmt(value * 100 / weight) + '%' : 'Pending';
   const cont = (value, done, total) => total && done === total ? fmt(value) + '%' : 'Pending';
   return `<div class="section mgr-box" id="managerQuarterSummary">
-    <div class="section-head"><h2>Quarterly Appraisal — Manager Rating Summary</h2><span class="weight-badge">Employee score: KRA 80% + Role 20%</span></div>
+    <div class="section-head"><h2>Quarterly Appraisal — ${state.revisionLabel || state.quarter} ${state.year} — Manager Rating Summary</h2><span class="weight-badge">Employee score: KRA 80% + Role 20%</span></div>
     <div class="note">Each section is shown as an equivalent rating out of 25. All tasks and saved Role Attributes must receive manager ratings. If Role Attributes are missing from an already submitted appraisal, the employee appraisal record needs authorized correction in Zoho Creator before finalization.</div>
     <div style="overflow-x:auto;"><table class="q-table"><thead><tr><th>Appraisal criteria</th><th>Manager rating</th><th>Achievement</th><th>Weightage</th><th>Weighted contribution</th></tr></thead><tbody>
       <tr><td><b>Task Performance</b><div class="note" style="margin:3px 0 0">${a.taskDone} / ${a.taskCount} tasks rated</div></td><td>${mark(a.taskMark,a.taskDone,a.taskCount)}</td><td>${perc(a.kra,a.tw,a.taskDone,a.taskCount)}</td><td>${fmt(a.tw)}%</td><td>${cont(a.kra,a.taskDone,a.taskCount)}</td></tr>
       <tr><td><b>Role Attributes</b><div class="note" style="margin:3px 0 0">${a.roleDone} / ${a.roleCount} attributes rated</div></td><td>${a.roleCount ? mark(a.roleMark,a.roleDone,a.roleCount) : 'Missing'}</td><td>${a.roleCount ? perc(a.role,a.rw,a.roleDone,a.roleCount) : 'Missing'}</td><td>${fmt(a.rw)}%</td><td>${a.roleCount ? cont(a.role,a.roleDone,a.roleCount) : 'Missing'}</td></tr>
       <tr style="font-weight:700;background:#F1EBFD"><td>Combined Quarterly Appraisal</td><td colspan="3">${a.complete ? 'All ratings completed' : 'Complete all manager ratings'}</td><td style="font-size:17px;color:#6D28D9">${a.complete ? fmt(a.total) + '%': 'Pending'}</td></tr>
     </tbody></table></div>
+    <div class="note" style="margin:12px 0 4px"><b>Rating comparison:</b> Employee self-rating is for KRA tasks only. The Manager's final employee-performance score includes KRA (80%) and Role Attributes (20%). The Super Admin may separately override the employee-performance percentage used for variable pay.</div>
+    ${state.mode === 'admin' ? `<div style="overflow-x:auto"><table class="q-table"><thead><tr><th>Assessment</th><th>KRA / Tasks</th><th>Role Attributes</th><th>Final employee-performance %</th></tr></thead><tbody>
+      <tr><td>Employee self-rating</td><td>${fmt(kraTotal()?computeScores().kra*100/kraTotal():0)}% achievement</td><td>Not rated by employee</td><td>Not applicable</td></tr>
+      <tr><td>Manager rating</td><td>${a.taskDone===a.taskCount ? fmt(a.kra)+' / 80' : 'Pending'}</td><td>${a.roleDone===a.roleCount ? fmt(a.role)+' / 20' : 'Pending'}</td><td>${a.complete ? fmt(a.total)+'%' : 'Pending'}</td></tr>
+      <tr><td>Super Admin adjustment</td><td colspan="2">Override applies to complete manager performance; not a new set of task ratings</td><td>${state.hod.ips !== '' ? fmt(Number(state.hod.ips))+'%' : (a.complete ? fmt(a.total)+'% (unchanged)' : 'Pending')}</td></tr>
+    </tbody></table></div>` : ''}
     <div class="note" style="margin:10px 0 0">Formula: (Task equivalent rating / 25 × Task weightage) + (Role equivalent rating / 25 × Role weightage). This is the employee-performance score used for quarterly variable-pay calculations; company performance is calculated separately using the employee/company percentage split configured in the employee master (for example, 90% employee + 10% company). Within the 90% employee share, KRA is 80% and Role Attributes 20%.</div>
   </div>`;
 }
@@ -1599,9 +1604,9 @@ function renderScores(){
     const s = computeScores(), m = computeMgrScores();
     const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0), mr = state.kras.reduce((n,k) => n + k.goals.filter(g => g.apprRating).length, 0);
     el.innerHTML = `
-      <div class="score-tile"><div class="k">Employee self score</div><div class="v">${fmt(s.total)} / 100</div><div class="s">KRA ${fmt(s.kra)} · Role ${fmt(s.role)} · ≈ ${suggestedOverall(s.total)}</div></div>
-      <div class="score-tile final" style="border-color:#6D28D9;background:#F1EBFD;"><div class="k">Manager score</div><div class="v" style="color:#6D28D9;">${fmt(m.total)} / 100</div><div class="s">KRA ${fmt(m.kra)} · Role ${fmt(m.role)} · ${mr} of ${tasks} task(s) rated</div></div>
-      <div class="score-tile"><div class="k">Manager: Task / Role achievement</div><div class="v">${fmt(kraTotal() ? m.kra * 100 / kraTotal() : 0)}% / ${roleTotal() ? fmt(m.role * 100 / roleTotal()) + '%' : '—'}</div><div class="s">Difference vs self: ${fmt(m.total - s.total)}</div></div>`;
+      <div class="score-tile"><div class="k">Employee KRA self rating</div><div class="v">${fmt(kraTotal() ? s.kra*100/kraTotal():0)}%</div><div class="s">KRA self assessment only · Role Attributes manager-only</div></div>
+      <div class="score-tile final" style="border-color:#6D28D9;background:#F1EBFD;"><div class="k">Manager employee-performance score</div><div class="v" style="color:#6D28D9;">${managerQuarterBreakdown().complete ? fmt(m.total) + ' / 100' : 'Pending'}</div><div class="s">KRA ${fmt(m.kra)}/80 · Role ${fmt(m.role)}/20 · ${mr} of ${tasks} tasks rated</div></div>
+      <div class="score-tile"><div class="k">Manager: Task / Role achievement</div><div class="v">${managerQuarterBreakdown().taskDone === managerQuarterBreakdown().taskCount ? fmt(kraTotal() ? m.kra * 100 / kraTotal() : 0)+'%' : 'Pending'} / ${managerQuarterBreakdown().roleDone === managerQuarterBreakdown().roleCount ? (roleTotal() ? fmt(m.role * 100 / roleTotal()) + '%' : '—') : 'Pending'}</div><div class="s">Comparison: self KRA and manager overall use different criteria</div></div>`;
     refreshManagerQuarterTable();
     return;
   }
@@ -1963,7 +1968,7 @@ function hodBoxHtml(canEdit){
   const inp = (f, val, ph, extra) => `<input id="in_${f}" type="number" step="0.01" min="0" ${extra || ''} style="max-width:170px" value="${esc(val)}" placeholder="${ph}" oninput="setHod('${f}',this.value)">`;
   const ro = (id, t) => `<span id="${id}">${t}</span>`;
   return `<div class="section hod-box" id="hodBox">
-    <div class="section-head"><h2>Variable pay — ${state.quarter} ${state.year} (Super Admin)</h2><span class="weight-badge" style="border-color:#0E7490;color:#0E7490;background:#E6F6FA;">Individual ${ro('vEp', fmt(c.ep))}% · Company ${ro('vCp', fmt(c.cp))}%</span></div>
+    <div class="section-head"><h2>Variable pay — ${state.revisionLabel || state.quarter} ${state.year} (Super Admin)</h2><span class="weight-badge" style="border-color:#0E7490;color:#0E7490;background:#E6F6FA;">Individual ${ro('vEp', fmt(c.ep))}% · Company ${ro('vCp', fmt(c.cp))}%</span></div>
     ${canEdit ? `<div class="note" style="margin:0 0 12px;">All white boxes are pre-filled (All Employees + manager rating). <b>You can change any of them</b> — the pay is re-calculated instantly.</div>` : ''}
     <h3 style="font-size:14px;color:#0E7490;margin:4px 0 8px;">A. Individual Performance (manager ratings · Task ${fmt(c.kt)} : Role ${fmt(c.rt)})</h3>
     <table class="calc">
