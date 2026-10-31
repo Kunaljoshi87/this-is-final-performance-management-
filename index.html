@@ -789,7 +789,7 @@ const state = {
   texts:{ facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'' },
   mode:'menu',            // menu | new | rating
   periods:[],
-  busy:false, loadToken:0
+  revisionMode:false, revisionNumber:0, revisionBase:0, busy:false, loadToken:0
 };
 let seq = 1;
 function nid(p){ return p + (seq++); }
@@ -988,7 +988,7 @@ function renderMenuBadges(){
 }
 /* ---- New Appraisal: pick quarter, add targets ---- */
 function chooseNew(){
-  state.mode = 'new'; state.justSaved = false;
+  state.mode = 'new'; state.justSaved = false; state.revisionMode = false;
   show('choiceView', false); show('menuBtn', true); show('footerBar', true);
   show('yearBox', true); show('quarterRow', true); show('periodChips', false);
   if(periodOf(state.quarter, state.year)){
@@ -1085,7 +1085,7 @@ async function loadPeriod(){
     if(isOwnMode()){ if(r.employee){ const keep = { is_manager:state.me.is_manager, is_admin:state.me.is_admin, is_hod:state.me.is_hod }; state.me = Object.assign(state.me || {}, r.employee); if(r.employee.is_manager === undefined) Object.assign(state.me, keep); } }
     else { state.subject = r.employee || {}; fillProfile(state.subject); }
     state.mgrDone = !!r.mgr_done; state.finalDone = !!r.final_done; state.hodDone = !!r.hod_done; state.serverVersion = r.version || '';
-    state.phase = r.phase;
+    state.phase = r.phase; state.revisionNumber = Number(r.revision_number || 0); state.revisionMode = false;
     state.kras = (r.kras || []).map(k => ({ id:nid('k'), recId:String(k.id), name:k.name, description:k.description, weightage:num(k.weightage),
       goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, html:richFromServer(g.html, g.name), weightage:num(g.weightage), achievement:g.achievement || '',
         selfRating:g.self_rating || '', apprRating:g.appraiser_rating || '' })) }));
@@ -1380,7 +1380,8 @@ function renderPage(){
           <button onclick="downloadPdf()">Download PDF</button> &nbsp; <button onclick="chooseView('${state.quarter}','${state.year}')">View it</button> &nbsp; <button class="solid" onclick="showMenu()">Back to menu</button></div>`
       : `<div class="section notice"><h3>Targets for ${q} are already saved</h3>
           <p>${state.phase === 'rating' ? 'They are waiting for your self rating.' : 'This appraisal is already complete.'} Choose another quarter for a new appraisal, or go to Self Rating.</p>
-          <button onclick="chooseView('${state.quarter}','${state.year}')">View it</button> &nbsp; <button class="solid" onclick="showMenu();chooseRating()">Go to Self Rating</button></div>`;
+          <button onclick="chooseView('${state.quarter}','${state.year}')">View it</button> &nbsp; <button class="solid" onclick="showMenu();chooseRating()">Go to Self Rating</button>
+          ${state.phase==='rating' ? `<button class="solid" onclick="startAppraisalRevision()">Create Revision — ${state.quarter}-R${state.revisionNumber+1}</button>` : ''}</div>`;
     return;
   }
   if(state.mode === 'view'){
@@ -1393,6 +1394,20 @@ function renderPage(){
   body.innerHTML = state.phase === 'targets' ? targetsHtml()
     : (state.phase === 'done' ? `<div class="lock-note">🔒 <div><b>${state.quarter} ${state.year} is submitted and locked.</b> Nothing can be changed — you can only view it and download the PDF.</div></div>` : '') + ratingHtml(state.phase === 'done');
   placeRoleAttributesLast(); renderScores(); renderOverall();
+}
+async function startAppraisalRevision(){
+  if(state.mode !== 'new' || state.phase !== 'rating' || state.busy) return;
+  const ok=await confirmBox('Create revision '+state.quarter+'-R'+(state.revisionNumber+1)+'?',
+    'A fresh version of these targets and Role Attributes will be saved using existing Zoho Creator forms. Original records remain in history. Revision is only allowed before Self Rating is submitted.', 'Create revision');
+  if(!ok) return;
+  state.revisionBase=state.revisionNumber;
+  state.revisionMode=true;
+  state.phase='targets';
+  state.justSaved=false;
+  state.kras.forEach(k=> { k.recId=''; k.goals.forEach(g=>g.recId=''); });
+  state.attributes.forEach(a=> {a.recId=''; a.rating=''; a.apprRating='';});
+  renderPage();
+  setStatus('Editing '+state.quarter+'-R'+(state.revisionBase+1)+' — submit when your changes are complete.',null);
 }
 function targetsHtml(){
   const sh = sectionShares();
@@ -1667,14 +1682,14 @@ async function submitTargets(){
   const tasks = state.kras.reduce((n,k) => n + k.goals.length, 0);
   const ok = await confirmBox('Submit targets for ' + state.quarter + ' ' + state.year + '?',
     `You are submitting <b>${state.kras.length} target(s)</b>, <b>${tasks} task(s)</b> and <b>${state.attributes.length} role attribute(s)</b>.<br><br>
-     After submitting, the targets for this quarter are <b>locked</b> and cannot be changed. A quarter can be submitted only once.`, 'Yes, submit targets');
+     This submission creates a new locked revision where applicable. Historical records are retained.`, 'Yes, submit targets');
   if(!ok) return;
   const q = state.quarter, y = state.year;
   lock(true); busyOverlay('Saving your targets…');
   setStatus('Saving your targets… please do not close this page.', null);
   let saved = false, errMsg = '';
   try{
-    await call('save_targets', { quarter:q, year:y,
+    await call('save_targets', { quarter:q, year:y, revision_mode:!!state.revisionMode, revision_from:state.revisionBase,
       kras:state.kras.map(k => ({ name:k.name.trim(), description:(k.description||'').trim(), goals:k.goals.map(g => ({ name:g.name.trim(), html:sanitizeRich(g.html || '') })) })),
       attributes:state.attributes.map(a => ({ name:a.name.trim() })) });
     saved = true;
@@ -1690,6 +1705,7 @@ async function submitTargets(){
   if(saved){
     clearDraft();
     state.justSaved = true;
+    state.revisionMode = false;
     refreshPeriods(true);
     await loadPeriod();
     setStatus('✅ Targets submitted for ' + q + ' ' + y + '. A confirmation email has been sent to you.', true);
