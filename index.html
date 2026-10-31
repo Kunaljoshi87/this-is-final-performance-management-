@@ -1955,7 +1955,7 @@ function hodCalc(){
   const kt = kraTotal() || 0, rt = roleTotal() || 0;
   const taskAch = kt ? m.kra * 100 / kt : 0;            // Task achievement %  (= task rating / 25)
   const roleAch = rt ? m.role * 100 / rt : 0;           // Role achievement %  (= role rating / 25)
-  const mgrAuto = state.managerScore !== '' && !isNaN(Number(state.managerScore)) ? Number(state.managerScore) : m.total;  // from manager ratings
+  const mgrAuto = m.total; // Always derived from fetched latest-revision task and role ratings; never use stale Review score.  // from manager ratings
   const mgr = state.hod.ips !== '' && !isNaN(Number(state.hod.ips)) ? Number(state.hod.ips) : mgrAuto;  // Individual Performance % used for pay (Super Admin can change)
   /* Layer 2 — variable pay (Individual : Company from All Employees) */
   const yv = Number(state.hod.yv) || 0, ep = Number(state.hod.ep) || 0, cp = Number(state.hod.cp) || 0;
@@ -1977,26 +1977,28 @@ function hodBoxHtml(canEdit){
   return `<div class="section hod-box" id="hodBox">
     <div class="section-head"><h2>Variable pay — ${state.revisionLabel || state.quarter} ${state.year} (Super Admin)</h2><span class="weight-badge" style="border-color:#0E7490;color:#0E7490;background:#E6F6FA;">Individual ${ro('vEp', fmt(c.ep))}% · Company ${ro('vCp', fmt(c.cp))}%</span></div>
     ${!managerComplete && !state.finalDone ? `<div class="note" style="margin:0 0 12px;color:#9B1C1C;font-weight:700;border:1px solid #FECACA;border-radius:6px;padding:10px;background:#FFF7F7;">Manager Rating pending — this is a preview only. All KRA tasks and all Role Attributes must be rated and saved before Super Admin can finalize variable pay. Partial manager scores must not be used for payout.</div>` : ''}
+    ${!varSetupOk() ? `<div class="note" style="margin:0 0 12px;color:#9B1C1C;font-weight:700">Annual variable pay or Individual/Company percentage is missing for this employee. The Super Admin must enter the actual values (e.g. 90/10 if applicable); zeros are not defaults. No payout can be finalized until complete.</div>` : ''}
     ${canEdit ? `<div class="note" style="margin:0 0 12px;">All white boxes are pre-filled (All Employees + manager rating). <b>You can change any of them</b> — the pay is re-calculated instantly.</div>` : ''}
     <h3 style="font-size:14px;color:#0E7490;margin:4px 0 8px;">A. Individual Performance (manager ratings · Task ${fmt(c.kt)} : Role ${fmt(c.rt)})</h3>
     <table class="calc">
       <tr><td>Task rating (manager) — out of 25</td><td>${fmt(c.taskRating25)} / 25 &nbsp;·&nbsp; ${fmt(c.taskAch)}% → ${fmt(c.m.kra)} points</td></tr>
       <tr><td>Role rating (manager) — out of 25</td><td>${c.rt ? fmt(c.roleRating25) + ' / 25 &nbsp;·&nbsp; ' + fmt(c.roleAch) + '% → ' + fmt(c.m.role) + ' points' : '— (no role attributes)'}</td></tr>
       <tr><td>Individual Performance Score from manager rating</td><td>${managerComplete ? fmt(c.mgrAuto) + "%" : "Pending — manager ratings incomplete"}</td></tr>
-      <tr class="big"><td>Individual Performance % used for pay ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('ips', state.hod.ips !== '' ? state.hod.ips : String(r2(c.mgrAuto)), 'e.g. 77.6', 'max="100"') + ' %' : fmt(c.mgr) + '%'}</td></tr>
+      <tr><td>Manager rating records</td><td>${managerQuarterBreakdown().taskDone}/${managerQuarterBreakdown().taskCount} tasks · ${managerQuarterBreakdown().roleDone}/${managerQuarterBreakdown().roleCount} role attributes rated ${state.mgrDone ? "· Submitted" : "· Not submitted"}</td></tr>
+      <tr class="big"><td>Individual Performance % used for pay ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('ips', state.hod.ips !== '' ? state.hod.ips : (managerComplete ? String(r2(c.mgrAuto)) : ''), 'Await complete manager rating', 'max="100"') + ' %' : (managerComplete || state.finalDone ? fmt(c.mgr) + '%' : 'Pending manager rating')}</td></tr>
     </table>
     <h3 style="font-size:14px;color:#0E7490;margin:14px 0 8px;">B. Quarterly variable pay</h3>
     <table class="calc">
-      <tr><td>Annual variable pay ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('yv', state.hod.yv, 'e.g. 100000') : money(c.yv)}</td></tr>
+      <tr><td>Annual variable pay ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('yv', state.hod.yv, 'e.g. 100000') : (state.hod.yv !== '' ? money(c.yv) : 'Not configured')}</td></tr>
       <tr><td>Quarterly target = annual ÷ 4</td><td>${ro('vQ', money(c.eligible))}</td></tr>
-      <tr><td>Individual % ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('ep', state.hod.ep, 'e.g. 70', 'max="100"') + ' %' : fmt(c.ep) + '%'}</td></tr>
-      <tr><td>Company % (Individual + Company = 100)</td><td>${canEdit ? inp('cp', state.hod.cp, 'e.g. 30', 'max="100"') + ' %' : fmt(c.cp) + '%'}</td></tr>
+      <tr><td>Individual % ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('ep', state.hod.ep, 'e.g. 90', 'max="100"') + ' %' : (state.hod.ep !== '' ? fmt(c.ep) + '%' : 'Not configured')}</td></tr>
+      <tr><td>Company % (Individual + Company = 100)</td><td>${canEdit ? inp('cp', state.hod.cp, 'e.g. 10', 'max="100"') + ' %' : (state.hod.cp !== '' ? fmt(c.cp) + '%' : 'Not configured')}</td></tr>
       <tr><td>Individual component target = quarterly target × Individual %</td><td>${ro('vIT', money(c.empPart))}</td></tr>
       <tr><td>Company component target = quarterly target × Company %</td><td>${ro('vCT', money(c.compPart))}</td></tr>
       <tr><td>Company performance % ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('company', state.hod.company, 'e.g. 90', 'max="100"') + ' %' : (state.hod.company !== '' ? esc(state.hod.company) + '%' : '—')}</td></tr>
       <tr><td>Individual variable = individual target × Individual Performance %</td><td>${ro('hodEmpVar', money(shown.empVar))}</td></tr>
       <tr><td>Company variable = company target × Company performance %</td><td>${ro('hodCompVar', money(shown.compVar))}</td></tr>
-      <tr class="big"><td>Total quarterly variable pay</td><td>${managerComplete || state.finalDone ? ro('hodPayout', money(shown.payout)) : "Pending manager rating"}</td></tr>
+      <tr class="big"><td>Total quarterly variable pay</td><td>${(managerComplete || state.finalDone) && varSetupOk() ? ro('hodPayout', money(shown.payout)) : 'Pending complete manager rating / pay setup'}</td></tr>
       <tr><td>Quarterly payout achievement</td><td>${ro('hodPct', fmt(pctShown) + '%')}</td></tr>
       <tr><td>Quarterly target not earned</td><td>${ro('hodNot', money(c.eligible - shown.payout))}</td></tr>
     </table>
