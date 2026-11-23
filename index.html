@@ -1961,9 +1961,16 @@ function hodCalc(){
   const yv = Number(state.hod.yv) || 0, ep = Number(state.hod.ep) || 0, cp = Number(state.hod.cp) || 0;
   const co = Number(state.hod.company) || 0;
   const qvp = r2(yv / 4), ict = r2(qvp * ep / 100), cct = r2(qvp * cp / 100);
-  const aic = r2(ict * mgr / 100), acc = r2(cct * co / 100), qep = r2(aic + acc);
+//  const aic = r2(ict * mgr / 100), acc = r2(cct * co / 100), qep = r2(aic + acc);
+  // Eligibility based on Individual Performance
+const eligibilityPct = mgr >= 80 ? 100 : mgr >= 50 ? 75 : 0;
+
+const qep = r2(qvp * eligibilityPct / 100);
+const aic = r2(qep * ep / 100);
+const acc = r2(qep - aic);
   return { mgrAuto, m, kt, rt, taskAch, roleAch, taskRating25: taskAch / 4, roleRating25: roleAch / 4, mgr, yv, ep, cp, co,
-           eligible:qvp, empPart:ict, compPart:cct, empVar:aic, compVar:acc, payout:qep,
+      //     eligible:qvp, empPart:ict, compPart:cct, empVar:aic, compVar:acc, payout:qep,
+          eligible:qvp, eligibilityPct, empPart:ict, compPart:cct, empVar:aic, compVar:acc, payout:qep,
            pct: qvp ? qep * 100 / qvp : 0, notEarned: r2(qvp - qep) };
 }
 function hodBoxHtml(canEdit){
@@ -1996,15 +2003,18 @@ function hodBoxHtml(canEdit){
       <tr><td>Individual component target = quarterly target × Individual %</td><td>${ro('vIT', money(c.empPart))}</td></tr>
       <tr><td>Company component target = quarterly target × Company %</td><td>${ro('vCT', money(c.compPart))}</td></tr>
       <tr><td>Company performance % ${canEdit ? '<span class="req">*</span>' : ''}</td><td>${canEdit ? inp('company', state.hod.company, 'e.g. 90', 'max="100"') + ' %' : (state.hod.company !== '' ? esc(state.hod.company) + '%' : '—')}</td></tr>
-      <tr><td>Individual variable = individual target × Individual Performance %</td><td>${ro('hodEmpVar', money(shown.empVar))}</td></tr>
-      <tr><td>Company variable = company target × Company performance %</td><td>${ro('hodCompVar', money(shown.compVar))}</td></tr>
+    //  <tr><td>Individual variable = individual target × Individual Performance %</td><td>${ro('hodEmpVar', money(shown.empVar))}</td></tr>
+    //  <tr><td>Company variable = company target × Company performance %</td><td>${ro('hodCompVar', money(shown.compVar))}</td></tr>
+    <tr><td>Appraisal payout eligibility (individual performance)</td><td>${ro('hodEligibility', fmt(c.eligibilityPct) + '%')}</td></tr>
+<tr><td>Individual variable = eligible quarter payout × Individual %</td><td>${ro('hodEmpVar', money(shown.empVar))}</td></tr>
+<tr><td>Company variable = eligible quarter payout × Company %</td><td>${ro('hodCompVar', money(shown.compVar))}</td></tr>
       <tr class="big"><td>Total quarterly variable pay</td><td>${(managerComplete || state.finalDone) && varSetupOk() ? ro('hodPayout', money(shown.payout)) : 'Pending complete manager rating / pay setup'}</td></tr>
       <tr><td>Quarterly payout achievement</td><td>${ro('hodPct', fmt(pctShown) + '%')}</td></tr>
       <tr><td>Quarterly target not earned</td><td>${ro('hodNot', money(c.eligible - shown.payout))}</td></tr>
     </table>
     <div id="hodWarn" class="note" style="margin:8px 0 0;color:#9B1C1C;font-weight:600;">${canEdit && !varSetupOk() ? '⛔ Annual variable must be more than 0 and Individual % + Company % must be 100.' : ''}</div>
     ${!canEdit && state.hod.remark ? `<div class="note" style="margin:8px 0 0;">${esc(state.hod.remark)}</div>` : ''}
-    <div class="note" style="margin:10px 0 0;">Rating 1–5 → 5 = 100%, 4 = 80%, 3 = 60%, 2 = 40%, 1 = 20% (= rating ÷ 25). Only manager ratings are used. Amounts rounded to 2 decimals.</div>
+    <div class="note" style="margin:10px 0 0;">Rating 1–5 → 5 = 100%, 4 = 80%, 3 = 60%, 2 = 40%, 1 = 20% (= rating ÷ 25). Payout eligibility: Individual Performance 80% and above = 100% of quarterly target; 50% to below 80% = 75%; below 50% = 0%. Amounts rounded to 2 decimals.</div>
   </div>`;
 }
 function setHod(f, v){
@@ -2020,6 +2030,7 @@ function refreshHod(){
   const c = hodCalc();
   const set = (id, t) => { const el = document.getElementById(id); if(el) el.textContent = t; };
   set('vEp', fmt(c.ep)); set('vCp', fmt(c.cp)); set('vQ', money(c.eligible)); set('vIT', money(c.empPart)); set('vCT', money(c.compPart));
+set('hodEligibility', fmt(c.eligibilityPct) + '%');
   set('hodCompVar', money(c.compVar)); set('hodEmpVar', money(c.empVar));
   set('hodPayout', money(c.payout)); set('hodPct', fmt(c.pct) + '%'); set('hodNot', money(c.notEarned));
   set('finCalc', money(c.payout));
