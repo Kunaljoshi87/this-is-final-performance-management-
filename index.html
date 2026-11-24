@@ -1193,8 +1193,7 @@ function pct(r){ const n = parseInt(r, 10); return RATING_PCT[n] !== undefined ?
 function computeScores(){
   let kra = 0, role = 0;
   state.kras.forEach(k => k.goals.forEach(g => { kra += (g.weightage || 0) * pct(g.selfRating) / 100; }));
-  // General: employee does not rate Role Attributes. Project Team: the employee rates them too.
-  if(isProject()) state.attributes.forEach(a => { role += (a.weightage || 0) * pct(a.rating) / 100; });
+  // Employee does not rate Role Attributes (General and Project Team).
   kra = Math.round(kra*100)/100; role = Math.round(role*100)/100;
   return { kra, role, total: Math.round((kra + role)*100)/100 };
 }
@@ -1350,8 +1349,8 @@ function renderBanner(){
     done:['DONE','Appraisal submitted','Status: ' + (state.reviewStatus || 'Submitted') + '. Your entries are locked — download the PDF anytime.','done']
   }[p];
   if(isProject()){
-    if(p === 'targets') info = ['FORM', state.revisionMode ? 'Revise your Project appraisal (' + state.quarter + '-R' + ((state.revisionBase || 0) + 1) + ')' : 'Project Appraisal Form', 'Fill every KPI section and table, give your self rating for each KPI and Role Attribute, then click Submit Appraisal. Weightage is fixed: KPI 80% · Role Attributes 20%.', ''];
-    else if(p === 'rating') info = ['STEP 2', 'Self Rating', 'Your form is saved — give your self rating for every KPI and Role Attribute, then submit.', 'rating'];
+    if(p === 'targets') info = ['FORM', state.revisionMode ? 'Revise your Project appraisal (' + state.quarter + '-R' + ((state.revisionBase || 0) + 1) + ')' : 'Project Appraisal Form', 'Fill every KPI section and table, give your self rating for each KPI, then click Submit Appraisal. Role Attributes are rated by your manager. Weightage is fixed: KPI 80% · Role Attributes 20%.', ''];
+    else if(p === 'rating') info = ['STEP 2', 'Self Rating', 'Your form is saved — give your self rating for every KPI, then submit.', 'rating'];
   }
   el.innerHTML = `<div class="step-banner ${info[3]}"><span class="num">${info[0]}</span><div><div class="t">${info[1]}</div><div class="d">${info[2]}</div></div>
     <div class="steps"><span class="${p==='targets'?'on':''}">1 · Targets</span><span class="${p==='rating'?'on':''}">2 · Self Rating</span><span class="${p==='done'?'on':''}">✓ Done</span></div></div>`;
@@ -1797,7 +1796,7 @@ function pafTotals(){
   const sum = key => { let t = 0, all = true; PROJECT_KPIS.forEach(d => { const s = pafScore(d, key); if(s === null) all = false; else t += s; }); return { t:r2(t), all }; };
   const roleSum = key => { let t = 0, all = state.attributes.length > 0; state.attributes.forEach(a => { if(/^[1-5]$/.test(String(a[key]))) t += (a.weightage || 0) * pct(a[key]) / 100; else all = false; }); return { t:r2(t), all }; };
   const ks = sum('selfRating'), km = sum('apprRating'), rs = roleSum('rating'), rm = roleSum('apprRating');
-  return { ks, km, rs, rm, selfFinal:r2(ks.t * PAF_KPI_SHARE + rs.t), mgrFinal:r2(km.t * PAF_KPI_SHARE + rm.t) };
+  return { ks, km, rs, rm, selfFinal:r2(ks.t * PAF_KPI_SHARE), mgrFinal:r2(km.t * PAF_KPI_SHARE + rm.t) };   // self = KPI only (like General)
 }
 function pafShowMgr(){ return !isOwnMode() || state.mgrDone || state.kras.some(k => k.goals.some(g => g.apprRating)); }
 function pafTableHtml(tb, edit){
@@ -1828,10 +1827,10 @@ function projectHtml(o){
     </div>`; }).join('');
   const roleHtml = `<div class="section" id="pafRole">
     <div class="section-head"><h2>Role Attributes (${fmt(ROLE_SHARE)}%)</h2><span class="weight-badge">${state.attributes.length} attribute(s)</span></div>
-    <div class="note">Rate on a scale: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
-    <div style="overflow-x:auto;"><table class="paf-table"><thead><tr><th style="width:40px">#</th><th>Role attribute</th><th style="width:90px">Weightage</th><th style="width:170px">Self rating</th>${showMgr ? '<th style="width:170px">Appraiser rating</th>' : ''}</tr></thead><tbody>
+    <div class="note">Same as the General form: Role Attributes are rated by the <b>manager only</b> (5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor).</div>
+    <div style="overflow-x:auto;"><table class="paf-table"><thead><tr><th style="width:40px">#</th><th>Role attribute</th><th style="width:90px">Weightage</th><th style="width:190px">Appraiser rating</th></tr></thead><tbody>
     ${state.attributes.map((a, i) => `<tr><td>${i+1}</td><td><b>${esc(a.name)}</b></td><td>${fmt(a.weightage)}%</td>
-      <td>${sel(o.self, a.rating, `setAttr('${a.id}','rating',this.value)`)}</td>${showMgr ? `<td>${sel(o.mgr, a.apprRating, `setAttr('${a.id}','apprRating',this.value)`)}</td>` : ''}</tr>`).join('')}
+      <td>${showMgr ? sel(o.mgr, a.apprRating, `setAttr('${a.id}','apprRating',this.value)`) : '<div class="ro" style="color:var(--muted)">Waiting for manager</div>'}</td></tr>`).join('')}
     </tbody></table></div></div>`;
   const trainHtml = o.own ? `<div class="section">
     <div class="section-head"><h2>Training Need Identification</h2>${o.edit ? '<button class="small" onclick="addTrainingRow()">+ Add Row</button>' : ''}</div>
@@ -1857,8 +1856,8 @@ function pafSummaryHtml(showMgr){
     ${PROJECT_KPIS.map(d => { const g = goalOfKpi(d.id) || {}; return `<tr><td>${esc(d.name)}</td><td>${d.bench}</td><td>${esc(g.selfRating) || '—'}</td><td>${cell(pafScore(d,'selfRating'))}</td>${showMgr ? `<td>${esc(g.apprRating) || '—'}</td><td>${cell(pafScore(d,'apprRating'))}</td>` : ''}</tr>`; }).join('')}
     <tr style="font-weight:700"><td>TOTAL (KPI)</td><td>100</td><td></td><td>${fmt(T.ks.t)}</td>${showMgr ? `<td></td><td>${fmt(T.km.t)}</td>` : ''}</tr>
     <tr><td>KPI share of appraisal (× ${fmt(KRA_SHARE)}%)</td><td>${fmt(KRA_SHARE)}</td><td></td><td>${fmt(r2(T.ks.t * PAF_KPI_SHARE))}</td>${showMgr ? `<td></td><td>${fmt(r2(T.km.t * PAF_KPI_SHARE))}</td>` : ''}</tr>
-    <tr><td>Role Attributes</td><td>${fmt(ROLE_SHARE)}</td><td></td><td>${fmt(T.rs.t)}</td>${showMgr ? `<td></td><td>${fmt(T.rm.t)}</td>` : ''}</tr>
-    <tr style="font-weight:700;background:#F1EBFD"><td>Final appraisal score</td><td>100</td><td></td><td>${T.ks.all && T.rs.all ? fmt(T.selfFinal) : 'Pending'}</td>${showMgr ? `<td></td><td style="color:#6D28D9">${T.km.all && T.rm.all ? fmt(T.mgrFinal) : 'Pending'}</td>` : ''}</tr>
+    <tr><td>Role Attributes (manager only)</td><td>${fmt(ROLE_SHARE)}</td><td></td><td>—</td>${showMgr ? `<td></td><td>${fmt(T.rm.t)}</td>` : ''}</tr>
+    <tr style="font-weight:700;background:#F1EBFD"><td>Final appraisal score</td><td>100</td><td></td><td>${T.ks.all ? fmt(T.selfFinal) + ' / ' + fmt(KRA_SHARE) : 'Pending'}</td>${showMgr ? `<td></td><td style="color:#6D28D9">${T.km.all && T.rm.all ? fmt(T.mgrFinal) : 'Pending'}</td>` : ''}</tr>
     </tbody></table></div></div>`;
 }
 function refreshPafSummary(){
@@ -1870,7 +1869,6 @@ function refreshPafSummary(){
 }
 function validateProject(){
   for(let i = 0; i < PROJECT_KPIS.length; i++){ const g = goalOfKpi(PROJECT_KPIS[i].id); if(!g || !g.selfRating) return `KPI ${i+1} (${PROJECT_KPIS[i].name}): select your self rating.`; }
-  for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].rating) return `Role Attribute ${i+1} (${state.attributes[i].name}): select your self rating.`;
   for(const d of PROJECT_KPIS) if(JSON.stringify(pafKpiData(d)).length > PAF_MAX_JSON) return `KPI "${d.name}": the answers are too long — please shorten them.`;
   return '';
 }
@@ -1880,7 +1878,7 @@ async function submitProject(){
   const problem = validateProject(); if(problem){ setStatus('❌ ' + problem, false); return; }
   const T = pafTotals();
   const ok = await confirmBox((state.revisionMode ? 'Submit revised appraisal ' : 'Submit appraisal ') + state.quarter + ' ' + state.year + '?',
-    `KPI self score: <b>${fmt(T.ks.t)} / 100</b> (counts ${fmt(KRA_SHARE)}%)<br>Role attributes: <b>${fmt(T.rs.t)} / ${fmt(ROLE_SHARE)}</b><br>Final self score: <b>${fmt(T.selfFinal)} / 100</b><br><br>
+    `KPI self score: <b>${fmt(T.ks.t)} / 100</b> → <b>${fmt(T.selfFinal)} / ${fmt(KRA_SHARE)}</b><br>Role Attributes (${fmt(ROLE_SHARE)}%) are rated by your manager.<br><br>
      After submitting, it goes to your manager. You can revise it until the manager gives the rating.`, 'Yes, submit');
   if(!ok) return;
   const q = state.quarter, y = state.year;
@@ -1904,8 +1902,7 @@ async function submitProject(){
       busyOverlay('Saving your ratings…');
       const r = await call('load', { quarter:q, year:y });
       const goals = (r.kras || []).map(k => { const g = (k.goals || [])[0] || {}; return { id:String(g.id), achievement:'', self_rating:String(selfBy[String(k.name || '').trim().toLowerCase()] || '') }; });
-      const attrs = (r.attributes || []).map(a => ({ id:String(a.id), rating:String(roleBy[String(a.name || '').trim().toLowerCase()] || '') }));
-      await call('save_rating', { quarter:q, year:y, goals, attributes:attrs,
+      await call('save_rating', { quarter:q, year:y, goals, attributes:[],
         training:state.training.filter(t => !t.saved && t.need.trim()).map(t => ({ need:t.need.trim(), benefit:t.benefit || '', fulfilled:t.fulfilled || '' })),
         facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'', overall:state.overallRating || '' });
       saved = true;
@@ -1979,9 +1976,9 @@ function buildProjectPdfHtml(m){
   </div>
   <div class="pa-page pa-page2">
     <div class="pa-p"><span class="pa-b">Role Attributes:</span> Rate on a scale : 5 = Outstanding,&nbsp; 4= Very Good,&nbsp; 3= Good, 2 = Fair,&nbsp; 1= Poor &nbsp; <span class="pa-wt">(${pdfFmt(ROLE_SHARE,0)}% weightage)</span></div>
-    <table class="pa-grid pp-small"><tr><th>Rate on a scale of 1-5</th><th class="pa-th-r">Self rating</th><th class="pa-th-r">Appraisers rating</th></tr>
-      ${attrs.map((a, i) => `<tr><td>${i+1}.&nbsp;&nbsp; ${pdfEsc(a.name)}: <span class="pa-wt">(${pdfFmt(a.weightage,2)}%)</span></td><td class="pa-rc">${pdfEsc(a.rating)}</td><td class="pa-rc">${pdfEsc(a.apprRating || '')}</td></tr>`).join('')}
-      <tr><td class="pa-center pa-b">TOTAL <span class="pa-wt">(out of ${pdfFmt(ROLE_SHARE,0)})</span></td><td class="pa-rc pa-b">${roleSum('rating')}</td><td class="pa-rc pa-b">${roleSum('apprRating')}</td></tr></table>
+    <table class="pa-grid pp-small"><tr><th>Rate on a scale of 1-5</th><th class="pa-th-r">Appraisers rating</th></tr>
+      ${attrs.map((a, i) => `<tr><td>${i+1}.&nbsp;&nbsp; ${pdfEsc(a.name)}: <span class="pa-wt">(${pdfFmt(a.weightage,2)}%)</span></td><td class="pa-rc">${pdfEsc(a.apprRating || '')}</td></tr>`).join('')}
+      <tr><td class="pa-center pa-b">TOTAL <span class="pa-wt">(out of ${pdfFmt(ROLE_SHARE,0)})</span></td><td class="pa-rc pa-b">${roleSum('apprRating')}</td></tr></table>
     <table class="pa-grid pp-small" style="margin-top:12px"><tr><th>KPI</th><th class="pa-th-r">Benchmark</th><th class="pa-th-r">Self score</th><th class="pa-th-r">Score (Appraiser)</th></tr>
       ${PROJECT_KPIS.map(d => `<tr><td>${pdfEsc(d.name)}</td><td class="pa-rc">${d.bench}</td><td class="pa-rc">${score(d,'self')}</td><td class="pa-rc">${score(d,'appr')}</td></tr>`).join('')}
       <tr><td class="pa-center pa-b">TOTAL</td><td class="pa-rc pa-b">100</td><td class="pa-rc pa-b">${sum('self')}</td><td class="pa-rc pa-b">${sum('appr')}</td></tr></table>
@@ -2001,7 +1998,7 @@ function applyMenuTemplate(){
   const proj = tplKey(state.me && state.me.template) === 'project';
   const t = document.getElementById('newTitle'), p = document.getElementById('newText'), rc = document.getElementById('rateCard');
   if(t) t.textContent = proj ? 'Project Appraisal' : 'New Appraisal';
-  if(p) p.textContent = proj ? 'Projects template: choose the quarter, fill the 7 KPI sections and tables, rate yourself on each KPI and Role Attribute, and submit — all in one go. You can revise it until your manager rates it.'
+  if(p) p.textContent = proj ? 'Projects template: choose the quarter, fill the 7 KPI sections and tables, give your self rating on each KPI and submit. Role Attributes are rated by your manager. You can revise it until your manager rates it.'
                              : 'Start a new quarter: choose the quarter and add your Targets (KRA), the tasks under each target and role attributes.';
   if(rc){ const waiting = (state.periods || []).some(x => x.phase === 'rating'); rc.classList.toggle('hidden', proj && !waiting); }
 }
@@ -2111,7 +2108,6 @@ async function submitTargets(){
   }
 }
 function validateRating(){
-  if(isProject()){ for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].rating) return `Role Attribute ${i+1}: select your self rating.`; }
   if(!state.attributes.length) return 'No saved Role Attributes for this quarter. Please contact HR for correction.';
   if(!state.kras.length) return 'No targets found for this quarter.';
   for(let i = 0; i < state.kras.length; i++) for(let j = 0; j < state.kras[i].goals.length; j++)
@@ -2133,7 +2129,7 @@ async function submitRating(){
   try{
     const r = await call('save_rating', { quarter:q, year:y,
       goals:state.kras.flatMap(k => k.goals).map(g => ({ id:g.recId, achievement:g.achievement || '', self_rating:String(g.selfRating) })),
-      attributes:isProject() ? state.attributes.map(a => ({ id:a.recId, rating:String(a.rating || '') })) : [],
+      attributes:[],
       training:state.training.filter(t => !t.saved && t.need.trim()).map(t => ({ need:t.need.trim(), benefit:t.benefit || '', fulfilled:t.fulfilled || '' })),
       facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
       comments:state.texts.comments, learnings:state.texts.learnings, overall:state.overallRating || '' });
