@@ -245,6 +245,17 @@
   .busy-bar span{display:block; height:100%; width:35%; background:linear-gradient(90deg,var(--navy),#6D28D9); animation:slide 1.1s ease-in-out infinite;}
   .attr-chip{display:inline-block; font-size:10px; padding:2px 8px; border-radius:20px; background:#F1EBFD; color:#6D28D9; border:1px solid #D9C8FA; margin-left:6px;}
   .lock-note{display:flex; gap:10px; align-items:center; background:#EAF7F0; border:1px solid #9ED3B7; color:#145C3B; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:13px;}
+  /* ===== PROJECT TEAM TEMPLATE ===== */
+  .paf-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;} .paf-full{grid-column:1/-1;}
+  .paf-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .paf-table th{background:#EAF1FA; color:var(--navy); text-align:left; padding:7px; border:1px solid var(--line); font-size:11px;}
+  .paf-table td{border:1px solid var(--line); padding:5px; vertical-align:top;} .paf-table td input{padding:5px 6px; font-size:12px;}
+  .paf-table td select{padding:5px 6px; font-size:12px;} .paf-table .ro{min-height:0; padding:5px 8px;}
+  .paf-tbl-title{font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px;}
+  .paf-rowhead{font-weight:600; background:#F7F9FB;}
+  .paf-rate{display:grid; grid-template-columns:repeat(3,minmax(150px,230px)); gap:12px; margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);}
+  .paf-kpi .section-head h2{font-size:16px;}
+  @media(max-width:760px){ .paf-grid,.paf-rate{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -309,13 +320,13 @@
 
   <!-- CHOICE: New Appraisal / Self Rating -->
   <div class="choice-grid hidden" id="choiceView">
-    <div class="choice-card" onclick="chooseNew()">
+    <div class="choice-card" id="newCard" onclick="chooseNew()">
       <span class="badge mute hidden" id="newBadge"></span>
       <div class="ic">📝</div>
-      <h3>New Appraisal</h3>
-      <p>Start a new quarter: choose the quarter and add your Targets (KRA), the tasks under each target and role attributes.</p>
+      <h3 id="newTitle">New Appraisal</h3>
+      <p id="newText">Start a new quarter: choose the quarter and add your Targets (KRA), the tasks under each target and role attributes.</p>
     </div>
-    <div class="choice-card rating" onclick="chooseRating()">
+    <div class="choice-card rating" id="rateCard" onclick="chooseRating()">
       <span class="badge hidden" id="rateBadge"></span>
       <div class="ic">⭐</div>
       <h3>Self Rating</h3>
@@ -673,6 +684,17 @@ const PDF_CSS = `
 .pa-overall{border-collapse:collapse;width:90%;margin-bottom:4px}
 .pa-overall td{padding:5px 0;font-weight:700;width:33%}
 .pa-tick{font-size:14px;font-weight:400}
+.pa-land{width:1047px}
+.pp-title{font-size:14px;text-decoration:underline}
+.pp-ins{font-size:11.5px;margin:0 0 6px}
+.pp-kpi{margin-top:10px}
+.pp-h{font-size:13px;margin:6px 0 4px;display:flex;justify-content:space-between}
+.pp-r{font-weight:400;font-size:11.5px}
+.pp-q{margin:3px 0 3px 14px;font-size:12px}
+.pp-ql{font-weight:700}
+.pp-tbl{margin:4px 0 8px}
+.pp-tbl th{font-size:11px}
+.pp-small{width:72%}
 `;
 
 /* Inject PDF CSS once */
@@ -698,7 +720,9 @@ function pdfPrintFallback(html){
 /* Main entry: build + download PDF. Returns a Promise. */
 async function downloadAppraisalPdf(model, onStatus){
   const say = onStatus || function(){};
-  const html = buildAppraisalPdfHtml(model);
+  const land = model.template === 'project';
+  const PW = land ? 1047 : 718;
+  const html = land ? buildProjectPdfHtml(model) : buildAppraisalPdfHtml(model);
   if(typeof html2pdf === 'undefined'){
     say('PDF library not loaded — opening print view (choose "Save as PDF").', null);
     if(!pdfPrintFallback(html)) say('Pop-up blocked. Allow pop-ups to print / save PDF.', false);
@@ -706,7 +730,7 @@ async function downloadAppraisalPdf(model, onStatus){
   }
   say('Generating PDF…', null);
   const holder = document.createElement('div');
-  holder.style.cssText = 'position:absolute;left:0;top:0;width:718px;background:#fff;z-index:-1;pointer-events:none;';
+  holder.style.cssText = 'position:absolute;left:0;top:0;width:' + PW + 'px;background:#fff;z-index:-1;pointer-events:none;';
   const prevScroll = [window.scrollX, window.scrollY]; window.scrollTo(0,0);
   holder.innerHTML = html;
   document.body.appendChild(holder);
@@ -719,7 +743,7 @@ async function downloadAppraisalPdf(model, onStatus){
        without cutting a task row in half. */
     const pages = Array.from(holder.querySelectorAll('.pa-page')).map(pg => {
       const wrap = document.createElement('div');
-      wrap.className = 'pa-pdf';
+      wrap.className = holder.firstElementChild.className;
       const clone = pg.cloneNode(true);
       clone.classList.remove('pa-page2');
       wrap.appendChild(clone);
@@ -731,8 +755,8 @@ async function downloadAppraisalPdf(model, onStatus){
       margin: [10, 10, 10, 10],
       filename: pdfSafeFileName(model),
       image: { type: 'jpeg', quality: 0.96 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, x: 0, y: 0, windowWidth: 718 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, x: 0, y: 0, windowWidth: PW },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: land ? 'landscape' : 'portrait' },
       pagebreak: { mode: ['css'], avoid: ['.pa-avoid'] }
     };
     /* 1) Each form page → canvas (html2pdf inserts "avoid" spacers so a
@@ -746,7 +770,7 @@ async function downloadAppraisalPdf(model, onStatus){
     const probe = document.createElement('div'); probe.style.cssText = 'width:10px;height:10px'; holder.appendChild(probe);
     // html2pdf does not expose jsPDF globally: take its instance (1 probe page) and drop that page at the end.
     const pdf = await html2pdf().set(opt).from(probe).toPdf().get('pdf');
-    const M = 10, innerW = 210 - 2*M, innerH = 297 - 2*M;
+    const M = 10, innerW = (land ? 297 : 210) - 2*M, innerH = (land ? 210 : 297) - 2*M;
     canvases.forEach(cv => {
       const pxPerPage = Math.floor(cv.width * innerH / innerW);
       for(let y = 0; y < cv.height; y += pxPerPage){
@@ -946,7 +970,7 @@ function showMenu(){
   saveDraft();
   state.mode = 'menu'; state.loadToken++; state.phase = 'menu'; resetData();
   state.target = null; state.subject = null; fillProfile(state.me);
-  show('teamCard', !!(state.me && state.me.is_manager)); show('adminCard', !!(state.me && state.me.is_admin)); show('hodCard', false); show('diagCard', !!(state.me && state.me.is_admin));
+  show('teamCard', !!(state.me && state.me.is_manager)); show('adminCard', !!(state.me && state.me.is_admin)); show('hodCard', false); show('diagCard', !!(state.me && state.me.is_admin)); applyMenuTemplate();
   show('choiceView', true); show('menuBtn', false); show('footerBar', false);
   show('yearBox', false); show('quarterRow', false); show('periodChips', false);
   document.getElementById('stepBanner').innerHTML = '';
@@ -965,6 +989,7 @@ function refreshPeriods(force){
   if(periodsPromise && !force) return periodsPromise;
   periodsPromise = call('periods', {}).then(r => {
     state.periods = normPeriods(r.periods); state.periodsLoaded = true;
+    if(r.template && state.me){ state.me.template = r.template; try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify({ auth:state.auth, me:state.me })); }catch(e){} }
     renderMenuBadges(); if(state.mode === 'new') renderQuarters(); if(state.mode === 'rating' || state.mode === 'view') renderPeriodChips();
     return state.periods;
   }).finally(() => { periodsPromise = null; });
@@ -985,6 +1010,7 @@ function renderMenuBadges(){
   nb.textContent = state.periods.length ? (state.periods.length + ' quarter(s) saved') : 'Start here';
   const vb = document.getElementById('viewBadge');
   if(vb){ vb.classList.remove('hidden'); vb.textContent = state.periods.length ? (state.periods.length + ' quarter(s)') : 'None yet'; }
+  applyMenuTemplate();
 }
 /* ---- New Appraisal: pick quarter, add targets ---- */
 function chooseNew(){
@@ -1087,7 +1113,7 @@ async function loadPeriod(){
     state.mgrDone = !!r.mgr_done; state.finalDone = !!r.final_done; state.hodDone = !!r.hod_done; state.serverVersion = r.version || '';
     state.phase = r.phase; state.revisionNumber = Number(r.revision_number || 0); state.revisionLabel = r.revision_label || (state.quarter + (state.revisionNumber > 0 ? '-R' + state.revisionNumber : '')); state.revisionMode = false;
     state.kras = (r.kras || []).map(k => ({ id:nid('k'), recId:String(k.id), name:k.name, description:k.description, weightage:num(k.weightage),
-      goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, html:richFromServer(g.html, g.name), weightage:num(g.weightage), achievement:g.achievement || '',
+      goals:(k.goals || []).map(g => ({ id:nid('g'), recId:String(g.id), name:g.name, raw:String(g.html || ''), html:richFromServer(g.html, g.name), weightage:num(g.weightage), achievement:g.achievement || '',
         selfRating:g.self_rating || '', apprRating:g.appraiser_rating || '' })) }));
     state.attributes = (r.attributes || []).map(a => ({ id:nid('a'), recId:String(a.id), name:a.name, weightage:num(a.weightage), rating:a.rating || '', apprRating:a.appraiser_rating || '' }));
     // Legacy records with zero/missing Weightage1 must not lose the 20% role share.
@@ -1114,7 +1140,11 @@ async function loadPeriod(){
                   eligible:rv.eligible || '', empVar:rv.emp_var || '', compVar:rv.comp_var || '', payout:rv.payout || '' };
     state.final.payoutEdited = false;
     if(state.mode === 'admin' && !r.final_done && state.final.payout === '' && r.mgr_done){ const c0 = hodCalc(); if(varSetupOk()) state.final.payout = String(c0.payout); }
-    if(state.phase === 'targets'){ if(!restoreDraft()) addKRA(true); if(!state.attributes.length) addDefaultAttrs(); }
+    if(isProject()){
+      if(state.phase === 'targets'){ if(!restoreDraft() || !state.kras.length || !state.kras.every(k => k.kpi) || !state.paf) initProject(); }
+      else { readProjectFromServer(); if(state.phase === 'rating' && state.mode !== 'view') restoreDraft(); }
+    }
+    else if(state.phase === 'targets'){ if(!restoreDraft()) addKRA(true); if(!state.attributes.length) addDefaultAttrs(); }
     else if(state.phase === 'rating' && state.mode !== 'view'){ restoreDraft(); }
     renderPage();
     if(!isOwnMode()){
@@ -1134,6 +1164,7 @@ async function loadPeriod(){
   }
 }
 function resetData(){
+  state.paf = { a:{}, t:{} };
   state.hodDone = false; state.hod = { company:'', ips:'', weighted:'', remark:'', by:'', yv:'', ep:'', cp:'', eligible:'', empVar:'', compVar:'', payout:'' };
   state.mgrDone = false; state.finalDone = false; state.managerRemark = ''; state.managerScore = ''; state.selfScoreSaved = '';
   state.final = { rating:'', payout:'', remark:'', by:'' };
@@ -1152,7 +1183,7 @@ function splitEven(total, count){
 }
 function sectionShares(){ const r = state.attributes.length > 0; return { kra: r ? KRA_SHARE : 100, role: r ? ROLE_SHARE : 0 }; }
 function applyWeights(){                     // Step 1 only; later the saved weights are used
-  if(state.phase !== 'targets') return;
+  if(state.phase !== 'targets' || isProject()) return;   // Project Team: fixed KPI weightage
   const sh = sectionShares(), kw = splitEven(sh.kra, state.kras.length);
   state.kras.forEach((k, i) => { k.weightage = kw[i]; const gw = splitEven(k.weightage, k.goals.length); k.goals.forEach((g, j) => g.weightage = gw[j]); });
   const aw = splitEven(sh.role, state.attributes.length);
@@ -1162,7 +1193,8 @@ function pct(r){ const n = parseInt(r, 10); return RATING_PCT[n] !== undefined ?
 function computeScores(){
   let kra = 0, role = 0;
   state.kras.forEach(k => k.goals.forEach(g => { kra += (g.weightage || 0) * pct(g.selfRating) / 100; }));
-  // Employee does not rate Role Attributes: they contribute only to manager score.
+  // General: employee does not rate Role Attributes. Project Team: the employee rates them too.
+  if(isProject()) state.attributes.forEach(a => { role += (a.weightage || 0) * pct(a.rating) / 100; });
   kra = Math.round(kra*100)/100; role = Math.round(role*100)/100;
   return { kra, role, total: Math.round((kra + role)*100)/100 };
 }
@@ -1276,7 +1308,7 @@ function busyOverlay(msg){
 function addTrainingRow(){ state.training.push({ id:nid('t'), saved:false, need:'', benefit:'', fulfilled:'' }); renderPage(); markUnsaved(); }
 function removeTrainingRow(id){ state.training = state.training.filter(t => t.id !== id); renderPage(); markUnsaved(); }
 function setTrain(id, f, v){ state.training.find(t => t.id === id)[f] = v; markUnsaved(); }
-function setOverall(l){ if(state.phase !== 'rating' || state.mode === 'view') return; state.overallRating = l; renderOverall(); markUnsaved(); }
+function setOverall(l){ if(!(state.phase === 'rating' || (isProject() && state.phase === 'targets')) || state.mode === 'view') return; state.overallRating = l; renderOverall(); markUnsaved(); }
 
 /* ======================= RENDER ======================= */
 function ratingSelect(value, onchange){
@@ -1308,15 +1340,19 @@ function renderBanner(){
     return;
   }
   btn.classList.toggle('hidden', !editable);
-  btn.textContent = p === 'targets' ? 'Submit Targets' : 'Submit Self Rating';
+  btn.textContent = p === 'targets' ? (isProject() ? 'Submit Appraisal' : 'Submit Targets') : 'Submit Self Rating';
   btn.disabled = state.busy;
   document.getElementById('pdfBtn').disabled = !(p === 'targets' || p === 'rating' || p === 'done');
   if(!(p === 'targets' || p === 'rating' || p === 'done') || (state.mode === 'new' && p !== 'targets')){ el.innerHTML = ''; return; }
-  const info = {
+  let info = {
     targets:['STEP 1','Set your Targets','Add each Target (KRA) and the tasks under it. Weightage is calculated automatically. You rate them later in Step 2.',''],
     rating:['STEP 2','Self Rating','Your targets are saved and locked. Fill the achievement and your self rating for every task, then submit.','rating'],
     done:['DONE','Appraisal submitted','Status: ' + (state.reviewStatus || 'Submitted') + '. Your entries are locked — download the PDF anytime.','done']
   }[p];
+  if(isProject()){
+    if(p === 'targets') info = ['FORM', state.revisionMode ? 'Revise your Project appraisal (' + state.quarter + '-R' + ((state.revisionBase || 0) + 1) + ')' : 'Project Appraisal Form', 'Fill every KPI section and table, give your self rating for each KPI and Role Attribute, then click Submit Appraisal. Weightage is fixed: KPI 80% · Role Attributes 20%.', ''];
+    else if(p === 'rating') info = ['STEP 2', 'Self Rating', 'Your form is saved — give your self rating for every KPI and Role Attribute, then submit.', 'rating'];
+  }
   el.innerHTML = `<div class="step-banner ${info[3]}"><span class="num">${info[0]}</span><div><div class="t">${info[1]}</div><div class="d">${info[2]}</div></div>
     <div class="steps"><span class="${p==='targets'?'on':''}">1 · Targets</span><span class="${p==='rating'?'on':''}">2 · Self Rating</span><span class="${p==='done'?'on':''}">✓ Done</span></div></div>`;
 }
@@ -1387,17 +1423,21 @@ function renderPage(){
       : `<div class="section notice"><h3>Targets for ${q} are already saved</h3>
           <p>${state.phase === 'rating' ? 'They are waiting for your self rating.' : 'This appraisal is already complete.'} Choose another quarter for a new appraisal, or go to Self Rating.</p>
           <button onclick="chooseView('${state.quarter}','${state.year}')">View it</button> &nbsp; <button class="solid" onclick="showMenu();chooseRating()">Go to Self Rating</button>
-          ${state.phase==='rating' ? `<button class="solid" onclick="startAppraisalRevision()">Create Revision — ${state.quarter}-R${state.revisionNumber+1}</button>` : ''}</div>`;
+          ${state.phase==='rating' ? `<button class="solid" onclick="startAppraisalRevision()">Create Revision — ${state.quarter}-R${state.revisionNumber+1}</button>` : ''}
+          ${isProject() && state.phase === 'done' && !state.mgrDone && !state.finalDone ? `<button class="solid" onclick="startProjectRevision()">Revise this appraisal</button>` : ''}</div>`;
     return;
   }
   if(state.mode === 'view'){
     if(state.phase === 'targets'){ body.innerHTML = `<div class="section notice"><h3>No appraisal for ${state.quarter} ${state.year}</h3><p>Pick a quarter above.</p></div>`; return; }
     const isDone = state.phase === 'done';
-    body.innerHTML = `<div class="lock-note">🔒 <div><b>${state.revisionLabel || state.quarter} ${state.year} — view only.</b> ${isDone ? 'Self rating is submitted. Nothing can be changed.' : 'Targets are submitted; self rating is still pending (do it from <b>Self Rating</b>).'}</div></div>` + ratingHtml(true);
+    body.innerHTML = `<div class="lock-note">🔒 <div><b>${state.revisionLabel || state.quarter} ${state.year} — view only.</b> ${isDone ? 'Self rating is submitted. Nothing can be changed.' : 'Targets are submitted; self rating is still pending (do it from <b>Self Rating</b>).'}</div></div>` + (isProject()
+      ? projectHtml({ edit:false, self:'ro', mgr:pafShowMgr() ? 'ro' : 'hide', own:true }) + (isDone && !state.mgrDone && !state.finalDone ? `<div class="section notice"><h3>Need to change something?</h3><p>You can revise this appraisal until your manager gives the rating.</p><button class="solid" onclick="startProjectRevision()">Revise this appraisal</button></div>` : '')
+      : ratingHtml(true));
     placeRoleAttributesLast(); renderScores(); renderOverall();
     return;
   }
-  body.innerHTML = state.phase === 'targets' ? targetsHtml()
+  body.innerHTML = isProject() ? projectHtml({ edit:state.phase === 'targets', self:state.phase === 'done' ? 'ro' : 'edit', mgr:pafShowMgr() ? 'ro' : 'hide', own:true })
+    : state.phase === 'targets' ? targetsHtml()
     : (state.phase === 'done' ? `<div class="lock-note">🔒 <div><b>${state.revisionLabel || state.quarter} ${state.year} is submitted and locked.</b> Nothing can be changed — you can only view it and download the PDF.</div></div>` : '') + ratingHtml(state.phase === 'done');
   placeRoleAttributesLast(); renderScores(); renderOverall();
 }
@@ -1605,6 +1645,7 @@ function refreshManagerQuarterTable(){
   old.replaceWith(holder.firstElementChild);
 }
 function renderScores(){
+  refreshPafSummary();
   const el = document.getElementById('scoreBar'); if(!el) return;
   if(!isOwnMode()){
     const s = computeScores(), m = computeMgrScores();
@@ -1624,8 +1665,344 @@ function renderScores(){
 }
 function renderOverall(){
   const el = document.getElementById('overallOptions'); if(!el) return;
-  const ro = state.phase !== 'rating' || state.mode === 'view' || !isOwnMode();
+  const ro = !(state.phase === 'rating' || (isProject() && state.phase === 'targets')) || state.mode === 'view' || !isOwnMode();
   el.innerHTML = OVERALL_LABELS.map(l => `<div class="overall-opt ${state.overallRating===l?'selected':''}" ${ro?'':`onclick="setOverall('${l}')"`}>${l}</div>`).join('');
+}
+
+/* ======================= DEPARTMENT TEMPLATES ======================= */
+/* All Employees > Templates : "General" (KRA + tasks) or "Project Team" (fixed KPI form).
+   Project Team KPIs keep the same Creator records: every KPI = one KRA with one task (Goal);
+   the answers and tables of a KPI are stored as JSON in that task's Description ("[PAF]{...}").
+   KPI benchmark (25/20/15/10/10/10/10 = 100) counts 80%, Role Attributes 20%. */
+function tplKey(t){ const s = String(t || '').toLowerCase(); return s.includes('project') ? 'project' : s.includes('purchase') ? 'purchase' : 'general'; }
+function currentTemplate(){ const p = isOwnMode() ? state.me : state.subject; return tplKey(p && p.template); }
+function isProject(){ return currentTemplate() === 'project'; }
+const PROJECT_KPIS = [
+  { id:'k1', name:'Project Delivery & Time Management', bench:25, items:[
+    { t:'table', id:'t1', title:'Project status for the quarter', cols:['Project Name','Completion Time line of the Project','Activity scheduled for the quarter','Target Date of Completion','Actual Stage','% of Completion','If delayed, reason for delay','Variance'] },
+    { id:'q1a', label:'Any critical activities scheduled during the quarter with target date' },
+    { id:'q1b', label:'Delay, if any' },
+    { id:'q1c', label:'Reason for delay' },
+    { id:'q1d', label:'How many weekly reports were made for Project tracking' },
+    { id:'q1e', label:'Did you raise any red alert for delay in any project activity? If yes, how many' },
+    { id:'q1f', label:'Issues due to other department / contractor' },
+    { id:'q1g', label:'Action taken' } ]},
+  { id:'k2', name:'Cost Control & Budget Management', bench:20, items:[
+    { t:'table', id:'t2', title:'Project budget', cols:['Project Name','Budget allotted','Amount spent','Balance required to complete the project','Advance received'] },
+    { id:'q2a', label:'A. Give instances where you have prevented cost overrun' },
+    { id:'q2b', label:'B. For each Project, what was the manpower deployment' },
+    { t:'table', id:'t3', title:'Manpower deployment', rowHead:'Manpower', fixed:['Site Engineer','Laborers','Contractor'], cols:['Estimated','Actual','Variance'] },
+    { id:'q2c', label:'Any efforts to reduce cost in this area' },
+    { id:'q2d', label:'No. of resources trained by you for back up / succession plan' },
+    { id:'q2e', label:'Any projects completed during the quarter and actual profitability figures' } ]},
+  { id:'k3', name:'Planning, Coordination & Execution', bench:15, items:[
+    { id:'q3a', label:'a. As per bar chart, how many Projects are in line with bar chart and how many are delayed' },
+    { id:'q3b', label:'Is it due to bad planning? If no, give reasons' },
+    { id:'q3c', label:'Give instances of good co-ordination' },
+    { id:'q3d', label:'Give instances of bad co-ordination' },
+    { id:'q3e', label:'b. No. of contractors appointed and what was their performance on a scale of 0-5' },
+    { id:'q3f', label:'c. During this quarter any stoppage of work due to shortage of material' },
+    { id:'q3g', label:'If yes, how many times and reasons' } ]},
+  { id:'k4', name:'Quality & Compliance', bench:10, items:[
+    { id:'q4a', label:'A. Any incidents of rejection of our equipment / construction / rework at site' },
+    { id:'q4b', label:'Reason' },
+    { id:'q4c', label:'Investigation made' },
+    { id:'q4d', label:'Action taken' },
+    { id:'q4e', label:'B. Do you have approved SOPs of all activities in your work area' },
+    { id:'q4f', label:'If yes, a. How many are available' },
+    { id:'q4g', label:'b. How many to be made' },
+    { id:'q4h', label:'C. Any customer complaints on Site' },
+    { id:'q4i', label:'Action taken (customer complaints)' },
+    { id:'q4j', label:'D. Any incidences of errors in drawing which required revision or rework' },
+    { id:'q4k', label:'E. Any incidences of rejection at site due to documentation errors' } ]},
+  { id:'k5', name:'Billing, Cash Flow & Recovery', bench:10, items:[
+    { id:'q5a', label:'A. How many instances of bill submission to customer during this quarter' },
+    { id:'q5b', label:'B. Any delays in submission of bills for work completion' },
+    { id:'q5c', label:'C. Recovery on outstanding amount' },
+    { t:'table', id:'t4', title:'Client outstanding & recovery', cols:['Client name','Outstanding','Recovery','No. of emails','No. of meetings / visits','No. of calls made'] },
+    { id:'q5d', label:'What are the steps initiated to reduce the recovery' } ]},
+  { id:'k6', name:'Site Management & Productivity', bench:10, items:[
+    { id:'q6a', label:'A. Are daily progress reports checked and feedback given by you' },
+    { id:'q6b', label:'B. Any instances of appreciation from customer for excellent work quality at Site (for labour workmanship)' },
+    { id:'q6c', label:'C. Any appreciation for following Safety rules at Project Site' },
+    { id:'q6d', label:'D. Any instances of accident / injuries at Site during the quarter' },
+    { id:'q6e', label:'Reason' },
+    { id:'q6f', label:'Action taken' },
+    { id:'q6g', label:'Any reports made' } ]},
+  { id:'k7', name:'Customer Relationship', bench:10, items:[
+    { id:'q7a', label:'1. Letters / mails of appreciation' },
+    { id:'q7b', label:'2. Reference given to others' },
+    { id:'q7c', label:'3. Repeat orders generated' } ]}
+];
+const PROJECT_ROLE_ATTRS = ['Leadership Skills','Training / Succession plan','Communication skills','Problem Solving','Innovative ideas / Out of Box thinking'];
+const PAF_KPI_SHARE = KRA_SHARE / 100;                     // 100 benchmark points → 80% of the appraisal
+const PAF_MAX_JSON = 19000;                                // Goal.Description safety limit per KPI
+
+function initProject(){
+  state.kras = PROJECT_KPIS.map(k => { const w = r2(k.bench * PAF_KPI_SHARE);
+    return { id:nid('k'), recId:'', kpi:k.id, name:k.name, description:'', weightage:w,
+      goals:[{ id:nid('g'), recId:'', name:k.name, html:'', raw:'', achievement:'', weightage:w, selfRating:'', apprRating:'' }] }; });
+  state.attributes = PROJECT_ROLE_ATTRS.map(n => ({ id:nid('a'), recId:'', name:n, weightage:r2(ROLE_SHARE / PROJECT_ROLE_ATTRS.length), rating:'', apprRating:'' }));
+  state.paf = { a:{}, t:{} };
+}
+/* after load: link each saved KRA to its KPI and read the answers back */
+function readProjectFromServer(){
+  state.paf = { a:{}, t:{} };
+  state.kras.forEach((k, i) => {
+    const def = PROJECT_KPIS.find(d => d.name.toLowerCase() === String(k.name || '').trim().toLowerCase()) || PROJECT_KPIS[i];
+    if(def) k.kpi = def.id;
+    (k.goals || []).forEach(g => {
+      const raw = String(g.raw || '');
+      if(raw.startsWith('[PAF]')){
+        try{ const d = JSON.parse(raw.slice(5)); Object.assign(state.paf.a, d.a || {}); Object.assign(state.paf.t, d.t || {}); }catch(e){}
+      }
+    });
+  });
+}
+function kraOfKpi(id){ return state.kras.find(k => k.kpi === id); }
+function goalOfKpi(id){ const k = kraOfKpi(id); return k && k.goals && k.goals[0]; }
+function pafAns(id){ return (state.paf && state.paf.a && state.paf.a[id]) || ''; }
+function pafRows(tb){
+  const saved = state.paf && state.paf.t && state.paf.t[tb.id];
+  if(Array.isArray(saved) && saved.length) return saved;
+  return tb.fixed ? tb.fixed.map(() => tb.cols.map(() => '')) : [tb.cols.map(() => ''), tb.cols.map(() => '')];
+}
+function setPafA(id, v){ state.paf.a[id] = v; markUnsaved(); }
+function setPafT(tid, r, c, v){
+  const tb = PROJECT_KPIS.flatMap(k => k.items).find(x => x.id === tid);
+  if(!state.paf.t[tid]) state.paf.t[tid] = pafRows(tb).map(row => row.slice());
+  state.paf.t[tid][r][c] = v; markUnsaved();
+}
+function addPafRow(tid){
+  const tb = PROJECT_KPIS.flatMap(k => k.items).find(x => x.id === tid);
+  if(!state.paf.t[tid]) state.paf.t[tid] = pafRows(tb).map(row => row.slice());
+  state.paf.t[tid].push(tb.cols.map(() => '')); renderPage(); markUnsaved();
+}
+function delPafRow(tid, r){
+  if(!state.paf.t[tid] || state.paf.t[tid].length <= 1) return;
+  state.paf.t[tid].splice(r, 1); renderPage(); markUnsaved();
+}
+function pafKpiData(def){
+  const d = { v:1, kpi:def.id, a:{}, t:{} };
+  def.items.forEach(it => {
+    if(it.t === 'table'){
+      const rows = pafRows(it).filter((row, i) => it.fixed || row.some(c => String(c || '').trim()));
+      d.t[it.id] = rows.map(row => row.map(c => String(c || '').trim()));
+    } else d.a[it.id] = String(pafAns(it.id)).trim();
+  });
+  return d;
+}
+function pafScore(def, key){ const g = goalOfKpi(def.id); const r = g ? g[key] : ''; return /^[1-5]$/.test(String(r)) ? def.bench * pct(r) / 100 : null; }
+function pafTotals(){
+  const sum = key => { let t = 0, all = true; PROJECT_KPIS.forEach(d => { const s = pafScore(d, key); if(s === null) all = false; else t += s; }); return { t:r2(t), all }; };
+  const roleSum = key => { let t = 0, all = state.attributes.length > 0; state.attributes.forEach(a => { if(/^[1-5]$/.test(String(a[key]))) t += (a.weightage || 0) * pct(a[key]) / 100; else all = false; }); return { t:r2(t), all }; };
+  const ks = sum('selfRating'), km = sum('apprRating'), rs = roleSum('rating'), rm = roleSum('apprRating');
+  return { ks, km, rs, rm, selfFinal:r2(ks.t * PAF_KPI_SHARE + rs.t), mgrFinal:r2(km.t * PAF_KPI_SHARE + rm.t) };
+}
+function pafShowMgr(){ return !isOwnMode() || state.mgrDone || state.kras.some(k => k.goals.some(g => g.apprRating)); }
+function pafTableHtml(tb, edit){
+  const rows = pafRows(tb);
+  return `<div class="paf-tbl-wrap"><div class="paf-tbl-title">${esc(tb.title || '')}</div><div style="overflow-x:auto;"><table class="paf-table"><thead><tr>
+    ${tb.fixed ? `<th>${esc(tb.rowHead || '')}</th>` : ''}${tb.cols.map(c => `<th>${esc(c)}</th>`).join('')}${edit && !tb.fixed ? '<th style="width:34px"></th>' : ''}</tr></thead><tbody>
+    ${rows.map((row, r) => `<tr>${tb.fixed ? `<td class="paf-rowhead">${esc(tb.fixed[r])}</td>` : ''}${tb.cols.map((c, ci) => `<td>${edit
+        ? `<input value="${esc(row[ci] || '')}" maxlength="300" onchange="setPafT('${tb.id}',${r},${ci},this.value)">`
+        : (esc(row[ci] || '') || '<span style="color:#9AA6B5">—</span>')}</td>`).join('')}${edit && !tb.fixed ? `<td><button class="small danger" onclick="delPafRow('${tb.id}',${r})">✕</button></td>` : ''}</tr>`).join('')}
+  </tbody></table></div>${edit && !tb.fixed ? `<button class="small" style="margin-top:6px" onclick="addPafRow('${tb.id}')">+ Add row</button>` : ''}</div>`;
+}
+/* o = { edit: answers editable, self: 'edit'|'ro', mgr: 'edit'|'ro'|'hide', own: show training + overall } */
+function projectHtml(o){
+  const sel = (mode, v, on) => mode === 'edit' ? ratingSelect(v, on) : `<div class="ro"><b>${esc(v) || '—'}</b></div>`;
+  const showMgr = o.mgr !== 'hide';
+  const kpiHtml = PROJECT_KPIS.map((d, i) => {
+    const k = kraOfKpi(d.id), g = goalOfKpi(d.id);
+    if(!k || !g) return '';
+    return `<div class="section paf-kpi">
+      <div class="section-head"><h2>${i+1}. ${esc(d.name)}</h2><span class="weight-badge">Weightage ${d.bench}%</span></div>
+      <div class="paf-grid">${d.items.map(it => it.t === 'table' ? `<div class="paf-full">${pafTableHtml(it, o.edit)}</div>`
+        : `<div><label>${esc(it.label)}</label>${o.edit ? `<textarea maxlength="2000" rows="2" onchange="setPafA('${it.id}',this.value)">${esc(pafAns(it.id))}</textarea>` : `<div class="ro">${esc(pafAns(it.id)) || '—'}</div>`}</div>`).join('')}</div>
+      <div class="paf-rate">
+        <div><label>Self rating (1–5) ${o.self === 'edit' ? '<span class="req">*</span>' : ''}</label>${sel(o.self, g.selfRating, `setGoal('${k.id}','${g.id}','selfRating',this.value)`)}</div>
+        ${showMgr ? `<div><label style="color:#6D28D9;">Appraiser rating (1–5) ${o.mgr === 'edit' ? '<span class="req">*</span>' : ''}</label>${sel(o.mgr, g.apprRating, `setGoal('${k.id}','${g.id}','apprRating',this.value)`)}</div>` : ''}
+        <div><label>Score (out of ${d.bench})</label><div class="ro" id="pafKs_${d.id}">—</div></div>
+      </div>
+    </div>`; }).join('');
+  const roleHtml = `<div class="section" id="pafRole">
+    <div class="section-head"><h2>Role Attributes (${fmt(ROLE_SHARE)}%)</h2><span class="weight-badge">${state.attributes.length} attribute(s)</span></div>
+    <div class="note">Rate on a scale: 5 = Outstanding, 4 = Very Good, 3 = Good, 2 = Fair, 1 = Poor</div>
+    <div style="overflow-x:auto;"><table class="paf-table"><thead><tr><th style="width:40px">#</th><th>Role attribute</th><th style="width:90px">Weightage</th><th style="width:170px">Self rating</th>${showMgr ? '<th style="width:170px">Appraiser rating</th>' : ''}</tr></thead><tbody>
+    ${state.attributes.map((a, i) => `<tr><td>${i+1}</td><td><b>${esc(a.name)}</b></td><td>${fmt(a.weightage)}%</td>
+      <td>${sel(o.self, a.rating, `setAttr('${a.id}','rating',this.value)`)}</td>${showMgr ? `<td>${sel(o.mgr, a.apprRating, `setAttr('${a.id}','apprRating',this.value)`)}</td>` : ''}</tr>`).join('')}
+    </tbody></table></div></div>`;
+  const trainHtml = o.own ? `<div class="section">
+    <div class="section-head"><h2>Training Need Identification</h2>${o.edit ? '<button class="small" onclick="addTrainingRow()">+ Add Row</button>' : ''}</div>
+    <div class="note">Appraisee to identify the training needs to improve job performance in consultation with Appraiser</div>
+    <table class="train-table"><thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled (Internal faculty / Self-study / Outside training)</th>${o.edit ? '<th style="width:50px"></th>' : ''}</tr></thead>
+      <tbody>${state.training.length ? state.training.map(t => !o.edit || t.saved ? `<tr><td>${esc(t.need)}</td><td>${esc(t.benefit)}</td><td>${esc(t.fulfilled)}</td>${o.edit ? '<td></td>' : ''}</tr>` : `
+        <tr><td><input value="${esc(t.need)}" maxlength="300" onchange="setTrain('${t.id}','need',this.value)"></td>
+            <td><input value="${esc(t.benefit)}" maxlength="300" onchange="setTrain('${t.id}','benefit',this.value)"></td>
+            <td><input value="${esc(t.fulfilled)}" maxlength="300" onchange="setTrain('${t.id}','fulfilled',this.value)"></td>
+            <td><button class="small danger" onclick="removeTrainingRow('${t.id}')">✕</button></td></tr>`).join('')
+        : `<tr><td colspan="4" class="empty">${o.edit ? 'No training needs added yet.' : 'None.'}</td></tr>`}</tbody></table></div>
+  <div class="section"><div class="section-head"><h2>Overall Performance Rating (self)</h2></div><div class="overall-options" id="overallOptions"></div></div>` : '';
+  return `<div class="section paf-head"><div class="section-head"><h2>Performance Appraisal Form — Projects</h2><span class="weight-badge">KPI ${fmt(KRA_SHARE)}% · Role ${fmt(ROLE_SHARE)}%</span></div>
+      <div class="note" style="margin:0">Instructions: 1. Any false information will be considered as discredit to the employee during next appraisal cycle. 2. Please give descriptive explanation where figures are not available.</div></div>
+    ${kpiHtml}${roleHtml}<div id="pafSummary">${pafSummaryHtml(showMgr)}</div>${trainHtml}`;
+}
+function pafSummaryHtml(showMgr){
+  if(showMgr === undefined) showMgr = pafShowMgr();
+  const T = pafTotals();
+  const cell = s => s === null ? '—' : fmt(s);
+  return `<div class="section mgr-box"><div class="section-head"><h2>KPI Score</h2><span class="weight-badge">Score = Benchmark × rating ÷ 5</span></div>
+    <div style="overflow-x:auto;"><table class="paf-table"><thead><tr><th>KPI</th><th>Benchmark</th><th>Self rating</th><th>Self score</th>${showMgr ? '<th>Appraiser rating</th><th>Appraiser score</th>' : ''}</tr></thead><tbody>
+    ${PROJECT_KPIS.map(d => { const g = goalOfKpi(d.id) || {}; return `<tr><td>${esc(d.name)}</td><td>${d.bench}</td><td>${esc(g.selfRating) || '—'}</td><td>${cell(pafScore(d,'selfRating'))}</td>${showMgr ? `<td>${esc(g.apprRating) || '—'}</td><td>${cell(pafScore(d,'apprRating'))}</td>` : ''}</tr>`; }).join('')}
+    <tr style="font-weight:700"><td>TOTAL (KPI)</td><td>100</td><td></td><td>${fmt(T.ks.t)}</td>${showMgr ? `<td></td><td>${fmt(T.km.t)}</td>` : ''}</tr>
+    <tr><td>KPI share of appraisal (× ${fmt(KRA_SHARE)}%)</td><td>${fmt(KRA_SHARE)}</td><td></td><td>${fmt(r2(T.ks.t * PAF_KPI_SHARE))}</td>${showMgr ? `<td></td><td>${fmt(r2(T.km.t * PAF_KPI_SHARE))}</td>` : ''}</tr>
+    <tr><td>Role Attributes</td><td>${fmt(ROLE_SHARE)}</td><td></td><td>${fmt(T.rs.t)}</td>${showMgr ? `<td></td><td>${fmt(T.rm.t)}</td>` : ''}</tr>
+    <tr style="font-weight:700;background:#F1EBFD"><td>Final appraisal score</td><td>100</td><td></td><td>${T.ks.all && T.rs.all ? fmt(T.selfFinal) : 'Pending'}</td>${showMgr ? `<td></td><td style="color:#6D28D9">${T.km.all && T.rm.all ? fmt(T.mgrFinal) : 'Pending'}</td>` : ''}</tr>
+    </tbody></table></div></div>`;
+}
+function refreshPafSummary(){
+  const box = document.getElementById('pafSummary'); if(!box || !isProject()) return;
+  box.innerHTML = pafSummaryHtml();
+  PROJECT_KPIS.forEach(d => { const el = document.getElementById('pafKs_' + d.id); if(!el) return;
+    const s = pafScore(d, 'selfRating'), m = pafScore(d, 'apprRating');
+    el.textContent = (s === null ? '—' : fmt(s)) + ' self' + (pafShowMgr() ? ' · ' + (m === null ? '—' : fmt(m)) + ' appraiser' : ''); });
+}
+function validateProject(){
+  for(let i = 0; i < PROJECT_KPIS.length; i++){ const g = goalOfKpi(PROJECT_KPIS[i].id); if(!g || !g.selfRating) return `KPI ${i+1} (${PROJECT_KPIS[i].name}): select your self rating.`; }
+  for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].rating) return `Role Attribute ${i+1} (${state.attributes[i].name}): select your self rating.`;
+  for(const d of PROJECT_KPIS) if(JSON.stringify(pafKpiData(d)).length > PAF_MAX_JSON) return `KPI "${d.name}": the answers are too long — please shorten them.`;
+  return '';
+}
+/* One step: save the KPI form (as targets) and the self ratings together */
+async function submitProject(){
+  if(state.busy) return;
+  const problem = validateProject(); if(problem){ setStatus('❌ ' + problem, false); return; }
+  const T = pafTotals();
+  const ok = await confirmBox((state.revisionMode ? 'Submit revised appraisal ' : 'Submit appraisal ') + state.quarter + ' ' + state.year + '?',
+    `KPI self score: <b>${fmt(T.ks.t)} / 100</b> (counts ${fmt(KRA_SHARE)}%)<br>Role attributes: <b>${fmt(T.rs.t)} / ${fmt(ROLE_SHARE)}</b><br>Final self score: <b>${fmt(T.selfFinal)} / 100</b><br><br>
+     After submitting, it goes to your manager. You can revise it until the manager gives the rating.`, 'Yes, submit');
+  if(!ok) return;
+  const q = state.quarter, y = state.year;
+  const selfBy = {}; PROJECT_KPIS.forEach(d => { const g = goalOfKpi(d.id); selfBy[d.name.toLowerCase()] = g ? g.selfRating : ''; });
+  const roleBy = {}; state.attributes.forEach(a => { roleBy[a.name.toLowerCase()] = a.rating; });
+  lock(true); busyOverlay('Saving your appraisal…');
+  setStatus('Saving your appraisal… please do not close this page.', null);
+  let errMsg = '', step1 = false, saved = false;
+  try{
+    await call('save_targets', { quarter:q, year:y, template:'project', revision_mode:!!state.revisionMode, revision_from:state.revisionBase,
+      kras:PROJECT_KPIS.map(d => ({ name:d.name, description:'', weightage:r2(d.bench * PAF_KPI_SHARE),
+        goals:[{ name:d.name, html:'[PAF]' + JSON.stringify(pafKpiData(d)) }] })),
+      attributes:state.attributes.map(a => ({ name:a.name })) });
+    step1 = true;
+  }catch(err){
+    errMsg = err.message;
+    if(err.network){ try{ const chk = await call('load', { quarter:q, year:y }); if(chk.phase && chk.phase !== 'targets' && !state.revisionMode) step1 = true; }catch(e){} }
+  }
+  if(step1){
+    try{
+      busyOverlay('Saving your ratings…');
+      const r = await call('load', { quarter:q, year:y });
+      const goals = (r.kras || []).map(k => { const g = (k.goals || [])[0] || {}; return { id:String(g.id), achievement:'', self_rating:String(selfBy[String(k.name || '').trim().toLowerCase()] || '') }; });
+      const attrs = (r.attributes || []).map(a => ({ id:String(a.id), rating:String(roleBy[String(a.name || '').trim().toLowerCase()] || '') }));
+      await call('save_rating', { quarter:q, year:y, goals, attributes:attrs,
+        training:state.training.filter(t => !t.saved && t.need.trim()).map(t => ({ need:t.need.trim(), benefit:t.benefit || '', fulfilled:t.fulfilled || '' })),
+        facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'', overall:state.overallRating || '' });
+      saved = true;
+    }catch(err){
+      errMsg = err.message;
+      try{ const chk = await call('load', { quarter:q, year:y }); if(chk.phase === 'done') saved = true; }catch(e){}
+    }
+  }
+  busyOverlay(null); lock(false);
+  if(saved){
+    clearDraft(); state.revisionMode = false; state.justSaved = true;
+    refreshPeriods(true);
+    state.mode = 'view'; show('quarterRow', false); show('yearBox', false); show('periodChips', true);
+    await loadPeriod(); renderPeriodChips();
+    setStatus('✅ Appraisal submitted for ' + q + ' ' + y + '. It now goes to your manager.', true);
+  } else if(step1){
+    refreshPeriods(true);
+    setStatus('❌ The form is saved but the ratings were not: ' + errMsg + ' Open Self Rating and submit the ratings again.', false);
+  } else {
+    setStatus('❌ ' + errMsg + ' Your entries are kept — please try Submit again.', false);
+  }
+}
+/* Revise a submitted Project appraisal (allowed until the manager rates it) */
+async function startProjectRevision(){
+  if(state.busy || state.mgrDone || state.finalDone || state.phase !== 'done') return;
+  const ok = await confirmBox('Revise ' + state.quarter + ' ' + state.year + '?',
+    'Your answers and ratings open again for editing. When you submit, a new version (' + state.quarter + '-R' + (state.revisionNumber + 1) + ') is saved — the earlier version stays in history.', 'Revise');
+  if(!ok) return;
+  state.revisionBase = state.revisionNumber; state.revisionMode = true; state.justSaved = false;
+  state.mode = 'new'; state.phase = 'targets';
+  show('periodChips', false); show('quarterRow', false); show('yearBox', false);
+  state.kras.forEach(k => { k.recId = ''; k.goals.forEach(g => { g.recId = ''; }); });
+  state.attributes.forEach(a => { a.recId = ''; a.apprRating = ''; });
+  renderPage();
+  setStatus('Revising ' + state.quarter + '-R' + (state.revisionBase + 1) + ' — change what you need, then click Submit Appraisal.', null);
+}
+
+/* ---------- Project Team PDF (landscape, like "Projects PAF") ---------- */
+function buildProjectPdfHtml(m){
+  const P = m.paf || { a:{}, t:{} };
+  const rowsOf = tb => { const s = P.t && P.t[tb.id]; if(Array.isArray(s) && s.length) return s; return tb.fixed ? tb.fixed.map(() => tb.cols.map(() => '')) : [tb.cols.map(() => '')]; };
+  const tbl = tb => `<table class="pa-grid pp-tbl"><tr>${tb.fixed ? `<th>${pdfEsc(tb.rowHead || '')}</th>` : ''}${tb.cols.map(c => `<th>${pdfEsc(c)}</th>`).join('')}</tr>
+    ${rowsOf(tb).map((row, r) => `<tr class="pa-avoid">${tb.fixed ? `<td class="pa-b">${pdfEsc(tb.fixed[r])}</td>` : ''}${tb.cols.map((c, ci) => `<td>${pdfMultiline(row[ci] || '')}</td>`).join('')}</tr>`).join('')}</table>`;
+  const kpi = (d, i) => { const r = (m.ratings || {})[d.id] || {};
+    return `<div class="pp-kpi"><div class="pa-b pp-h">${i+1}. ${pdfEsc(d.name)} (Weightage: ${d.bench}%)<span class="pp-r">Self rating: <b>${pdfEsc(r.self || '')}</b> &nbsp; Appraiser rating: <b>${pdfEsc(r.appr || '')}</b></span></div>
+      ${d.items.map(it => it.t === 'table' ? tbl(it) : `<div class="pp-q pa-avoid"><span class="pp-ql">${pdfEsc(it.label)} :</span> ${pdfMultiline(P.a[it.id] || '')}</div>`).join('')}</div>`; };
+  const quarterCells = PDF_QUARTERS.map(q => { const sel = q.id === m.quarter;
+    return `<td class="${sel?'pa-qsel':''}">${sel ? `<b>${q.label.split(':')[0]}:</b>${q.label.substring(q.label.indexOf(':')+1)} ${pdfEsc(m.year || '')}` : q.label}</td>`; }).join('');
+  const score = (d, key) => { const r = ((m.ratings || {})[d.id] || {})[key]; return /^[1-5]$/.test(String(r)) ? pdfFmt(d.bench * (RATING_PCT[r] || 0) / 100, 2) : ''; };
+  const sum = key => { let t = 0, any = false; PROJECT_KPIS.forEach(d => { const r = ((m.ratings || {})[d.id] || {})[key]; if(/^[1-5]$/.test(String(r))){ t += d.bench * RATING_PCT[r] / 100; any = true; } }); return any ? pdfFmt(t, 2) : ''; };
+  const attrs = m.attributes || [];
+  const roleSum = key => { let t = 0, any = false; attrs.forEach(a => { if(/^[1-5]$/.test(String(a[key]))){ t += (pdfNum(a.weightage) || 0) * RATING_PCT[a[key]] / 100; any = true; } }); return any ? pdfFmt(t, 2) : ''; };
+  const train = (m.training || []).filter(t => t && (t.need || t.benefit || t.fulfilled));
+  const ovr = String(m.overallRating || '').toLowerCase();
+  const tick = l => `<span class="pa-tick">${ovr === l.toLowerCase() ? '☑' : '☐'}</span> ${l}`;
+  const head = `<div class="pp-title pa-b">PERFORMANCE APPRAISAL FORM FOR PROJECTS :</div>`;
+  return `<div class="pa-pdf pa-land">
+  <div class="pa-page">
+    <div class="pa-head"><img class="pa-logo" src="${PDF_LOGO}" alt="MEGA">${head}</div>
+    <table class="pa-qtable"><tr>${quarterCells}</tr></table>
+    <div class="pa-info"><div class="pa-info-row"><span class="pa-b">Name: ${pdfEsc(m.employeeName)}</span><span class="pa-b" style="margin-left:60px">Department: ${pdfEsc(m.department)}</span><span class="pa-b" style="margin-left:60px">Name of Appraiser: ${pdfEsc(m.appraiser)}</span></div></div>
+    <div class="pp-ins"><b>Instructions for filling the form :</b> 1. Any false information will be considered as discredit to the employee during next appraisal cycle.<br><span style="padding-left:178px">2. Pls give descriptive explanation where figures are not available.</span></div>
+    ${kpi(PROJECT_KPIS[0], 0)}${kpi(PROJECT_KPIS[1], 1)}
+  </div>
+  <div class="pa-page pa-page2">${kpi(PROJECT_KPIS[2], 2)}${kpi(PROJECT_KPIS[3], 3)}${kpi(PROJECT_KPIS[4], 4)}</div>
+  <div class="pa-page pa-page2">${kpi(PROJECT_KPIS[5], 5)}${kpi(PROJECT_KPIS[6], 6)}
+    <div class="pa-b pa-sub2">Training Need Identification</div>
+    <div class="pa-p">Appraisee to identify the training needs to improve job performance in consultation with Appraiser</div>
+    <table class="pa-grid pa-train"><tr><th>Training need</th><th>Expected benefit after training</th><th>How training need will be fulfilled ( Internal faculty/ Self-study/ Outside training</th></tr>
+      ${(train.length ? train : [{}]).map(t => `<tr class="pa-avoid"><td>${pdfMultiline(t.need)}</td><td>${pdfMultiline(t.benefit)}</td><td>${pdfMultiline(t.fulfilled)}</td></tr>`).join('')}</table>
+  </div>
+  <div class="pa-page pa-page2">
+    <div class="pa-p"><span class="pa-b">Role Attributes:</span> Rate on a scale : 5 = Outstanding,&nbsp; 4= Very Good,&nbsp; 3= Good, 2 = Fair,&nbsp; 1= Poor &nbsp; <span class="pa-wt">(${pdfFmt(ROLE_SHARE,0)}% weightage)</span></div>
+    <table class="pa-grid pp-small"><tr><th>Rate on a scale of 1-5</th><th class="pa-th-r">Self rating</th><th class="pa-th-r">Appraisers rating</th></tr>
+      ${attrs.map((a, i) => `<tr><td>${i+1}.&nbsp;&nbsp; ${pdfEsc(a.name)}: <span class="pa-wt">(${pdfFmt(a.weightage,2)}%)</span></td><td class="pa-rc">${pdfEsc(a.rating)}</td><td class="pa-rc">${pdfEsc(a.apprRating || '')}</td></tr>`).join('')}
+      <tr><td class="pa-center pa-b">TOTAL <span class="pa-wt">(out of ${pdfFmt(ROLE_SHARE,0)})</span></td><td class="pa-rc pa-b">${roleSum('rating')}</td><td class="pa-rc pa-b">${roleSum('apprRating')}</td></tr></table>
+    <table class="pa-grid pp-small" style="margin-top:12px"><tr><th>KPI</th><th class="pa-th-r">Benchmark</th><th class="pa-th-r">Self score</th><th class="pa-th-r">Score (Appraiser)</th></tr>
+      ${PROJECT_KPIS.map(d => `<tr><td>${pdfEsc(d.name)}</td><td class="pa-rc">${d.bench}</td><td class="pa-rc">${score(d,'self')}</td><td class="pa-rc">${score(d,'appr')}</td></tr>`).join('')}
+      <tr><td class="pa-center pa-b">TOTAL</td><td class="pa-rc pa-b">100</td><td class="pa-rc pa-b">${sum('self')}</td><td class="pa-rc pa-b">${sum('appr')}</td></tr></table>
+    <div class="pa-p">Final appraisal score = KPI total × ${pdfFmt(KRA_SHARE,0)}% + Role Attributes total</div>
+    ${m.hodRemark ? `<div class="pa-p"><span class="pa-b">Appraiser’s / HOD’s Remark:</span> ${pdfMultiline(plainFromRich(m.hodRemark))}</div>` : ''}
+    <div class="pa-sign pa-b">Signature Appraisee…………………………..Sign. Appraiser…………………………Sign. HOD</div>
+    <div class="pa-p" style="margin-top:18px"><span class="pa-b">OVERALL PERFORMANCE RATING</span>: (Tick <b>one</b> applicable word)</div>
+    <table class="pa-overall"><tr><td>${tick('Outstanding')}</td><td>${tick('Exceeds Expectations')}</td><td>${tick('Meets Expectations')}</td></tr>
+      <tr><td>${tick('Needs Improvement')}</td><td>${tick('Unacceptable')}</td><td></td></tr></table>
+    <div class="pa-sign pa-b">Sign. Appraiser…………………………Sign. HOD………………………</div>
+  </div>
+</div>`;
+}
+/* menu wording follows the employee's template */
+function applyMenuTemplate(){
+  const proj = tplKey(state.me && state.me.template) === 'project';
+  const t = document.getElementById('newTitle'), p = document.getElementById('newText'), rc = document.getElementById('rateCard');
+  if(t) t.textContent = proj ? 'Project Appraisal' : 'New Appraisal';
+  if(p) p.textContent = proj ? 'Projects template: choose the quarter, fill the 7 KPI sections and tables, rate yourself on each KPI and Role Attribute, and submit — all in one go. You can revise it until your manager rates it.'
+                             : 'Start a new quarter: choose the quarter and add your Targets (KRA), the tasks under each target and role attributes.';
+  if(rc){ const waiting = (state.periods || []).some(x => x.phase === 'rating'); rc.classList.toggle('hidden', proj && !waiting); }
 }
 
 /* ======================= STATUS / DRAFT ======================= */
@@ -1636,7 +2013,7 @@ function saveDraft(){
   if(state.mode === 'view' || !isOwnMode()) return;
   if(!state.me || (state.phase !== 'targets' && state.phase !== 'rating')) return;
   const d = state.phase === 'targets'
-    ? { kras:state.kras, attributes:state.attributes }
+    ? { kras:state.kras, attributes:state.attributes, paf:state.paf, training:state.training.filter(t => !t.saved), overall:state.overallRating }
     : { goals:Object.fromEntries(state.kras.flatMap(k => k.goals).map(g => [g.recId, { a:g.achievement, r:g.selfRating }])),
         attrs:Object.fromEntries(state.attributes.map(a => [a.recId, a.rating])),
         training:state.training.filter(t => !t.saved), texts:state.texts, overall:state.overallRating };
@@ -1648,6 +2025,7 @@ function restoreDraft(){
   if(state.phase === 'targets'){
     if(!Array.isArray(d.kras) || !d.kras.length) return false;
     state.kras = d.kras; state.attributes = d.attributes || [];
+    if(d.paf) state.paf = d.paf; if(Array.isArray(d.training) && d.training.length) state.training = d.training; if(d.overall) state.overallRating = d.overall;
   } else {
     state.kras.forEach(k => k.goals.forEach(g => { const x = d.goals && d.goals[g.recId]; if(x){ if(x.a && !g.achievement) g.achievement = x.a; if(x.r && !g.selfRating) g.selfRating = x.r; } }));
     state.attributes.forEach(a => { const r = d.attrs && d.attrs[a.recId]; if(r && !a.rating) a.rating = r; });
@@ -1666,7 +2044,7 @@ function mainAction(){
   if(state.mode === 'team'){ submitManager(); return; }
   if(state.mode === 'admin'){ submitFinal(); return; }
   if(state.mode === 'hod'){ submitHod(); return; }
-  if(state.phase === 'targets') submitTargets(); else if(state.phase === 'rating') submitRating();
+  if(state.phase === 'targets'){ if(isProject()) submitProject(); else submitTargets(); } else if(state.phase === 'rating') submitRating();
 }
 function lock(on){ state.busy = on; document.getElementById('mainBtn').disabled = on; }
 function validateTargets(){
@@ -1725,6 +2103,7 @@ async function submitTargets(){
   }
 }
 function validateRating(){
+  if(isProject()){ for(let i = 0; i < state.attributes.length; i++) if(!state.attributes[i].rating) return `Role Attribute ${i+1}: select your self rating.`; }
   if(!state.attributes.length) return 'No saved Role Attributes for this quarter. Please contact HR for correction.';
   if(!state.kras.length) return 'No targets found for this quarter.';
   for(let i = 0; i < state.kras.length; i++) for(let j = 0; j < state.kras[i].goals.length; j++)
@@ -1746,7 +2125,7 @@ async function submitRating(){
   try{
     const r = await call('save_rating', { quarter:q, year:y,
       goals:state.kras.flatMap(k => k.goals).map(g => ({ id:g.recId, achievement:g.achievement || '', self_rating:String(g.selfRating) })),
-      attributes:[],
+      attributes:isProject() ? state.attributes.map(a => ({ id:a.recId, rating:String(a.rating || '') })) : [],
       training:state.training.filter(t => !t.saved && t.need.trim()).map(t => ({ need:t.need.trim(), benefit:t.benefit || '', fulfilled:t.fulfilled || '' })),
       facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
       comments:state.texts.comments, learnings:state.texts.learnings, overall:state.overallRating || '' });
@@ -1879,6 +2258,7 @@ function reviewHtml(){
   return `
   ${state.finalDone ? `<div class="lock-note">🔒 <div><b>Final — approved.</b> This appraisal is locked for everyone.</div></div>` : (!canMgr && !canAdm && !canHod ? `<div class="lock-note">🔒 <div><b>View only.</b> ${state.mgrDone ? 'Manager rating is submitted.' : 'Waiting for the manager rating.'}</div></div>` : '')}
   <div class="score-bar" id="scoreBar"></div>
+  ${isProject() ? projectHtml({ edit:false, self:'ro', mgr:canMgr ? 'edit' : 'ro', own:false }) : `
   <div class="section">
     <div class="section-head"><h2>Targets (KRA) &amp; Tasks</h2><span class="weight-badge">${fmt(kraTotal())}% · ${state.kras.length} target(s)</span></div>
     ${state.kras.map((k, i) => `
@@ -1912,7 +2292,7 @@ function reviewHtml(){
     <div><label>Constraining Factors (employee)</label>${t('constraining')}</div>
     <div><label>Outstanding Achievement (employee)</label>${t('outstanding')}</div>
     <div><label>My Learnings (employee)</label>${t('learnings')}</div>
-  </div>
+  </div>`}
   <div class="section">
     <div class="section-head"><h2>Training Need Identification</h2></div>
     <table class="train-table"><thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled</th></tr></thead>
@@ -2194,7 +2574,9 @@ function downloadPdf(){
     facilitating:state.texts.facilitating, constraining:state.texts.constraining, outstanding:state.texts.outstanding,
     comments:state.texts.comments, learnings:state.texts.learnings, hodRemark:state.managerRemark || '',
     training:state.training.map(t => ({ need:t.need, benefit:t.benefit, fulfilled:t.fulfilled })),
-    overallRating:state.overallRating || ''
+    overallRating:state.overallRating || '',
+    template:isProject() ? 'project' : 'general', paf:state.paf,
+    ratings:Object.fromEntries(PROJECT_KPIS.map(d => { const g = goalOfKpi(d.id) || {}; return [d.id, { self:g.selfRating || '', appr:g.apprRating || '' }]; }))
   }, setStatus);
 }
 
