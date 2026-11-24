@@ -295,7 +295,7 @@
 <!-- =================== APPRAISAL PAGE =================== -->
 <div class="wrap hidden" id="appView">
   <div class="who-bar">
-    <div>Signed in as <b id="whoName">—</b> · <span id="whoEmail" class="mono"></span></div>
+    <div>Signed in as <b id="whoName">—</b> · <span id="whoEmail" class="mono"></span><span id="whoTpl"></span></div>
     <div style="display:flex; gap:8px;">
       <button class="small hidden" id="menuBtn" onclick="showMenu()">← Menu</button>
       <button class="small" onclick="logout()">Sign out</button>
@@ -989,7 +989,7 @@ function refreshPeriods(force){
   if(periodsPromise && !force) return periodsPromise;
   periodsPromise = call('periods', {}).then(r => {
     state.periods = normPeriods(r.periods); state.periodsLoaded = true;
-    if(r.template && state.me){ state.me.template = r.template; try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify({ auth:state.auth, me:state.me })); }catch(e){} }
+    if(r.template && state.me){ state.me.template = r.template; state.me.template_source = r.template_source || state.me.template_source; try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify({ auth:state.auth, me:state.me })); }catch(e){} }
     renderMenuBadges(); if(state.mode === 'new') renderQuarters(); if(state.mode === 'rating' || state.mode === 'view') renderPeriodChips();
     return state.periods;
   }).finally(() => { periodsPromise = null; });
@@ -1997,12 +1997,20 @@ function buildProjectPdfHtml(m){
 }
 /* menu wording follows the employee's template */
 function applyMenuTemplate(){
+  showTemplateInfo();
   const proj = tplKey(state.me && state.me.template) === 'project';
   const t = document.getElementById('newTitle'), p = document.getElementById('newText'), rc = document.getElementById('rateCard');
   if(t) t.textContent = proj ? 'Project Appraisal' : 'New Appraisal';
   if(p) p.textContent = proj ? 'Projects template: choose the quarter, fill the 7 KPI sections and tables, rate yourself on each KPI and Role Attribute, and submit — all in one go. You can revise it until your manager rates it.'
                              : 'Start a new quarter: choose the quarter and add your Targets (KRA), the tasks under each target and role attributes.';
   if(rc){ const waiting = (state.periods || []).some(x => x.phase === 'rating'); rc.classList.toggle('hidden', proj && !waiting); }
+}
+/* show which form the server chose (top bar) */
+function showTemplateInfo(){
+  const el = document.getElementById('whoTpl'); if(!el || !state.me) return;
+  const t = state.me.template;
+  if(t === undefined){ el.innerHTML = ' · <span style="color:var(--red)">Form: General — server did not send a template (update the Zoho function to Version 24, then sign out and in)</span>'; return; }
+  el.innerHTML = ' · Form: <b>' + esc(t) + '</b>' + (state.me.template_source ? ' <span style="color:var(--muted);font-size:11px">(' + esc(state.me.template_source) + ')</span>' : '');
 }
 
 /* ======================= STATUS / DRAFT ======================= */
