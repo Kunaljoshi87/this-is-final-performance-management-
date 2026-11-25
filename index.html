@@ -1339,7 +1339,7 @@ function renderBanner(){
     return;
   }
   btn.classList.toggle('hidden', !editable);
-  btn.textContent = p === 'targets' ? (isProject() ? 'Submit Appraisal' : 'Submit Targets') : 'Submit Self Rating';
+  btn.textContent = p === 'targets' ? (isProject() ? 'Submit Form' : 'Submit Targets') : 'Submit Self Rating';
   btn.disabled = state.busy;
   document.getElementById('pdfBtn').disabled = !(p === 'targets' || p === 'rating' || p === 'done');
   if(!(p === 'targets' || p === 'rating' || p === 'done') || (state.mode === 'new' && p !== 'targets')){ el.innerHTML = ''; return; }
@@ -1349,8 +1349,8 @@ function renderBanner(){
     done:['DONE','Appraisal submitted','Status: ' + (state.reviewStatus || 'Submitted') + '. Your entries are locked — download the PDF anytime.','done']
   }[p];
   if(isProject()){
-    if(p === 'targets') info = ['FORM', state.revisionMode ? 'Revise your Project appraisal (' + state.quarter + '-R' + ((state.revisionBase || 0) + 1) + ')' : 'Project Appraisal Form', 'Fill every KPI section and table, give your self rating for each KPI, then click Submit Appraisal. Role Attributes are rated by your manager. Weightage is fixed: KPI 80% · Role Attributes 20%.', ''];
-    else if(p === 'rating') info = ['STEP 2', 'Self Rating', 'Your form is saved — give your self rating for every KPI, then submit.', 'rating'];
+    if(p === 'targets') info = ['STEP 1', state.revisionMode ? 'Revise your Project form (' + state.quarter + '-R' + ((state.revisionBase || 0) + 1) + ')' : 'Project Appraisal Form', 'Fill every KPI section and table, then click Submit Form. Self rating is given later in Self Rating. Weightage is fixed: KPI 80% · Role Attributes 20%.', ''];
+    else if(p === 'rating') info = ['STEP 2', 'Self Rating', 'Your form is loaded. Give your self rating (and achievement) for every KPI, add training needs, then submit.', 'rating'];
   }
   el.innerHTML = `<div class="step-banner ${info[3]}"><span class="num">${info[0]}</span><div><div class="t">${info[1]}</div><div class="d">${info[2]}</div></div>
     <div class="steps"><span class="${p==='targets'?'on':''}">1 · Targets</span><span class="${p==='rating'?'on':''}">2 · Self Rating</span><span class="${p==='done'?'on':''}">✓ Done</span></div></div>`;
@@ -1422,20 +1422,19 @@ function renderPage(){
       : `<div class="section notice"><h3>Targets for ${q} are already saved</h3>
           <p>${state.phase === 'rating' ? 'They are waiting for your self rating.' : 'This appraisal is already complete.'} Choose another quarter for a new appraisal, or go to Self Rating.</p>
           <button onclick="chooseView('${state.quarter}','${state.year}')">View it</button> &nbsp; <button class="solid" onclick="showMenu();chooseRating()">Go to Self Rating</button>
-          ${state.phase==='rating' ? `<button class="solid" onclick="startAppraisalRevision()">Create Revision — ${state.quarter}-R${state.revisionNumber+1}</button>` : ''}
-          ${isProject() && state.phase === 'done' && !state.mgrDone && !state.finalDone ? `<button class="solid" onclick="startProjectRevision()">Revise this appraisal</button>` : ''}</div>`;
+          ${state.phase==='rating' ? `<button class="solid" onclick="${isProject() ? 'startProjectRevision()' : 'startAppraisalRevision()'}">Create Revision — ${state.quarter}-R${state.revisionNumber+1}</button>` : ''}</div>`;
     return;
   }
   if(state.mode === 'view'){
     if(state.phase === 'targets'){ body.innerHTML = `<div class="section notice"><h3>No appraisal for ${state.quarter} ${state.year}</h3><p>Pick a quarter above.</p></div>`; return; }
     const isDone = state.phase === 'done';
     body.innerHTML = `<div class="lock-note">🔒 <div><b>${state.revisionLabel || state.quarter} ${state.year} — view only.</b> ${isDone ? 'Self rating is submitted. Nothing can be changed.' : 'Targets are submitted; self rating is still pending (do it from <b>Self Rating</b>).'}</div></div>` + (isProject()
-      ? projectHtml({ edit:false, self:'ro', mgr:pafShowMgr() ? 'ro' : 'hide', own:true }) + (isDone && !state.mgrDone && !state.finalDone ? `<div class="section notice"><h3>Need to change something?</h3><p>You can revise this appraisal until your manager gives the rating.</p><button class="solid" onclick="startProjectRevision()">Revise this appraisal</button></div>` : '')
+      ? projectHtml({ edit:false, self:isDone ? 'ro' : 'hide', mgr:pafShowMgr() ? 'ro' : 'hide', own:true }) + (!isDone ? `<div class="section notice"><h3>Need to change something?</h3><p>You can revise this form until you submit your self rating.</p><button class="solid" onclick="startProjectRevision()">Revise this form</button></div>` : '')
       : ratingHtml(true));
     placeRoleAttributesLast(); renderScores(); renderOverall();
     return;
   }
-  body.innerHTML = isProject() ? projectHtml({ edit:state.phase === 'targets', self:state.phase === 'done' ? 'ro' : 'edit', mgr:pafShowMgr() ? 'ro' : 'hide', own:true })
+  body.innerHTML = isProject() ? projectHtml({ edit:state.phase === 'targets', self:state.phase === 'targets' ? 'hide' : state.phase === 'done' ? 'ro' : 'edit', mgr:pafShowMgr() ? 'ro' : 'hide', own:true })
     : state.phase === 'targets' ? targetsHtml()
     : (state.phase === 'done' ? `<div class="lock-note">🔒 <div><b>${state.revisionLabel || state.quarter} ${state.year} is submitted and locked.</b> Nothing can be changed — you can only view it and download the PDF.</div></div>` : '') + ratingHtml(state.phase === 'done');
   placeRoleAttributesLast(); renderScores(); renderOverall();
@@ -1808,10 +1807,11 @@ function pafTableHtml(tb, edit){
         : (esc(row[ci] || '') || '<span style="color:#9AA6B5">—</span>')}</td>`).join('')}${edit && !tb.fixed ? `<td><button class="small danger" onclick="delPafRow('${tb.id}',${r})">✕</button></td>` : ''}</tr>`).join('')}
   </tbody></table></div>${edit && !tb.fixed ? `<button class="small" style="margin-top:6px" onclick="addPafRow('${tb.id}')">+ Add row</button>` : ''}</div>`;
 }
-/* o = { edit: answers editable, self: 'edit'|'ro', mgr: 'edit'|'ro'|'hide', own: show training + overall } */
+/* o = { edit: answers editable, self: 'edit'|'ro'|'hide', mgr: 'edit'|'ro'|'hide', own: show training + overall }
+   Step 1 (New Appraisal): self 'hide' — only the form.  Step 2 (Self Rating): self 'edit'. */
 function projectHtml(o){
   const sel = (mode, v, on) => mode === 'edit' ? ratingSelect(v, on) : `<div class="ro"><b>${esc(v) || '—'}</b></div>`;
-  const showMgr = o.mgr !== 'hide';
+  const showMgr = o.mgr !== 'hide', showSelf = o.self !== 'hide';
   const kpiHtml = PROJECT_KPIS.map((d, i) => {
     const k = kraOfKpi(d.id), g = goalOfKpi(d.id);
     if(!k || !g) return '';
@@ -1819,11 +1819,12 @@ function projectHtml(o){
       <div class="section-head"><h2>${i+1}. ${esc(d.name)}</h2><span class="weight-badge">Weightage ${d.bench}%</span></div>
       <div class="paf-grid">${d.items.map(it => it.t === 'table' ? `<div class="paf-full">${pafTableHtml(it, o.edit)}</div>`
         : `<div><label>${esc(it.label)}</label>${o.edit ? `<textarea maxlength="2000" rows="2" onchange="setPafA('${it.id}',this.value)">${esc(pafAns(it.id))}</textarea>` : `<div class="ro">${esc(pafAns(it.id)) || '—'}</div>`}</div>`).join('')}</div>
-      <div class="paf-rate">
+      ${showSelf ? `<div class="paf-rate">
         <div><label>Self rating (1–5) ${o.self === 'edit' ? '<span class="req">*</span>' : ''}</label>${sel(o.self, g.selfRating, `setGoal('${k.id}','${g.id}','selfRating',this.value)`)}</div>
         ${showMgr ? `<div><label style="color:#6D28D9;">Appraiser rating (1–5) ${o.mgr === 'edit' ? '<span class="req">*</span>' : ''}</label>${sel(o.mgr, g.apprRating, `setGoal('${k.id}','${g.id}','apprRating',this.value)`)}</div>` : ''}
         <div><label>Score (out of ${d.bench})</label><div class="ro" id="pafKs_${d.id}">—</div></div>
-      </div>
+        <div class="paf-full"><label>Achievement / comment (employee)</label>${o.self === 'edit' ? `<textarea maxlength="2000" rows="2" placeholder="What was achieved in this KPI this quarter" onchange="setGoal('${k.id}','${g.id}','achievement',this.value)">${esc(g.achievement)}</textarea>` : `<div class="ro">${esc(g.achievement) || '—'}</div>`}</div>
+      </div>` : ''}
     </div>`; }).join('');
   const roleHtml = `<div class="section" id="pafRole">
     <div class="section-head"><h2>Role Attributes (${fmt(ROLE_SHARE)}%)</h2><span class="weight-badge">${state.attributes.length} attribute(s)</span></div>
@@ -1832,20 +1833,21 @@ function projectHtml(o){
     ${state.attributes.map((a, i) => `<tr><td>${i+1}</td><td><b>${esc(a.name)}</b></td><td>${fmt(a.weightage)}%</td>
       <td>${showMgr ? sel(o.mgr, a.apprRating, `setAttr('${a.id}','apprRating',this.value)`) : '<div class="ro" style="color:var(--muted)">Waiting for manager</div>'}</td></tr>`).join('')}
     </tbody></table></div></div>`;
-  const trainHtml = o.own ? `<div class="section">
-    <div class="section-head"><h2>Training Need Identification</h2>${o.edit ? '<button class="small" onclick="addTrainingRow()">+ Add Row</button>' : ''}</div>
+  const tEdit = o.self === 'edit';
+  const trainHtml = o.own && showSelf ? `<div class="section">
+    <div class="section-head"><h2>Training Need Identification</h2>${tEdit ? '<button class="small" onclick="addTrainingRow()">+ Add Row</button>' : ''}</div>
     <div class="note">Appraisee to identify the training needs to improve job performance in consultation with Appraiser</div>
-    <table class="train-table"><thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled (Internal faculty / Self-study / Outside training)</th>${o.edit ? '<th style="width:50px"></th>' : ''}</tr></thead>
-      <tbody>${state.training.length ? state.training.map(t => !o.edit || t.saved ? `<tr><td>${esc(t.need)}</td><td>${esc(t.benefit)}</td><td>${esc(t.fulfilled)}</td>${o.edit ? '<td></td>' : ''}</tr>` : `
+    <table class="train-table"><thead><tr><th>Training Need</th><th>Expected Benefit</th><th>How Fulfilled (Internal faculty / Self-study / Outside training)</th>${tEdit ? '<th style="width:50px"></th>' : ''}</tr></thead>
+      <tbody>${state.training.length ? state.training.map(t => !tEdit || t.saved ? `<tr><td>${esc(t.need)}</td><td>${esc(t.benefit)}</td><td>${esc(t.fulfilled)}</td>${tEdit ? '<td></td>' : ''}</tr>` : `
         <tr><td><input value="${esc(t.need)}" maxlength="300" onchange="setTrain('${t.id}','need',this.value)"></td>
             <td><input value="${esc(t.benefit)}" maxlength="300" onchange="setTrain('${t.id}','benefit',this.value)"></td>
             <td><input value="${esc(t.fulfilled)}" maxlength="300" onchange="setTrain('${t.id}','fulfilled',this.value)"></td>
             <td><button class="small danger" onclick="removeTrainingRow('${t.id}')">✕</button></td></tr>`).join('')
-        : `<tr><td colspan="4" class="empty">${o.edit ? 'No training needs added yet.' : 'None.'}</td></tr>`}</tbody></table></div>
+        : `<tr><td colspan="4" class="empty">${tEdit ? 'No training needs added yet.' : 'None.'}</td></tr>`}</tbody></table></div>
   <div class="section"><div class="section-head"><h2>Overall Performance Rating (self)</h2></div><div class="overall-options" id="overallOptions"></div></div>` : '';
   return `<div class="section paf-head"><div class="section-head"><h2>Performance Appraisal Form — Projects</h2><span class="weight-badge">KPI ${fmt(KRA_SHARE)}% · Role ${fmt(ROLE_SHARE)}%</span></div>
       <div class="note" style="margin:0">Instructions: 1. Any false information will be considered as discredit to the employee during next appraisal cycle. 2. Please give descriptive explanation where figures are not available.</div></div>
-    ${kpiHtml}${roleHtml}<div id="pafSummary">${pafSummaryHtml(showMgr)}</div>${trainHtml}`;
+    ${kpiHtml}${roleHtml}${showSelf ? `<div id="pafSummary">${pafSummaryHtml(showMgr)}</div>` : `<div class="section"><div class="note" style="margin:0">Self rating is not given now. After the quarter, open <b>Self Rating</b> — this form opens again with everything you filled, and you rate each KPI there.</div></div>`}${trainHtml}`;
 }
 function pafSummaryHtml(showMgr){
   if(showMgr === undefined) showMgr = pafShowMgr();
@@ -1868,68 +1870,50 @@ function refreshPafSummary(){
     el.textContent = (s === null ? '—' : fmt(s)) + ' self' + (pafShowMgr() ? ' · ' + (m === null ? '—' : fmt(m)) + ' appraiser' : ''); });
 }
 function validateProject(){
-  for(let i = 0; i < PROJECT_KPIS.length; i++){ const g = goalOfKpi(PROJECT_KPIS[i].id); if(!g || !g.selfRating) return `KPI ${i+1} (${PROJECT_KPIS[i].name}): select your self rating.`; }
   for(const d of PROJECT_KPIS) if(JSON.stringify(pafKpiData(d)).length > PAF_MAX_JSON) return `KPI "${d.name}": the answers are too long — please shorten them.`;
   return '';
 }
-/* One step: save the KPI form (as targets) and the self ratings together */
+/* budget table rows → Project_Budget form (one record per project) */
+function pafBudgetRows(){
+  const tb = PROJECT_KPIS[1].items.find(x => x.id === 't2');
+  return pafRows(tb).filter(r => r.some(c => String(c || '').trim())).map(r => ({ project:String(r[0] || '').trim(), budget:String(r[1] || '').trim(), spent:String(r[2] || '').trim(), balance:String(r[3] || '').trim(), advance:String(r[4] || '').trim() }));
+}
+/* STEP 1 (New Appraisal): save the KPI form only. Self rating is given later in Self Rating. */
 async function submitProject(){
   if(state.busy) return;
   const problem = validateProject(); if(problem){ setStatus('❌ ' + problem, false); return; }
-  const T = pafTotals();
-  const ok = await confirmBox((state.revisionMode ? 'Submit revised appraisal ' : 'Submit appraisal ') + state.quarter + ' ' + state.year + '?',
-    `KPI self score: <b>${fmt(T.ks.t)} / 100</b> → <b>${fmt(T.selfFinal)} / ${fmt(KRA_SHARE)}</b><br>Role Attributes (${fmt(ROLE_SHARE)}%) are rated by your manager.<br><br>
-     After submitting, it goes to your manager. You can revise it until the manager gives the rating.`, 'Yes, submit');
+  const ok = await confirmBox((state.revisionMode ? 'Submit revised form ' : 'Submit form ') + state.quarter + ' ' + state.year + '?',
+    `Your 7 KPI sections and tables will be saved and locked.<br><br>After the quarter, open <b>Self Rating</b> — this form opens again with everything you filled, and you give your self rating there.`, 'Yes, submit form');
   if(!ok) return;
   const q = state.quarter, y = state.year;
-  const selfBy = {}; PROJECT_KPIS.forEach(d => { const g = goalOfKpi(d.id); selfBy[d.name.toLowerCase()] = g ? g.selfRating : ''; });
-  const roleBy = {}; state.attributes.forEach(a => { roleBy[a.name.toLowerCase()] = a.rating; });
-  lock(true); busyOverlay('Saving your appraisal…');
-  setStatus('Saving your appraisal… please do not close this page.', null);
-  let errMsg = '', step1 = false, saved = false;
+  lock(true); busyOverlay('Saving your form…');
+  setStatus('Saving your form… please do not close this page.', null);
+  let errMsg = '', saved = false, res = null;
   try{
-    await call('save_targets', { quarter:q, year:y, template:'project', revision_mode:!!state.revisionMode, revision_from:state.revisionBase,
+    res = await call('save_targets', { quarter:q, year:y, template:'project', revision_mode:!!state.revisionMode, revision_from:state.revisionBase,
       kras:PROJECT_KPIS.map(d => ({ name:d.name, description:'', weightage:r2(d.bench * PAF_KPI_SHARE),
         goals:[{ name:d.name, html:'[PAF]' + JSON.stringify(pafKpiData(d)) }] })),
-      attributes:state.attributes.map(a => ({ name:a.name })) });
-    step1 = true;
+      attributes:state.attributes.map(a => ({ name:a.name })), budget:pafBudgetRows() });
+    saved = true;
   }catch(err){
     errMsg = err.message;
-    if(err.network){ try{ const chk = await call('load', { quarter:q, year:y }); if(chk.phase && chk.phase !== 'targets' && !state.revisionMode) step1 = true; }catch(e){} }
-  }
-  if(step1){
-    try{
-      busyOverlay('Saving your ratings…');
-      const r = await call('load', { quarter:q, year:y });
-      const goals = (r.kras || []).map(k => { const g = (k.goals || [])[0] || {}; return { id:String(g.id), achievement:'', self_rating:String(selfBy[String(k.name || '').trim().toLowerCase()] || '') }; });
-      await call('save_rating', { quarter:q, year:y, goals, attributes:[],
-        training:state.training.filter(t => !t.saved && t.need.trim()).map(t => ({ need:t.need.trim(), benefit:t.benefit || '', fulfilled:t.fulfilled || '' })),
-        facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'', overall:state.overallRating || '' });
-      saved = true;
-    }catch(err){
-      errMsg = err.message;
-      try{ const chk = await call('load', { quarter:q, year:y }); if(chk.phase === 'done') saved = true; }catch(e){}
-    }
+    if(err.network && !state.revisionMode){ try{ const chk = await call('load', { quarter:q, year:y }); if(chk.phase && chk.phase !== 'targets') saved = true; }catch(e){} }
   }
   busyOverlay(null); lock(false);
   if(saved){
     clearDraft(); state.revisionMode = false; state.justSaved = true;
     refreshPeriods(true);
-    state.mode = 'view'; show('quarterRow', false); show('yearBox', false); show('periodChips', true);
-    await loadPeriod(); renderPeriodChips();
-    setStatus('✅ Appraisal submitted for ' + q + ' ' + y + '. It now goes to your manager.', true);
-  } else if(step1){
-    refreshPeriods(true);
-    setStatus('❌ The form is saved but the ratings were not: ' + errMsg + ' Open Self Rating and submit the ratings again.', false);
+    await loadPeriod();
+    setStatus('✅ Form submitted for ' + q + ' ' + y + '. After the quarter, open Self Rating to rate it.' + (res && res.budget_warning ? ' ⚠ ' + res.budget_warning : ''), !(res && res.budget_warning));
   } else {
     setStatus('❌ ' + errMsg + ' Your entries are kept — please try Submit again.', false);
   }
 }
-/* Revise a submitted Project appraisal (allowed until the manager rates it) */
+/* Revise a submitted Project form (same as General: allowed until the self rating is submitted) */
 async function startProjectRevision(){
-  if(state.busy || state.mgrDone || state.finalDone || state.phase !== 'done') return;
+  if(state.busy || state.phase !== 'rating') return;
   const ok = await confirmBox('Revise ' + state.quarter + ' ' + state.year + '?',
-    'Your answers and ratings open again for editing. When you submit, a new version (' + state.quarter + '-R' + (state.revisionNumber + 1) + ') is saved — the earlier version stays in history.', 'Revise');
+    'Your answers open again for editing. When you submit, a new version (' + state.quarter + '-R' + (state.revisionNumber + 1) + ') is saved — the earlier version stays in history.', 'Revise');
   if(!ok) return;
   state.revisionBase = state.revisionNumber; state.revisionMode = true; state.justSaved = false;
   state.mode = 'new'; state.phase = 'targets';
@@ -1937,7 +1921,7 @@ async function startProjectRevision(){
   state.kras.forEach(k => { k.recId = ''; k.goals.forEach(g => { g.recId = ''; }); });
   state.attributes.forEach(a => { a.recId = ''; a.apprRating = ''; });
   renderPage();
-  setStatus('Revising ' + state.quarter + '-R' + (state.revisionBase + 1) + ' — change what you need, then click Submit Appraisal.', null);
+  setStatus('Revising ' + state.quarter + '-R' + (state.revisionBase + 1) + ' — change what you need, then click Submit Form.', null);
 }
 
 /* ---------- Project Team PDF (landscape, like "Projects PAF") ---------- */
@@ -1998,9 +1982,9 @@ function applyMenuTemplate(){
   const proj = tplKey(state.me && state.me.template) === 'project';
   const t = document.getElementById('newTitle'), p = document.getElementById('newText'), rc = document.getElementById('rateCard');
   if(t) t.textContent = proj ? 'Project Appraisal' : 'New Appraisal';
-  if(p) p.textContent = proj ? 'Projects template: choose the quarter, fill the 7 KPI sections and tables, give your self rating on each KPI and submit. Role Attributes are rated by your manager. You can revise it until your manager rates it.'
+  if(p) p.textContent = proj ? 'Projects template: choose the quarter, fill the 7 KPI sections and tables and submit. After the quarter, rate yourself in Self Rating.'
                              : 'Start a new quarter: choose the quarter and add your Targets (KRA), the tasks under each target and role attributes.';
-  if(rc){ const waiting = (state.periods || []).some(x => x.phase === 'rating'); rc.classList.toggle('hidden', proj && !waiting); }
+  if(rc) rc.classList.remove('hidden');
 }
 /* show which form the server chose (top bar) */
 function showTemplateInfo(){
