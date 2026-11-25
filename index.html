@@ -1108,7 +1108,7 @@ async function loadPeriod(){
     if(!isOwnMode()) payload.target = state.target;
     const r = await call(act, payload);
     if(token !== state.loadToken) return;
-    if(isOwnMode()){ if(r.employee){ const keep = { is_manager:state.me.is_manager, is_admin:state.me.is_admin, is_hod:state.me.is_hod }; state.me = Object.assign(state.me || {}, r.employee); if(r.employee.is_manager === undefined) Object.assign(state.me, keep); } }
+    if(isOwnMode()){ if(r.employee){ const keep = { is_manager:state.me.is_manager, is_admin:state.me.is_admin, is_hod:state.me.is_hod }; state.me = Object.assign(state.me || {}, r.employee); Object.assign(state.me, keep); } }
     else { state.subject = r.employee || {}; fillProfile(state.subject); }
     state.mgrDone = !!r.mgr_done; state.finalDone = !!r.final_done; state.hodDone = !!r.hod_done; state.serverVersion = r.version || '';
     state.phase = r.phase; state.revisionNumber = Number(r.revision_number || 0); state.revisionLabel = r.revision_label || (state.quarter + (state.revisionNumber > 0 ? '-R' + state.revisionNumber : '')); state.revisionMode = false;
@@ -1812,6 +1812,7 @@ function pafTableHtml(tb, edit){
 function projectHtml(o){
   const sel = (mode, v, on) => mode === 'edit' ? ratingSelect(v, on) : `<div class="ro"><b>${esc(v) || '—'}</b></div>`;
   const showMgr = o.mgr !== 'hide', showSelf = o.self !== 'hide';
+  const showScores = !o.own;          // KPI scores + KPI Score table: manager & Super Admin only
   const kpiHtml = PROJECT_KPIS.map((d, i) => {
     const k = kraOfKpi(d.id), g = goalOfKpi(d.id);
     if(!k || !g) return '';
@@ -1822,7 +1823,7 @@ function projectHtml(o){
       ${showSelf ? `<div class="paf-rate">
         <div><label>Self rating (1–5) ${o.self === 'edit' ? '<span class="req">*</span>' : ''}</label>${sel(o.self, g.selfRating, `setGoal('${k.id}','${g.id}','selfRating',this.value)`)}</div>
         ${showMgr ? `<div><label style="color:#6D28D9;">Appraiser rating (1–5) ${o.mgr === 'edit' ? '<span class="req">*</span>' : ''}</label>${sel(o.mgr, g.apprRating, `setGoal('${k.id}','${g.id}','apprRating',this.value)`)}</div>` : ''}
-        <div><label>Score (out of ${d.bench})</label><div class="ro" id="pafKs_${d.id}">—</div></div>
+        ${showScores ? `<div><label>Score (out of ${d.bench})</label><div class="ro" id="pafKs_${d.id}">—</div></div>` : ''}
         <div class="paf-full"><label>Achievement / comment (employee)</label>${o.self === 'edit' ? `<textarea maxlength="2000" rows="2" placeholder="What was achieved in this KPI this quarter" onchange="setGoal('${k.id}','${g.id}','achievement',this.value)">${esc(g.achievement)}</textarea>` : `<div class="ro">${esc(g.achievement) || '—'}</div>`}</div>
       </div>` : ''}
     </div>`; }).join('');
@@ -1847,7 +1848,7 @@ function projectHtml(o){
   <div class="section"><div class="section-head"><h2>Overall Performance Rating (self)</h2></div><div class="overall-options" id="overallOptions"></div></div>` : '';
   return `<div class="section paf-head"><div class="section-head"><h2>Performance Appraisal Form — Projects</h2><span class="weight-badge">KPI ${fmt(KRA_SHARE)}% · Role ${fmt(ROLE_SHARE)}%</span></div>
       <div class="note" style="margin:0">Instructions: 1. Any false information will be considered as discredit to the employee during next appraisal cycle. 2. Please give descriptive explanation where figures are not available.</div></div>
-    ${kpiHtml}${roleHtml}${showSelf ? `<div id="pafSummary">${pafSummaryHtml(showMgr)}</div>` : `<div class="section"><div class="note" style="margin:0">Self rating is not given now. After the quarter, open <b>Self Rating</b> — this form opens again with everything you filled, and you rate each KPI there.</div></div>`}${trainHtml}`;
+    ${kpiHtml}${roleHtml}${showSelf ? (showScores ? `<div id="pafSummary">${pafSummaryHtml(showMgr)}</div>` : '') : `<div class="section"><div class="note" style="margin:0">Self rating is not given now. After the quarter, open <b>Self Rating</b> — this form opens again with everything you filled, and you rate each KPI there.</div></div>`}${trainHtml}`;
 }
 function pafSummaryHtml(showMgr){
   if(showMgr === undefined) showMgr = pafShowMgr();
