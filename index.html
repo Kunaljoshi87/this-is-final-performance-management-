@@ -722,7 +722,7 @@ async function downloadAppraisalPdf(model, onStatus){
   const say = onStatus || function(){};
   const land = model.template === 'project';
   const PW = land ? 1047 : 718;
-  const html = land ? buildProjectPdfHtml(model) : buildAppraisalPdfHtml(model);
+  const html = land ? buildProjectPdfHtml(model) : model.template === 'manager' ? buildLeaderPdfHtml(model) : buildAppraisalPdfHtml(model);
   if(typeof html2pdf === 'undefined'){
     say('PDF library not loaded — opening print view (choose "Save as PDF").', null);
     if(!pdfPrintFallback(html)) say('Pop-up blocked. Allow pop-ups to print / save PDF.', false);
@@ -1140,7 +1140,11 @@ async function loadPeriod(){
                   eligible:rv.eligible || '', empVar:rv.emp_var || '', compVar:rv.comp_var || '', payout:rv.payout || '' };
     state.final.payoutEdited = false;
     if(state.mode === 'admin' && !r.final_done && state.final.payout === '' && r.mgr_done){ const c0 = hodCalc(); if(varSetupOk()) state.final.payout = String(c0.payout); }
-    if(isProject()){
+    if(isLeader()){
+      if(state.phase === 'targets'){ if(!restoreDraft() || !state.ldp) initLeader(); }
+      else readLeaderFromServer();
+    }
+    else if(isProject()){
       if(state.phase === 'targets'){ if(!restoreDraft() || !state.kras.length || !state.kras.every(k => k.kpi) || !state.paf) initProject(); }
       else { readProjectFromServer(); if(state.phase === 'rating' && state.mode !== 'view') restoreDraft(); }
     }
@@ -1164,7 +1168,7 @@ async function loadPeriod(){
   }
 }
 function resetData(){
-  state.paf = { a:{}, t:{} };
+  state.paf = { a:{}, t:{} }; state.ldp = { a:{} };
   state.hodDone = false; state.hod = { company:'', ips:'', weighted:'', remark:'', by:'', yv:'', ep:'', cp:'', eligible:'', empVar:'', compVar:'', payout:'' };
   state.mgrDone = false; state.finalDone = false; state.managerRemark = ''; state.managerScore = ''; state.selfScoreSaved = '';
   state.final = { rating:'', payout:'', remark:'', by:'' };
@@ -1183,7 +1187,7 @@ function splitEven(total, count){
 }
 function sectionShares(){ const r = state.attributes.length > 0; return { kra: r ? KRA_SHARE : 100, role: r ? ROLE_SHARE : 0 }; }
 function applyWeights(){                     // Step 1 only; later the saved weights are used
-  if(state.phase !== 'targets' || isProject()) return;   // Project Team: fixed KPI weightage
+  if(state.phase !== 'targets' || isProject() || isLeader()) return;   // Project Team: fixed KPI weightage
   const sh = sectionShares(), kw = splitEven(sh.kra, state.kras.length);
   state.kras.forEach((k, i) => { k.weightage = kw[i]; const gw = splitEven(k.weightage, k.goals.length); k.goals.forEach((g, j) => g.weightage = gw[j]); });
   const aw = splitEven(sh.role, state.attributes.length);
@@ -1327,7 +1331,7 @@ function renderBanner(){
     btn.textContent = canMgr ? 'Submit Manager Rating' : canHod ? 'Submit HOD Review' : 'Approve & Finalize';
     btn.disabled = state.busy;
     const who = (state.subject && state.subject.name) || state.target;
-    const stTxt = state.finalDone ? 'FINAL — approved' + (state.final.rating ? ' · ' + state.final.rating : '') : state.mgrDone ? 'Manager rating done — waiting for Super Admin' : p === 'done' ? 'Self rating done — waiting for manager rating' : 'Employee has not submitted self rating yet';
+    const stTxt = state.finalDone ? 'FINAL — approved' + (state.final.rating ? ' · ' + state.final.rating : '') : state.mgrDone ? (isLeader() ? 'Plan submitted — waiting for HOD review' : 'Manager rating done — waiting for Super Admin') : p === 'done' ? 'Self rating done — waiting for manager rating' : 'Employee has not submitted self rating yet';
     el.innerHTML = `<div class="step-banner ${state.finalDone ? 'done' : 'rating'}"><span class="num">${state.mode === 'team' ? 'MANAGER' : state.mode === 'hod' ? 'HOD' : 'SUPER ADMIN'}</span><div><div class="t">${esc(who)} — ${state.revisionLabel || state.quarter} ${state.year}</div><div class="d">${esc(stTxt)}</div></div>
       <div class="steps"><span class="on">1 · Self</span><span class="${state.mgrDone?'on':''}">2 · Manager</span><span class="${state.finalDone?'on':''}">3 · Super Admin</span></div></div>`;
     return;
@@ -1339,7 +1343,7 @@ function renderBanner(){
     return;
   }
   btn.classList.toggle('hidden', !editable);
-  btn.textContent = p === 'targets' ? (isProject() ? 'Submit Form' : 'Submit Targets') : 'Submit Self Rating';
+  btn.textContent = p === 'targets' ? (isLeader() ? 'Submit Plan' : isProject() ? 'Submit Form' : 'Submit Targets') : 'Submit Self Rating';
   btn.disabled = state.busy;
   document.getElementById('pdfBtn').disabled = !(p === 'targets' || p === 'rating' || p === 'done');
   if(!(p === 'targets' || p === 'rating' || p === 'done') || (state.mode === 'new' && p !== 'targets')){ el.innerHTML = ''; return; }
@@ -1348,7 +1352,11 @@ function renderBanner(){
     rating:['STEP 2','Self Rating','Your targets are saved and locked. Fill the achievement and your self rating for every task, then submit.','rating'],
     done:['DONE','Appraisal submitted','Status: ' + (state.reviewStatus || 'Submitted') + '. Your entries are locked — download the PDF anytime.','done']
   }[p];
-  if(isProject()){
+  if(isLeader()){
+    if(p === 'targets') info = ['PLAN', state.revisionMode ? 'Revise your Development Plan (' + state.quarter + '-R' + ((state.revisionBase || 0) + 1) + ')' : 'Personal Leadership Development Plan', 'Answer each section in your own words, then click Submit Plan. There is no rating — the HOD reviews your plan.', ''];
+    else info = ['DONE', 'Plan submitted', 'Status: ' + (state.final.rating ? 'Reviewed by the HOD' : 'Waiting for the HOD review') + '.', 'done'];
+  }
+  else if(isProject()){
     if(p === 'targets') info = ['STEP 1', state.revisionMode ? 'Revise your Project form (' + state.quarter + '-R' + ((state.revisionBase || 0) + 1) + ')' : 'Project Appraisal Form', 'Fill every KPI section and table, then click Submit Form. Self rating is given later in Self Rating. Weightage is fixed: KPI 80% · Role Attributes 20%.', ''];
     else if(p === 'rating') info = ['STEP 2', 'Self Rating', 'Your form is loaded. Give your self rating (and achievement) for every KPI, add training needs, then submit.', 'rating'];
   }
@@ -1377,7 +1385,7 @@ function placeRoleAttributesLast(){
   if(variable && kraSection) (role || missing || kraSection).after(variable);
   const managerReview=[...body.querySelectorAll('.section')].find(s=>s.querySelector('.section-head h2')?.textContent.trim()==='Manager Review');
   if(managerReview && variable) variable.after(managerReview);
-  if(!document.getElementById('managerQuarterSummary')) {
+  if(!document.getElementById('managerQuarterSummary') && !isLeader()) {
     const wrap=document.createElement('div');
     wrap.innerHTML=managerQuarterTable();
     body.appendChild(wrap.firstElementChild);
@@ -1413,6 +1421,10 @@ function renderPage(){
       <button class="solid" onclick="showMenu();chooseNew()">Start New Appraisal</button></div>`;
     return;
   }
+  if(state.mode === 'new' && state.phase !== 'targets' && isLeader()){
+    body.innerHTML = `<div class="section notice"><h3>Your plan for ${state.revisionLabel || state.quarter} ${state.year} is already submitted</h3><p>${state.finalDone ? 'The HOD has reviewed it.' : 'It is waiting for the HOD review. You can still revise it.'}</p><button onclick="chooseView('${state.quarter}','${state.year}')">View it</button> ${state.finalDone ? '' : '&nbsp; <button class="solid" onclick="startLeaderRevision()">Revise this plan</button>'}</div>`;
+    return;
+  }
   if(state.mode === 'new' && state.phase !== 'targets'){
     const q = (state.revisionLabel || state.quarter) + ' ' + state.year;
     body.innerHTML = state.justSaved
@@ -1428,13 +1440,15 @@ function renderPage(){
   if(state.mode === 'view'){
     if(state.phase === 'targets'){ body.innerHTML = `<div class="section notice"><h3>No appraisal for ${state.quarter} ${state.year}</h3><p>Pick a quarter above.</p></div>`; return; }
     const isDone = state.phase === 'done';
-    body.innerHTML = `<div class="lock-note">🔒 <div><b>${state.revisionLabel || state.quarter} ${state.year} — view only.</b> ${isDone ? 'Self rating is submitted. Nothing can be changed.' : 'Targets are submitted; self rating is still pending (do it from <b>Self Rating</b>).'}</div></div>` + (isProject()
+    body.innerHTML = `<div class="lock-note">🔒 <div><b>${state.revisionLabel || state.quarter} ${state.year} — view only.</b> ${isDone ? 'Self rating is submitted. Nothing can be changed.' : 'Targets are submitted; self rating is still pending (do it from <b>Self Rating</b>).'}</div></div>` + (isLeader()
+      ? leaderHtml({ edit:false }) + (!state.finalDone ? `<div class="section notice"><h3>Need to change something?</h3><p>You can revise your plan until the HOD reviews it.</p><button class="solid" onclick="startLeaderRevision()">Revise this plan</button></div>` : '')
+      : isProject()
       ? projectHtml({ edit:false, self:isDone ? 'ro' : 'hide', mgr:pafShowMgr() ? 'ro' : 'hide', own:true }) + (!isDone ? `<div class="section notice"><h3>Need to change something?</h3><p>You can revise this form until you submit your self rating.</p><button class="solid" onclick="startProjectRevision()">Revise this form</button></div>` : '')
       : ratingHtml(true));
     placeRoleAttributesLast(); renderScores(); renderOverall();
     return;
   }
-  body.innerHTML = isProject() ? projectHtml({ edit:state.phase === 'targets', self:state.phase === 'targets' ? 'hide' : state.phase === 'done' ? 'ro' : 'edit', mgr:pafShowMgr() ? 'ro' : 'hide', own:true })
+  body.innerHTML = isLeader() ? leaderHtml({ edit:state.phase === 'targets' }) : isProject() ? projectHtml({ edit:state.phase === 'targets', self:state.phase === 'targets' ? 'hide' : state.phase === 'done' ? 'ro' : 'edit', mgr:pafShowMgr() ? 'ro' : 'hide', own:true })
     : state.phase === 'targets' ? targetsHtml()
     : (state.phase === 'done' ? `<div class="lock-note">🔒 <div><b>${state.revisionLabel || state.quarter} ${state.year} is submitted and locked.</b> Nothing can be changed — you can only view it and download the PDF.</div></div>` : '') + ratingHtml(state.phase === 'done');
   placeRoleAttributesLast(); renderScores(); renderOverall();
@@ -1672,7 +1686,7 @@ function renderOverall(){
    Project Team KPIs keep the same Creator records: every KPI = one KRA with one task (Goal);
    the answers and tables of a KPI are stored as JSON in that task's Description ("[PAF]{...}").
    KPI benchmark (25/20/15/10/10/10/10 = 100) counts 80%, Role Attributes 20%. */
-function tplKey(t){ const s = String(t || '').toLowerCase(); return s.includes('project') ? 'project' : s.includes('purchase') ? 'purchase' : 'general'; }
+function tplKey(t){ const s = String(t || '').toLowerCase(); return s.includes('project') ? 'project' : s.includes('purchase') ? 'purchase' : (s.includes('manager') || s.includes('leader')) ? 'manager' : 'general'; }
 function currentTemplate(){ const p = isOwnMode() ? state.me : state.subject; return tplKey(p && p.template); }
 function isProject(){ return currentTemplate() === 'project'; }
 const PROJECT_KPIS = [
@@ -1980,12 +1994,12 @@ function buildProjectPdfHtml(m){
 /* menu wording follows the employee's template */
 function applyMenuTemplate(){
   showTemplateInfo();
-  const proj = tplKey(state.me && state.me.template) === 'project';
+  const tk = tplKey(state.me && state.me.template), proj = tk === 'project', lead = tk === 'manager';
   const t = document.getElementById('newTitle'), p = document.getElementById('newText'), rc = document.getElementById('rateCard');
-  if(t) t.textContent = proj ? 'Project Appraisal' : 'New Appraisal';
-  if(p) p.textContent = proj ? 'Projects template: choose the quarter, fill the 7 KPI sections and tables and submit. After the quarter, rate yourself in Self Rating.'
+  if(t) t.textContent = lead ? 'Development Plan' : proj ? 'Project Appraisal' : 'New Appraisal';
+  if(p) p.textContent = lead ? 'Manager template: choose the quarter and fill your Personal Leadership Development Plan. It goes to the HOD for review — there is no rating.' : proj ? 'Projects template: choose the quarter, fill the 7 KPI sections and tables and submit. After the quarter, rate yourself in Self Rating.'
                              : 'Start a new quarter: choose the quarter and add your Targets (KRA), the tasks under each target and role attributes.';
-  if(rc) rc.classList.remove('hidden');
+  if(rc) rc.classList.toggle('hidden', lead);
 }
 /* show which form the server chose (top bar) */
 function showTemplateInfo(){
@@ -1993,6 +2007,199 @@ function showTemplateInfo(){
   const t = state.me.template;
   if(t === undefined){ el.innerHTML = ' · <span style="color:var(--red)">Form: General — server did not send a template (update the Zoho function to Version 24, then sign out and in)</span>'; return; }
   el.innerHTML = ' · Form: <b>' + esc(t) + '</b>' + (state.me.template_source ? ' <span style="color:var(--muted);font-size:11px">(' + esc(state.me.template_source) + ')</span>' : '');
+}
+
+/* ======================= MANAGER TEMPLATE — Personal Leadership Development Plan =======================
+   All Employees > Templates = "Manager". The manager fills this plan once per quarter (no ratings);
+   it goes straight to the Super Admin (HOD) for review: final overall rating + remark.
+   Stored like the other templates: one KRA "Personal Leadership Development Plan", one task (Goal) per section,
+   the answers of a section as JSON in that task's Description ("[LDP]{...}").
+   The questions below can be re-worded freely — keep the ids (q1a, q2a …) unchanged once plans are saved. */
+const LDP_TITLE = 'Personal Leadership Development Plan';
+const LDP_SECTIONS = [
+  { id:'s1', name:'Your guiding purpose', qs:[
+    { id:'q1a', label:'In your own words, what is the purpose that guides you, and how can you tell when you are living by it?', big:true } ]},
+  { id:'s2', name:'Intellectual development', qs:[
+    { id:'q2a', label:'How will you deepen your knowledge and thinking?' },
+    { id:'q2b', label:'How will you broaden your perspective and interests?' },
+    { id:'q2c', label:'Which subjects do you want to read about or study?' },
+    { id:'q2d', label:'Which places would you like to visit or work in to support your growth?' } ]},
+  { id:'s3', name:'Personal discipline and stress management', qs:[
+    { id:'q3a', label:'What is your plan for healthy eating?' },
+    { id:'q3b', label:'What is your exercise routine or plan?' },
+    { id:'q3c', label:'How much sleep do you need, and how often do you fall short of it?' },
+    { id:'q3d', label:'How do you manage stress? (for example meditation, walking, sport, yoga, reflection, talking to family or a mentor, music, other)' } ]},
+  { id:'s4', name:'Values, leadership principles and ethical boundaries', qs:[
+    { id:'q4a', label:'List your most important values in order of priority (mark with * the ones you will never compromise).' },
+    { id:'q4b', label:'Which principles guide the way you lead?' },
+    { id:'q4c', label:'Which ethical limits will you never cross in your professional life?' } ]},
+  { id:'s5', name:'Motivations and capabilities', qs:[
+    { id:'q5a', label:'Which external rewards motivate you (for example recognition, income, position)?' },
+    { id:'q5b', label:'What motivates you from within?' },
+    { id:'q5c', label:'Rank your motivations from most to least important.' },
+    { id:'q5d', label:'What are your strongest capabilities?' },
+    { id:'q5e', label:'Where do you most need to develop?' },
+    { id:'q5f', label:'Which of your strengths also motivate you the most?' },
+    { id:'q5g', label:'In which leadership situations can you make the best use of these strengths?' } ]},
+  { id:'s6', name:'Personal reflection', qs:[
+    { id:'q6a', label:'How do you make time to reflect on yourself and your work?' },
+    { id:'q6b', label:'What spiritual or reflective practices do you follow, if any?' },
+    { id:'q6c', label:'If you do not follow such practices, how do you think about the bigger questions of life?' },
+    { id:'q6d', label:'How will you strengthen these practices?' } ]},
+  { id:'s7', name:'Building relationships', qs:[
+    { id:'q7a', label:'Who are the most important people in your life?' },
+    { id:'q7b', label:'With whom can you be completely open?' },
+    { id:'q7c', label:'Who do you turn to in difficult times?' },
+    { id:'q7d', label:'Who are your mentors?' },
+    { id:'q7e', label:'Which friends do you go to for personal advice?' },
+    { id:'q7f', label:'Who do you go to for professional advice?' },
+    { id:'q7g', label:'How do you build and keep your professional network?' },
+    { id:'q7h', label:'Would you like to form a support group? How would you set it up?' } ]},
+  { id:'s8', name:'Leadership style', qs:[
+    { id:'q8a', label:'What is your preferred leadership style?' },
+    { id:'q8b', label:'Which style do you fall back on under pressure, and what are you doing to avoid it?' },
+    { id:'q8c', label:'How are you learning to use different styles?' },
+    { id:'q8d', label:'How are you learning to match your style to the situation and to your team’s abilities?' },
+    { id:'q8e', label:'How are you learning to use your authority more effectively?' } ]},
+  { id:'s9', name:'Leadership development', qs:[
+    { id:'q9a', label:'Which experiences do you need to grow as a leader?' } ]},
+  { id:'s10', name:'Integration', qs:[
+    { id:'q10a', label:'How will you balance personal, family, friends and community life with your work to become a better leader?' },
+    { id:'q10b', label:'What trade-offs are you willing to make to reach your personal and professional goals?' } ]},
+  { id:'s11', name:'Leadership purpose and legacy', qs:[
+    { id:'q11a', label:'What is the purpose of your leadership?' },
+    { id:'q11b', label:'How does this purpose connect with your values, your life story and your passions?' },
+    { id:'q11c', label:'What legacy do you want to leave for your family, your career, your friends and your community?', big:true } ]}
+];
+const LDP_MAX_JSON = 19000;
+function isLeader(){ return currentTemplate() === 'manager'; }
+function ldpAns(id){ return (state.ldp && state.ldp.a && state.ldp.a[id]) || ''; }
+function setLdpA(id, v){ state.ldp.a[id] = v; markUnsaved(); }
+function initLeader(){ state.kras = []; state.attributes = []; state.ldp = { a:{} }; }
+function readLeaderFromServer(){
+  state.ldp = { a:{} };
+  state.kras.forEach(k => (k.goals || []).forEach(g => {
+    const raw = String(g.raw || '');
+    if(raw.startsWith('[LDP]')){ try{ const d = JSON.parse(raw.slice(5)); Object.assign(state.ldp.a, d.a || {}); }catch(e){} }
+  }));
+}
+function ldpSectionData(sec){ const d = { v:1, sec:sec.id, a:{} }; sec.qs.forEach(q => { d.a[q.id] = String(ldpAns(q.id)).trim(); }); return d; }
+/* o = { edit:bool } */
+function leaderHtml(o){
+  const done = state.phase === 'done';
+  return `<div class="section paf-head"><div class="section-head"><h2>${LDP_TITLE}</h2><span class="weight-badge">Reviewed by the HOD</span></div>
+      <div class="note" style="margin:0">This plan guides your development as a leader. Answer every section in your own words and update it each quarter. There is no rating — the HOD reviews the plan and gives the final remark.</div></div>
+    ${LDP_SECTIONS.map((sec, i) => `<div class="section">
+      <div class="section-head"><h2>${i+1}. ${esc(sec.name)}</h2></div>
+      ${sec.qs.map(q => `<div style="margin-bottom:12px;"><label style="text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--text);font-weight:600;">${esc(q.label)}</label>
+        ${o.edit ? `<textarea maxlength="3000" rows="${q.big ? 6 : 3}" onchange="setLdpA('${q.id}',this.value)">${esc(ldpAns(q.id))}</textarea>` : `<div class="ro">${esc(ldpAns(q.id)) || '—'}</div>`}</div>`).join('')}
+    </div>`).join('')}
+    ${!o.edit && (state.final.rating || state.final.remark) ? `<div class="section adm-box"><div class="section-head"><h2>HOD Review</h2></div>
+      <label>Final Overall Rating</label><div class="ro" style="margin-bottom:10px;"><b>${esc(state.final.rating) || '—'}</b></div>
+      <label>HOD Remark</label><div class="ro">${esc(state.final.remark) || '—'}</div>
+      ${state.final.by ? `<div class="note" style="margin:10px 0 0;">Reviewed by ${esc(state.final.by)}</div>` : ''}</div>` : (!o.edit && done && isOwnMode() ? `<div class="section"><div class="note" style="margin:0">Submitted — waiting for the HOD review.</div></div>` : '')}`;
+}
+/* Super Admin (HOD) screen for a Manager-template plan */
+function leaderReviewHtml(){
+  const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
+  return `${state.finalDone ? `<div class="lock-note">🔒 <div><b>Final — reviewed.</b> This plan is locked for everyone.</div></div>` : ''}
+    ${leaderHtml({ edit:false }).replace(/<div class="section adm-box"><div class="section-head"><h2>HOD Review<\/h2>[\s\S]*$/, '')}
+    ${state.mode === 'admin' ? `<div class="section adm-box">
+      <div class="section-head"><h2>HOD Review (Super Admin)</h2></div>
+      <label>Final Overall Rating ${canAdm ? '<span class="req">*</span>' : ''}</label>
+      <div class="overall-options" style="margin-bottom:14px;">${OVERALL_LABELS.map(l => `<div class="overall-opt ${state.final.rating===l?'selected':''}" ${canAdm ? `onclick="setFinal('rating','${l}')"` : ''}>${l}</div>`).join('')}</div>
+      <label>HOD Remark</label>${canAdm ? `<textarea maxlength="3000" rows="4" placeholder="Feedback on this development plan" onchange="setFinal('remark',this.value)">${esc(state.final.remark)}</textarea>` : `<div class="ro">${esc(state.final.remark) || '—'}</div>`}
+      ${state.final.by ? `<div class="note" style="margin:10px 0 0;">Reviewed by ${esc(state.final.by)}</div>` : ''}
+    </div>` : ''}`;
+}
+function validateLeader(){
+  const filled = LDP_SECTIONS.flatMap(s => s.qs).filter(q => String(ldpAns(q.id)).trim()).length;
+  if(!filled) return 'Please answer the plan before submitting.';
+  for(const sec of LDP_SECTIONS) if(JSON.stringify(ldpSectionData(sec)).length > LDP_MAX_JSON) return `Section "${sec.name}": the answers are too long — please shorten them.`;
+  return '';
+}
+async function submitLeader(){
+  if(state.busy) return;
+  const problem = validateLeader(); if(problem){ setStatus('❌ ' + problem, false); return; }
+  const total = LDP_SECTIONS.flatMap(s => s.qs).length, filled = LDP_SECTIONS.flatMap(s => s.qs).filter(q => String(ldpAns(q.id)).trim()).length;
+  const ok = await confirmBox((state.revisionMode ? 'Submit revised plan ' : 'Submit plan ') + state.quarter + ' ' + state.year + '?',
+    `You answered <b>${filled} of ${total}</b> questions.<br><br>The plan goes to the HOD for review. You can revise it until the HOD reviews it.`, 'Yes, submit plan');
+  if(!ok) return;
+  const q = state.quarter, y = state.year, wasRevision = !!state.revisionMode;
+  lock(true); busyOverlay('Saving your plan…');
+  let errMsg = '', saved = false, step1 = false;
+  try{
+    await call('save_targets', { quarter:q, year:y, template:'manager', revision_mode:wasRevision, revision_from:state.revisionBase,
+      kras:[{ name:LDP_TITLE, description:'', goals:LDP_SECTIONS.map(sec => ({ name:sec.name, html:'[LDP]' + JSON.stringify(ldpSectionData(sec)) })) }],
+      attributes:[] });
+    step1 = true;
+  }catch(err){ errMsg = err.message; }
+  if(step1 && !wasRevision){
+    try{
+      busyOverlay('Sending your plan to the HOD…');
+      await call('save_rating', { quarter:q, year:y, goals:[], attributes:[], training:[], facilitating:'', constraining:'', outstanding:'', comments:'', learnings:'', overall:'' });
+      saved = true;
+    }catch(err){
+      errMsg = err.message;
+      try{ const chk = await call('load', { quarter:q, year:y }); if(chk.phase === 'done') saved = true; }catch(e){}
+    }
+  } else if(step1) saved = true;
+  busyOverlay(null); lock(false);
+  if(saved){
+    clearDraft(); state.revisionMode = false;
+    refreshPeriods(true);
+    state.mode = 'view'; show('quarterRow', false); show('yearBox', false); show('periodChips', true);
+    await loadPeriod(); renderPeriodChips();
+    setStatus('✅ Plan submitted for ' + q + ' ' + y + '. It now goes to the HOD for review.', true);
+  } else setStatus('❌ ' + errMsg + ' Your answers are kept — please try Submit again.', false);
+}
+async function startLeaderRevision(){
+  if(state.busy || state.finalDone) return;
+  const ok = await confirmBox('Revise ' + state.quarter + ' ' + state.year + '?', 'Your plan opens again for editing. When you submit, a new version (' + state.quarter + '-R' + (state.revisionNumber + 1) + ') is saved — the earlier version stays in history.', 'Revise');
+  if(!ok) return;
+  state.revisionBase = state.revisionNumber; state.revisionMode = true;
+  state.mode = 'new'; state.phase = 'targets';
+  show('periodChips', false); show('quarterRow', false); show('yearBox', false);
+  renderPage();
+  setStatus('Revising ' + state.quarter + '-R' + (state.revisionBase + 1) + ' — change what you need, then click Submit Plan.', null);
+}
+/* ---------- Manager template PDF ---------- */
+function buildLeaderPdfHtml(m){
+  const A = (m.ldp && m.ldp.a) || {};
+  const quarterCells = PDF_QUARTERS.map(qq => { const sel = qq.id === m.quarter;
+    return `<td class="${sel?'pa-qsel':''}">${sel ? `<b>${qq.label.split(':')[0]}:</b>${qq.label.substring(qq.label.indexOf(':')+1)} ${pdfEsc(m.year || '')}` : qq.label}</td>`; }).join('');
+  const block = (sec, i) => `<div class="pp-kpi"><div class="pa-b pp-h">${i+1}. ${pdfEsc(sec.name)}</div>
+      ${sec.qs.map(q => `<table class="pa-grid pa-avoid" style="margin-bottom:6px"><tr><td><div class="pa-b" style="font-size:11.5px">${pdfEsc(q.label)}</div><div class="pa-fill">${pdfMultiline(A[q.id] || '')}</div></td></tr></table>`).join('')}</div>`;
+  const half = 6;
+  return `<div class="pa-pdf">
+  <div class="pa-page">
+    <div class="pa-head"><img class="pa-logo" src="${PDF_LOGO}" alt="MEGA"><div class="pa-title">${LDP_TITLE}</div></div>
+    <table class="pa-qtable"><tr>${quarterCells}</tr></table>
+    <div class="pa-info"><div class="pa-info-row"><span class="pa-b">Name: ${pdfEsc(m.employeeName)}</span><span class="pa-b pa-dept">Department: ${pdfEsc(m.department)}</span></div></div>
+    ${LDP_SECTIONS.slice(0, half).map((s, i) => block(s, i)).join('')}
+  </div>
+  <div class="pa-page pa-page2">
+    ${LDP_SECTIONS.slice(half).map((s, i) => block(s, i + half)).join('')}
+    <div class="pa-b pa-sub2">HOD Review</div>
+    <table class="pa-grid"><tr><td style="width:30%" class="pa-b">Final Overall Rating</td><td>${pdfEsc(m.finalRating || '')}</td></tr>
+      <tr><td class="pa-b">HOD Remark</td><td>${pdfMultiline(m.finalRemark || '')}</td></tr></table>
+    <div class="pa-sign pa-b">Signature Manager……………………………..Sign. HOD…………………………</div>
+  </div></div>`;
+}
+async function submitLeaderFinal(){
+  if(state.busy) return;
+  if(!state.final.rating){ setStatus('❌ Choose the Final Overall Rating.', false); return; }
+  const who = (state.subject && state.subject.name) || state.target;
+  const ok = await confirmBox('Complete HOD review?', `<b>${esc(who)}</b> — ${state.quarter} ${state.year}<br>Final rating: <b>${esc(state.final.rating)}</b><br><br>After this, the plan is <b>final and locked</b>. The manager is emailed.`, 'Yes, complete review');
+  if(!ok) return;
+  const tg = state.target, q = state.quarter, y = state.year;
+  lock(true); busyOverlay('Saving HOD review…');
+  let saved = false, errMsg = '';
+  try{ await call('admin_save', { target:tg, quarter:q, year:y, final_rating:state.final.rating, final_remark:state.final.remark || '', final_payout:'' }); saved = true; }
+  catch(err){ errMsg = err.message; try{ const chk = await call('admin_load', { target:tg, quarter:q, year:y }); if(chk.final_done) saved = true; }catch(e){} }
+  busyOverlay(null); lock(false);
+  if(saved){ await loadPeriod(); setStatus('✅ HOD review saved. The plan is final and the manager has been emailed.', true); }
+  else setStatus('❌ ' + errMsg, false);
 }
 
 /* ======================= STATUS / DRAFT ======================= */
@@ -2003,7 +2210,7 @@ function saveDraft(){
   if(state.mode === 'view' || !isOwnMode()) return;
   if(!state.me || (state.phase !== 'targets' && state.phase !== 'rating')) return;
   const d = state.phase === 'targets'
-    ? { kras:state.kras, attributes:state.attributes, paf:state.paf, training:state.training.filter(t => !t.saved), overall:state.overallRating }
+    ? { kras:state.kras, attributes:state.attributes, paf:state.paf, ldp:state.ldp, training:state.training.filter(t => !t.saved), overall:state.overallRating }
     : { goals:Object.fromEntries(state.kras.flatMap(k => k.goals).map(g => [g.recId, { a:g.achievement, r:g.selfRating }])),
         attrs:Object.fromEntries(state.attributes.map(a => [a.recId, a.rating])),
         training:state.training.filter(t => !t.saved), texts:state.texts, overall:state.overallRating };
@@ -2013,9 +2220,9 @@ function restoreDraft(){
   let d = null; try{ d = JSON.parse(localStorage.getItem(draftKey()) || 'null'); }catch(e){}
   if(!d) return false;
   if(state.phase === 'targets'){
-    if(!Array.isArray(d.kras) || !d.kras.length) return false;
-    state.kras = d.kras; state.attributes = d.attributes || [];
-    if(d.paf) state.paf = d.paf; if(Array.isArray(d.training) && d.training.length) state.training = d.training; if(d.overall) state.overallRating = d.overall;
+    if((!Array.isArray(d.kras) || !d.kras.length) && !d.ldp) return false;
+    state.kras = d.kras || []; state.attributes = d.attributes || [];
+    if(d.ldp) state.ldp = d.ldp; if(d.paf) state.paf = d.paf; if(Array.isArray(d.training) && d.training.length) state.training = d.training; if(d.overall) state.overallRating = d.overall;
   } else {
     state.kras.forEach(k => k.goals.forEach(g => { const x = d.goals && d.goals[g.recId]; if(x){ if(x.a && !g.achievement) g.achievement = x.a; if(x.r && !g.selfRating) g.selfRating = x.r; } }));
     state.attributes.forEach(a => { const r = d.attrs && d.attrs[a.recId]; if(r && !a.rating) a.rating = r; });
@@ -2034,7 +2241,7 @@ function mainAction(){
   if(state.mode === 'team'){ submitManager(); return; }
   if(state.mode === 'admin'){ submitFinal(); return; }
   if(state.mode === 'hod'){ submitHod(); return; }
-  if(state.phase === 'targets'){ if(isProject()) submitProject(); else submitTargets(); } else if(state.phase === 'rating') submitRating();
+  if(state.phase === 'targets'){ if(isLeader()) submitLeader(); else if(isProject()) submitProject(); else submitTargets(); } else if(state.phase === 'rating') submitRating();
 }
 function lock(on){ state.busy = on; document.getElementById('mainBtn').disabled = on; }
 function validateTargets(){
@@ -2239,6 +2446,7 @@ function periodHtml(){
   </div>`;
 }
 function reviewHtml(){
+  if(isLeader()) return leaderReviewHtml();
   const canMgr = state.mode === 'team' && state.phase === 'done' && !state.mgrDone && !state.finalDone;
   const canAdm = state.mode === 'admin' && state.mgrDone && !state.finalDone;
   const canHod = canHodNow();
@@ -2457,6 +2665,7 @@ async function submitManager(){
 }
 async function submitFinal(){
   if(state.busy) return;
+  if(isLeader()) return submitLeaderFinal();
   if(!varSetupOk()){ setStatus('❌ Annual variable must be more than 0 and Individual % + Company % must be 100.', false); return; }
   const cF = hodCalc();
   if(state.hod.company === '' || isNaN(cF.co) || cF.co < 0 || cF.co > 100){ setStatus('❌ Enter the Company performance % (0 to 100).', false); return; }
@@ -2564,7 +2773,7 @@ function downloadPdf(){
     comments:state.texts.comments, learnings:state.texts.learnings, hodRemark:state.managerRemark || '',
     training:state.training.map(t => ({ need:t.need, benefit:t.benefit, fulfilled:t.fulfilled })),
     overallRating:state.overallRating || '',
-    template:isProject() ? 'project' : 'general', paf:state.paf,
+    template:isLeader() ? 'manager' : isProject() ? 'project' : 'general', paf:state.paf, ldp:state.ldp, finalRating:state.final.rating, finalRemark:state.final.remark,
     ratings:Object.fromEntries(PROJECT_KPIS.map(d => { const g = goalOfKpi(d.id) || {}; return [d.id, { self:g.selfRating || '', appr:g.apprRating || '' }]; }))
   }, setStatus);
 }
