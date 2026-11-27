@@ -1141,6 +1141,8 @@ async function loadPeriod(){
     state.final.payoutEdited = false;
     if(state.mode === 'admin' && !r.final_done && state.final.payout === '' && r.mgr_done){ const c0 = hodCalc(); if(varSetupOk()) state.final.payout = String(c0.payout); }
     if(isLeader()){
+      await loadPlanQuestions();
+      if(token !== state.loadToken) return;
       if(state.phase === 'targets'){ if(!restoreDraft() || !state.ldp) initLeader(); }
       else readLeaderFromServer();
     }
@@ -2073,6 +2075,28 @@ const LDP_SECTIONS = [
 ];
 const LDP_MAX_JSON = 19000;
 function isLeader(){ return currentTemplate() === 'manager'; }
+/* Question wording from the Zoho form Plan_Questions (fields: Section, Question_ID, Question, Sort_Order).
+   Section = section number 1-11 (or "1 | New section title" to rename it). Question_ID = q1a, q2b … (see the list above).
+   A Question_ID that does not exist yet is added to that section as a new question. Empty form = built-in wording. */
+let planQPromise = null;
+function loadPlanQuestions(){
+  if(planQPromise) return planQPromise;
+  planQPromise = call('plan_questions', {}).then(r => { applyPlanQuestions(r.questions || []); }).catch(() => {});
+  return planQPromise;
+}
+function applyPlanQuestions(list){
+  const rows = list.slice().sort((a,b) => (parseFloat(a.order) || 0) - (parseFloat(b.order) || 0));
+  rows.forEach(row => {
+    const secTxt = String(row.section || ''), num = parseInt(secTxt, 10);
+    const sec = (num >= 1 && num <= LDP_SECTIONS.length) ? LDP_SECTIONS[num - 1] : null;
+    if(sec && secTxt.includes('|')){ const t = secTxt.split('|').slice(1).join('|').trim(); if(t) sec.name = t; }
+    const qid = String(row.qid || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    let found = null;
+    LDP_SECTIONS.forEach(sx => sx.qs.forEach(q => { if(q.id === qid) found = q; }));
+    if(found){ found.label = row.question; return; }
+    if(sec && qid) sec.qs.push({ id:qid, label:row.question, big:String(row.question).length > 120 });
+  });
+}
 function ldpAns(id){ return (state.ldp && state.ldp.a && state.ldp.a[id]) || ''; }
 function setLdpA(id, v){ state.ldp.a[id] = v; markUnsaved(); }
 function initLeader(){ state.kras = []; state.attributes = []; state.ldp = { a:{} }; }
